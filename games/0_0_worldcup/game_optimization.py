@@ -22,18 +22,30 @@ class OptimizationSetup:
             "base": {
                 "conditions": {
                     "wincap": ConstructConditions(
-                        rtp=0.02, av_win=wincaps["base"], search_conditions=wincaps["base"]
+                        rtp=0.02, av_win=5000, search_conditions=5000
                     ).return_dict(),
-                    "0": ConstructConditions(rtp=0, av_win=0, search_conditions=0).return_dict(),
+                    "0": ConstructConditions(
+                        rtp=0, av_win=0, search_conditions=0
+                    ).return_dict(),
                     "freegame": ConstructConditions(
-                        rtp=0.50, hr=200, search_conditions={"symbol": "scatter"}
+                        rtp=0.54, hr=200, search_conditions={"symbol": "scatter"}
                     ).return_dict(),
-                    "basegame": ConstructConditions(hr=4.0, rtp=0.45).return_dict(),
+                    "basegame": ConstructConditions(hr=4.0, rtp=0.40).return_dict(),
                 },
                 "scaling": ConstructScaling(
                     [
-                        {"criteria": "basegame", "scale_factor": 1.2, "win_range": (1, 2), "probability": 1.0},
-                        {"criteria": "basegame", "scale_factor": 1.5, "win_range": (10, 20), "probability": 1.0},
+                        {
+                            "criteria": "basegame",
+                            "scale_factor": 1.2,
+                            "win_range": (1, 2),
+                            "probability": 1.0,
+                        },
+                        {
+                            "criteria": "basegame",
+                            "scale_factor": 1.5,
+                            "win_range": (10, 20),
+                            "probability": 1.0,
+                        },
                         {
                             "criteria": "freegame",
                             "scale_factor": 0.8,
@@ -68,7 +80,9 @@ class OptimizationSetup:
             "bonus": {
                 "conditions": {
                     "wincap": ConstructConditions(
-                        rtp=0.02, av_win=wincaps["bonus"], search_conditions=wincaps["bonus"]
+                        rtp=0.02,
+                        av_win=wincaps["bonus"],
+                        search_conditions=wincaps["bonus"],
                     ).return_dict(),
                     "freegame": ConstructConditions(rtp=0.95, hr="x").return_dict(),
                 },

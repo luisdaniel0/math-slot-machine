@@ -7,7 +7,6 @@ from src.config.betmode import BetMode
 
 
 class GameConfig(Config):
-
     _instance = None
 
     def __new__(cls):
@@ -213,8 +212,10 @@ class GameConfig(Config):
             self.freegame_type: {2: 3, 3: 5, 4: 8, 5: 12},
         }
         self.anticipation_triggers = {
-            self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys()) - 1,
-            self.freegame_type: min(self.freespin_triggers[self.freegame_type].keys()) - 1,
+            self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
+            - 1,
+            self.freegame_type: min(self.freespin_triggers[self.freegame_type].keys())
+            - 1,
         }
         # Reels
         reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv"}
@@ -224,7 +225,9 @@ class GameConfig(Config):
 
         self.padding_reels[self.basegame_type] = self.reels["BR0"]
         self.padding_reels[self.freegame_type] = self.reels["FR0"]
-        self.padding_symbol_values = {"W": {"multiplier": {2: 100, 3: 50, 4: 50, 5: 50, 10: 30, 20: 20, 50: 5}}}
+        self.padding_symbol_values = {
+            "W": {"multiplier": {2: 100, 3: 50, 4: 50, 5: 50, 10: 30, 20: 20, 50: 5}}
+        }
 
         freegame_condition = {
             "reel_weights": {
@@ -262,7 +265,15 @@ class GameConfig(Config):
             },
             "mult_values": {
                 self.basegame_type: {1: 1},
-                self.freegame_type: {2: 10, 3: 20, 4: 50, 5: 60, 10: 100, 20: 90, 50: 50},
+                self.freegame_type: {
+                    2: 10,
+                    3: 20,
+                    4: 50,
+                    5: 60,
+                    10: 100,
+                    20: 90,
+                    50: 50,
+                },
             },
             "scatter_triggers": {4: 1, 5: 2},
             "force_wincap": True,
@@ -297,9 +308,18 @@ class GameConfig(Config):
                         win_criteria=mode_maxwins["base"],
                         conditions=wincap_condition,
                     ),
-                    Distribution(criteria="freegame", quota=0.1, conditions=freegame_condition),
-                    Distribution(criteria="0", quota=0.4, win_criteria=0.0, conditions=zerowin_condition),
-                    Distribution(criteria="basegame", quota=0.5, conditions=basegame_condition),
+                    Distribution(
+                        criteria="freegame", quota=0.1, conditions=freegame_condition
+                    ),
+                    Distribution(
+                        criteria="0",
+                        quota=0.4,
+                        win_criteria=0.0,
+                        conditions=zerowin_condition,
+                    ),
+                    Distribution(
+                        criteria="basegame", quota=0.5, conditions=basegame_condition
+                    ),
                 ],
             ),
             BetMode(
@@ -317,7 +337,9 @@ class GameConfig(Config):
                         win_criteria=mode_maxwins["bonus"],
                         conditions=wincap_condition,
                     ),
-                    Distribution(criteria="freegame", quota=0.1, conditions=freegame_condition),
+                    Distribution(
+                        criteria="freegame", quota=0.1, conditions=freegame_condition
+                    ),
                 ],
             ),
         ]
