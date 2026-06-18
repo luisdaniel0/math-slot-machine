@@ -1,12 +1,88 @@
 from game_calculations import GameCalculations
 from src.calculations.lines import Lines
+from src.calculations.statistics import get_random_outcome
+from src.events.events import update_global_mult_event, fs_trigger_event
+
+# Spins awarded on feature entry, by tier.
+FEATURE_SPINS = {"standard": 8, "super": 12, "mega": 12}
+# Spins added per retrigger, by tier. Super/Mega use key-rich reels, so a small
+# award keeps the freegame branching factor < 1 (otherwise it runs unbounded).
+RETRIGGER_SPINS = {"standard": 5, "super": 3, "mega": 3}
 
 
 class GameExecutables(GameCalculations):
 
     def evaluate_lines_board(self):
-        """Populate win-data, record wins, transmit events."""
-        self.win_data = Lines.get_lines(self.board, self.config, global_multiplier=self.global_multiplier)
+        """Populate win-data, record wins, transmit events.
+
+        Uses the "combined" strategy so each line win is multiplied by the
+        winning symbols' local multipliers AND the global Vault multiplier.
+        (The default "symbol" strategy ignores global_multiplier, which would
+        make the climbing Vault do nothing.)
+        """
+        self.win_data = Lines.get_lines(
+            self.board,
+            self.config,
+            global_multiplier=self.global_multiplier,
+            multiplier_method="combined",
+        )
         Lines.record_lines_wins(self)
         self.win_manager.update_spinwin(self.win_data["totalWin"])
         Lines.emit_linewin_events(self)
+
+    def run_freespin_from_base(self, scatter_key: str = "scatter") -> None:
+        """Set the active feature from the trigger key-count, then enter FG.
+
+        3 keys -> Standard, 4 -> Super, 5+ -> Mega (pre-charged Vault).
+        """
+        key_count = self.count_special_symbols(scatter_key)
+        if key_count >= 5:
+            self.fs_feature = "mega"
+            self.global_multiplier = self.config.mega_start_vault
+        elif key_count == 4:
+            self.fs_feature = "super"
+        else:
+            self.fs_feature = "standard"
+        super().run_freespin_from_base(scatter_key)
+
+    def update_freespin_amount(self, scatter_key: str = "scatter") -> None:
+        """Award entry spins by feature tier (not by exact key count).
+
+        Indexing the config map by exact key count would KeyError on the
+        key-rich boards that can show 6+ Keys.
+        """
+        self.tot_fs = FEATURE_SPINS[self.fs_feature]
+        fs_trigger_event(self, basegame_trigger=True, freegame_trigger=False)
+
+    def update_fs_retrigger_amt(self, scatter_key: str = "scatter") -> None:
+        """Add retrigger spins by tier, clamped to the hard safety cap."""
+        self.tot_fs = min(
+            self.tot_fs + RETRIGGER_SPINS[self.fs_feature], self.config.max_fs_spins
+        )
+        fs_trigger_event(self, freegame_trigger=True, basegame_trigger=False)
+
+    def charge_vault(self, scatter_key: str = "scatter") -> None:
+        """Super/Mega FG: each Key on the board adds a random Vault increment.
+
+        Increments the persistent global multiplier and emits the update
+        event. Standard FG never calls this.
+        """
+        num_keys = self.count_special_symbols(scatter_key)
+        if num_keys == 0:
+            return
+        for _ in range(num_keys):
+            self.global_multiplier += get_random_outcome(self.config.vault_increment_values)
+        update_global_mult_event(self)
+
+    def check_fs_condition(self, scatter_key: str = "scatter") -> bool:
+        """Retrigger gate.
+
+        Super/Mega require 3+ keys to retrigger; Standard (and basegame entry)
+        use the engine default (min trigger key for the current gametype).
+        """
+        if (
+            self.gametype == self.config.freegame_type
+            and self.fs_feature in ("super", "mega")
+        ):
+            return self.count_special_symbols(scatter_key) >= 3 and not self.repeat
+        return super().check_fs_condition(scatter_key)

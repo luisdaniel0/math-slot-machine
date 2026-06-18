@@ -10,6 +10,9 @@ class GameStateOverride(GameExecutables):
 
     def reset_book(self):
         super().reset_book()
+        # Which feature this simulation is running: None (basegame),
+        # "standard", "super", or "mega". Set on freegame entry.
+        self.fs_feature = None
 
     def assign_special_sym_function(self):
         self.special_symbol_functions = {
@@ -17,9 +20,13 @@ class GameStateOverride(GameExecutables):
         }
 
     def assign_mult_property(self, symbol) -> dict:
-        """Assign multiplier value to Wild symbol in freegame."""
+        """Assign a local multiplier to a Wild -- Standard FG only.
+
+        In Super/Mega FG wilds stay at 1x: the climbing Vault (global
+        multiplier) is the sole source of multiplication there.
+        """
         multiplier_value = 1
-        if self.gametype == self.config.freegame_type:
+        if self.fs_feature == "standard":
             multiplier_value = get_random_outcome(
                 self.get_current_distribution_conditions()["mult_values"][self.gametype]
             )

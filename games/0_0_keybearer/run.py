@@ -1,4 +1,4 @@
-"""Main file for generating results for sample lines-pay game."""
+"""Main file for generating results for the Keybearer lines game."""
 
 from gamestate import GameState
 from game_config import GameConfig
@@ -18,8 +18,8 @@ if __name__ == "__main__":
     profiling = False
 
     num_sim_args = {
-        "base": int(1e4),
-        "bonus": int(1e4),
+        "base": int(1e5),
+        "buy_super": int(1e5),
     }
 
     run_conditions = {
