@@ -30,22 +30,45 @@ class OptimizationSetup:
             "base": {
                 "conditions": {
                     "wincap": ConstructConditions(
-                        rtp=0.01, av_win=wincaps["base"], search_conditions=wincaps["base"]
+                        rtp=0.01,
+                        av_win=wincaps["base"],
+                        search_conditions=wincaps["base"],
                     ).return_dict(),
                     "super": ConstructConditions(
-                        rtp=0.25, hr=2000, search_conditions={"symbol": "scatter", "kind": 4}
+                        rtp=0.25,
+                        hr=2000,
+                        search_conditions={"symbol": "scatter", "kind": 4},
                     ).return_dict(),
                     "standard": ConstructConditions(
-                        rtp=0.35, hr=180, search_conditions={"symbol": "scatter", "kind": 3}
+                        rtp=0.35,
+                        hr=180,
+                        search_conditions={"symbol": "scatter", "kind": 3},
                     ).return_dict(),
-                    "basegame": ConstructConditions(rtp=0.35, hr=10).return_dict(),
-                    "0": ConstructConditions(rtp=0, av_win=0, search_conditions=0).return_dict(),
+                    "basegame": ConstructConditions(rtp=0.35, hr=12).return_dict(),
+                    "0": ConstructConditions(
+                        rtp=0, av_win=0, search_conditions=0
+                    ).return_dict(),
                 },
                 "scaling": ConstructScaling(
                     [
-                        {"criteria": "basegame", "scale_factor": 1.2, "win_range": (1, 2), "probability": 1.0},
-                        {"criteria": "standard", "scale_factor": 1.2, "win_range": (50, 150), "probability": 1.0},
-                        {"criteria": "super", "scale_factor": 1.2, "win_range": (1000, 4000), "probability": 1.0},
+                        {
+                            "criteria": "basegame",
+                            "scale_factor": 1.2,
+                            "win_range": (1, 2),
+                            "probability": 1.0,
+                        },
+                        {
+                            "criteria": "standard",
+                            "scale_factor": 1.2,
+                            "win_range": (50, 150),
+                            "probability": 1.0,
+                        },
+                        {
+                            "criteria": "super",
+                            "scale_factor": 1.2,
+                            "win_range": (1000, 4000),
+                            "probability": 1.0,
+                        },
                     ]
                 ).return_dict(),
                 "parameters": ConstructParameters(
@@ -69,15 +92,32 @@ class OptimizationSetup:
             "buy_super": {
                 "conditions": {
                     "wincap": ConstructConditions(
-                        rtp=0.02, av_win=wincaps["buy_super"], search_conditions=wincaps["buy_super"]
+                        rtp=0.02,
+                        av_win=wincaps["buy_super"],
+                        search_conditions=wincaps["buy_super"],
                     ).return_dict(),
                     "super": ConstructConditions(rtp=0.94, hr="x").return_dict(),
                 },
                 "scaling": ConstructScaling(
                     [
-                        {"criteria": "super", "scale_factor": 1.2, "win_range": (1, 50), "probability": 1.0},
-                        {"criteria": "super", "scale_factor": 0.8, "win_range": (1000, 2000), "probability": 1.0},
-                        {"criteria": "super", "scale_factor": 1.2, "win_range": (3000, 8000), "probability": 1.0},
+                        {
+                            "criteria": "super",
+                            "scale_factor": 1.2,
+                            "win_range": (1, 50),
+                            "probability": 1.0,
+                        },
+                        {
+                            "criteria": "super",
+                            "scale_factor": 0.8,
+                            "win_range": (1000, 2000),
+                            "probability": 1.0,
+                        },
+                        {
+                            "criteria": "super",
+                            "scale_factor": 1.2,
+                            "win_range": (3000, 8000),
+                            "probability": 1.0,
+                        },
                     ]
                 ).return_dict(),
                 "parameters": ConstructParameters(

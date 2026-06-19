@@ -10,7 +10,6 @@ from src.state.run_sims import create_books
 from src.write_data.write_configs import generate_configs
 
 if __name__ == "__main__":
-
     num_threads = 10
     rust_threads = 20
     batching_size = 5000
@@ -18,12 +17,12 @@ if __name__ == "__main__":
     profiling = False
 
     num_sim_args = {
-        "base": int(1e5),
-        "buy_super": int(1e5),
+        "base": int(1e6),
+        "buy_super": int(1e6),
     }
 
     run_conditions = {
-        "run_sims": True,
+        "run_sims": False,
         "run_optimization": True,
         "run_analysis": True,
         "run_format_checks": True,
