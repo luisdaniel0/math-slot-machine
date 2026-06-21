@@ -26,7 +26,7 @@ class OptimizationSetup:
             wincaps[bm.get_name()] = bm.get_wincap()
 
         self.game_config.opt_params = {
-            # base RTP 0.96 = wincap .01 + super .25 + standard .35 + basegame .35
+            # base RTP 0.96 = wincap .01 + super .23 + mega .02 + standard .35 + basegame .35
             "base": {
                 "conditions": {
                     "wincap": ConstructConditions(
@@ -35,9 +35,14 @@ class OptimizationSetup:
                         search_conditions=wincaps["base"],
                     ).return_dict(),
                     "super": ConstructConditions(
-                        rtp=0.25,
+                        rtp=0.23,
                         hr=2000,
                         search_conditions={"symbol": "scatter", "kind": 4},
+                    ).return_dict(),
+                    "mega": ConstructConditions(
+                        rtp=0.02,
+                        hr=100000,
+                        search_conditions={"symbol": "scatter", "kind": 5},
                     ).return_dict(),
                     "standard": ConstructConditions(
                         rtp=0.35,
@@ -88,7 +93,7 @@ class OptimizationSetup:
                     bias_weights=[0.5],
                 ).return_dict(),
             },
-            # buy_super RTP 0.96 = wincap .02 + super .94
+            # buy_super RTP 0.96 = wincap .02 + super .92 + mega .02 (buy->Mega ≈ 1/150)
             "buy_super": {
                 "conditions": {
                     "wincap": ConstructConditions(
@@ -96,7 +101,16 @@ class OptimizationSetup:
                         av_win=wincaps["buy_super"],
                         search_conditions=wincaps["buy_super"],
                     ).return_dict(),
-                    "super": ConstructConditions(rtp=0.94, hr="x").return_dict(),
+                    "super": ConstructConditions(
+                        rtp=0.92,
+                        hr="x",
+                        search_conditions={"symbol": "scatter", "kind": 4},
+                    ).return_dict(),
+                    "mega": ConstructConditions(
+                        rtp=0.02,
+                        hr=150,
+                        search_conditions={"symbol": "scatter", "kind": 5},
+                    ).return_dict(),
                 },
                 "scaling": ConstructScaling(
                     [

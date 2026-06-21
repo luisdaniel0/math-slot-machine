@@ -109,9 +109,11 @@ class GameConfig(Config):
             self.basegame_type: {3: 8, 4: 12, 5: 12},
             self.freegame_type: {2: 5, 3: 5},
         }
-        # Hard safety cap on total freegame spins. Even if retriggers chain,
-        # a feature can never exceed this many spins (guarantees termination).
-        self.max_fs_spins = 60
+        # Hard safety backstop on total freegame spins. Super/Mega are now
+        # fixed-length (no retriggers); only Standard FG retriggers, and it
+        # runs on key-poor wild-rich reels, so it won't approach this -- it
+        # just guarantees termination.
+        self.max_fs_spins = 30
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
             - 1,
@@ -186,6 +188,22 @@ class GameConfig(Config):
             "force_freegame": True,
         }
 
+        # Mega: 5-key entry (natural OR bought), pre-charged Vault, NOT capped
+        # (capped Megas are claimed by the wincap slice). Same reels as Super.
+        mega_condition = {
+            "reel_weights": {
+                self.basegame_type: {"BR0": 1},
+                self.freegame_type: {"FR_SUP": 1},
+            },
+            "scatter_triggers": {5: 1},
+            "mult_values": {
+                self.basegame_type: {1: 1},
+                self.freegame_type: fg_wild_mult,
+            },
+            "force_wincap": False,
+            "force_freegame": True,
+        }
+
         # Base-mode wincap can come from a natural Mega (5 keys) or Super (4).
         base_wincap_condition = {
             "reel_weights": {
@@ -233,8 +251,8 @@ class GameConfig(Config):
         # Buy cost is PROVISIONAL (~520x). Final value = Super-FG average win
         # / 0.96, set once simulation reveals the true average.
         # Slice tables (sum of slice RTP must equal self.rtp = 0.96):
-        #   base:      wincap .01 | super .25 | standard .35 | basegame .35 | 0
-        #   buy_super: wincap .02 | super .94
+        #   base:      wincap .01 | super .23 | mega .02 | standard .35 | basegame .35 | 0
+        #   buy_super: wincap .02 | super .92 | mega .02  (buy->Mega ≈ 1/150)
         # wincap is listed first so its sims are claimed before the broader
         # freegame slices (a wincap sim is also a freegame sim).
         mode_maxwins = {"base": 25000, "buy_super": 25000}
@@ -255,7 +273,10 @@ class GameConfig(Config):
                         conditions=base_wincap_condition,
                     ),
                     Distribution(
-                        criteria="super", quota=0.05, conditions=super_condition
+                        criteria="super", quota=0.045, conditions=super_condition
+                    ),
+                    Distribution(
+                        criteria="mega", quota=0.005, conditions=mega_condition
                     ),
                     Distribution(
                         criteria="standard", quota=0.15, conditions=standard_condition
@@ -287,7 +308,10 @@ class GameConfig(Config):
                         conditions=buy_wincap_condition,
                     ),
                     Distribution(
-                        criteria="super", quota=0.99, conditions=super_condition
+                        criteria="super", quota=0.97, conditions=super_condition
+                    ),
+                    Distribution(
+                        criteria="mega", quota=0.02, conditions=mega_condition
                     ),
                 ],
             ),

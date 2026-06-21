@@ -3,11 +3,13 @@ from src.calculations.lines import Lines
 from src.calculations.statistics import get_random_outcome
 from src.events.events import update_global_mult_event, fs_trigger_event
 
-# Spins awarded on feature entry, by tier.
-FEATURE_SPINS = {"standard": 8, "super": 12, "mega": 12}
-# Spins added per retrigger, by tier. Super/Mega use key-rich reels, so a small
-# award keeps the freegame branching factor < 1 (otherwise it runs unbounded).
-RETRIGGER_SPINS = {"standard": 5, "super": 3, "mega": 3}
+# Spins awarded on feature entry, by tier. Super/Mega are FIXED-length (no
+# retriggers) -- 15 gives the climbing Vault room to still reach the wincap.
+FEATURE_SPINS = {"standard": 8, "super": 15, "mega": 15}
+# Spins added per retrigger. Only Standard FG retriggers; Super/Mega decouple
+# length from Keys (Keys charge the Vault instead of adding spins), so a
+# key-rich board can't run those features unbounded.
+RETRIGGER_SPINS = {"standard": 5}
 
 
 class GameExecutables(GameCalculations):
@@ -77,12 +79,14 @@ class GameExecutables(GameCalculations):
     def check_fs_condition(self, scatter_key: str = "scatter") -> bool:
         """Retrigger gate.
 
-        Super/Mega require 3+ keys to retrigger; Standard (and basegame entry)
-        use the engine default (min trigger key for the current gametype).
+        Super/Mega FG never retrigger -- Keys there charge the climbing Vault
+        instead of adding spins (decoupled, so key-rich reels can't run the
+        feature unbounded). Standard FG (and basegame entry) use the engine
+        default (min trigger key for the current gametype).
         """
         if (
             self.gametype == self.config.freegame_type
             and self.fs_feature in ("super", "mega")
         ):
-            return self.count_special_symbols(scatter_key) >= 3 and not self.repeat
+            return False
         return super().check_fs_condition(scatter_key)

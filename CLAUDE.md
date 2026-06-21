@@ -5,20 +5,23 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
 
 ## Design spec (the blueprint — build to this)
 
-- **Identity:** Lines, high volatility, 0.96 RTP.
+- **Identity:** Lines, high volatility, ~0.96 RTP (Stake cap = 0.967; RTP must be ≤ that).
   Fantasy: collect keys → charge a climbing Vault multiplier toward the master win.
 - **Core:** 5x4 board, 20 paylines, 25,000x wincap.
   Bet modes: `base` (1.0), `buy_super` (~520x, cost = super avg ÷ 0.96).
 - **Features:** one "Key" scatter, count-based:
-  - 3 keys → Standard FG (8/12 spins; local 2x–10x adding wilds; retrigger 2+ → +5)
-  - 4 keys → Super FG (12 spins; CLIMBING VAULT mult — each key adds +2..+50,
-    persists, multiplies every line win; retrigger 3+)
-  - 5 keys → Mega Super (bigger starting Vault; ~1/100k; NATURAL ONLY, not buyable)
+  - 3 keys → Standard FG (8 spins; local 2x–10x adding wilds; retrigger 2+ → +5)
+  - 4 keys → Super FG (15 spins FIXED, NO retrigger; CLIMBING VAULT mult — each
+    key adds +2..+50, persists, multiplies every line win)
+  - 5 keys → Mega Super (15 spins FIXED; bigger starting Vault; natural ~1/100k
+    OR ~1/150 from a buy — Mega is now its OWN slice in both modes, was natural-only)
+  - DECOUPLING: in Super/Mega, Keys ONLY charge the Vault (no retrigger), so
+    key-rich reels can't run the feature unbounded. Standard FG keeps retriggers.
 - **Symbols:** W (5-kind only; 2–10x mult in Standard FG only), K (scatter, no line pay),
   H1–H4, L1–L5. Top-heavy paytable, top 5-kind = 80x.
 - **Slice tables:**
-  - base: wincap 0.01 (1/2.5M) | super 0.25 (1/2000) | standard 0.35 (1/180) | basegame 0.35 (1/5) | zero 0
-  - buy_super: wincap 0.02 | super 0.94  (→ 0.96 of cost)
+  - base: wincap 0.01 (1/2.5M) | super 0.23 (1/2000) | mega 0.02 (1/100k) | standard 0.35 (1/180) | basegame 0.35 (hr 12) | zero 0
+  - buy_super: wincap 0.02 | super 0.92 | mega 0.02 (buy→Mega 1/150)  (→ 0.96 of cost)
 - **Strips:** BR0 (keys: 3→1/150, 4→1/2000, 5→1/100k; wilds rare; lows-heavy),
   FR_STD (wild-rich), FR_SUP (key-rich to charge Vault), WCAP (juiced).
 - **Volatility:** base m2m 6–12, buy m2m 4–8.
@@ -61,6 +64,27 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
       Also added check_freespin_entry gate so basegame/0 slices reject natural
       triggers (correct, but not the overshoot cause).
       For submission: run 1e6/mode; base may want hr~10.4 for exact 0.960.
+      (Superseded by the decoupling re-run below: code is at hr=12, base = 0.964.)
+- [x] DECOUPLED Super/Mega feature length — fixes the 60-spin runaway surfaced
+      when the frontend replayed the wincap book (~10min passive watch). Keys in
+      Super/Mega now ONLY charge the Vault, NO retrigger (check_fs_condition
+      returns False for those tiers). Super/Mega are FIXED 15 spins (FEATURE_SPINS
+      12->15 to keep the Vault able to reach wincap in a shorter run); only
+      Standard FG retriggers. max_fs_spins 60->30 (backstop; only Standard nears it).
+      VERIFIED @1e6/mode: Super feature spins min≤3 / p50=p90=p99=15 / MAX 15
+      (992,860/1e6 land exactly 15); wincap 25,000x still reachable. RTP base
+      0.9640, buy_super 0.9600 — BOTH < 0.967 Stake cap, so left as-is (can run
+      base hotter later for generosity; 0.964 keeps a safety buffer under the cap).
+      Format checks: SHA-256 OK, payout hash OK, 1e6 entries each mode.
+- [x] MEGA SLICE — Mega is now BUYABLE (~1/150 from a buy) and a sampled event in
+      base (~1/100k), not only a wincap-tail outcome. New mega_condition (5-key
+      entry, FR_SUP reels, NOT capped); base re-sliced super .25->.23 + mega .02;
+      buy super .94->.92 + mega .02. Super slices filter kind=4, mega kind=5;
+      capped Megas still claimed by the wincap slice. RTP redistributed, not added
+      (volatility knob, total stays 0.96). VERIFIED @1e6 from PUBLISHED LUT:
+      buy mega = 1/150 exactly | base mega 1/99,709 | super 1/1994 | standard
+      1/179 | base wincap 1/2.49M. RTP base 0.9630 / buy 0.9600 (≤0.967). Buy
+      avg 499.2x at cost 520 = 0.96 of cost, so provisional 520 still consistent.
 
 ## Runtime fixes (found by first `make run`)
 - KeyError on freegame retrigger: key-rich FR_SUP shows 6+ Keys; base engine
@@ -71,6 +95,10 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
   FR_SUP key density (K 12->6), Super/Mega retrigger +5->+3 (Standard stays +5),
   hard cap config.max_fs_spins=60, and run_freespin now stops on wincap_triggered
   / max_fs_spins. Branching now 0.32; avg feature ~17 spins. Smoke: 4500 sims in 2s.
+  [SUPERSEDED] Even bounded, the wincap book still hit the 60-spin cap (~10min
+  passive watch in frontend replay). Now Super/Mega never retrigger and are fixed
+  15 spins; cap lowered to 30 (only Standard can approach it). See the decoupling
+  entry under Build status.
 
 ## Gotchas
 - Wilds pay 5-kind only (avoids short wild-line overriding longer real-symbol lines).
