@@ -152,7 +152,7 @@ class GameConfig(Config):
         # gold 25). {value: weight}. Weighted mean ~5.5 per Key -- close to
         # the old random 2-50 table's ~4.7, so balance is largely preserved
         # while the per-Key value is now something a player can actually read.
-        self.vault_increment_values = {3: 75, 10: 20, 25: 5}
+        self.vault_increment_values = {3: 83, 10: 13, 25: 3, 100: 1}
         # Mega Super begins with the Vault pre-charged (bigger starting point);
         # Super begins at 1x and climbs from scratch.
         self.mega_start_vault = 10
