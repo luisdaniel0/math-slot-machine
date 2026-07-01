@@ -3,10 +3,12 @@ from src.calculations.lines import Lines
 from src.calculations.statistics import get_random_outcome
 from src.events.events import update_global_mult_event, fs_trigger_event
 
-# Spins awarded on feature entry, by tier.
-FEATURE_SPINS = {"standard": 8, "super": 12, "mega": 12}
-# Spins added per retrigger, by tier. Super/Mega use key-rich reels, so a small
-# award keeps the freegame branching factor < 1 (otherwise it runs unbounded).
+# Spins awarded on feature entry. Standard is fixed; Super/Mega draw a bounded
+# starting count from config.super_spin_values (set in update_freespin_amount)
+# to give predictable-but-varied feature lengths.
+FEATURE_SPINS = {"standard": 8}
+# Spins added per retrigger, by tier (Standard only -- Super/Mega no longer
+# retrigger). A small award keeps the branching factor < 1.
 RETRIGGER_SPINS = {"standard": 5, "super": 3, "mega": 3}
 
 
@@ -48,10 +50,15 @@ class GameExecutables(GameCalculations):
     def update_freespin_amount(self, scatter_key: str = "scatter") -> None:
         """Award entry spins by feature tier (not by exact key count).
 
-        Indexing the config map by exact key count would KeyError on the
-        key-rich boards that can show 6+ Keys.
+        Standard gets a fixed count; Super/Mega draw a bounded starting count
+        from config.super_spin_values so feature length varies (the volatility
+        lever) while staying capped and known up front. Awarding by tier (not
+        exact key count) avoids a KeyError on key-rich boards showing 6+ Keys.
         """
-        self.tot_fs = FEATURE_SPINS[self.fs_feature]
+        if self.fs_feature in ("super", "mega"):
+            self.tot_fs = get_random_outcome(self.config.super_spin_values)
+        else:
+            self.tot_fs = FEATURE_SPINS[self.fs_feature]
         fs_trigger_event(self, basegame_trigger=True, freegame_trigger=False)
 
     def update_fs_retrigger_amt(self, scatter_key: str = "scatter") -> None:

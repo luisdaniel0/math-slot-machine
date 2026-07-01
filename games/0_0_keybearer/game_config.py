@@ -109,10 +109,15 @@ class GameConfig(Config):
             self.basegame_type: {3: 8, 4: 12, 5: 12},
             self.freegame_type: {2: 5, 3: 5},
         }
-        # Hard safety cap on total freegame spins. Super/Mega no longer
-        # retrigger (fixed 12 spins), and Standard's wild-rich reel rarely
-        # chains, so 20 is a comfortable ceiling that also kills the old
-        # 40-60 spin drag while still guaranteeing termination.
+        # Super/Mega no longer retrigger; instead they draw a BOUNDED starting
+        # spin count (shown to the player up front). This reintroduces the
+        # length variance that drives volatility -- but capped, so it never
+        # drags like the old 40-60 spin retrigger chains. {spins: weight};
+        # weighted mean ~12.6 so the average feature (and RTP/cost) stays put
+        # while short (8) vs long (20) features spread the payouts.
+        self.super_spin_values = {8: 30, 12: 35, 16: 25, 20: 10}
+        # Hard safety cap on total freegame spins -- matches the max startable
+        # count above, and still bounds Standard's occasional retrigger chain.
         self.max_fs_spins = 20
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
