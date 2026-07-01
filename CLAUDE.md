@@ -72,6 +72,26 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
   hard cap config.max_fs_spins=60, and run_freespin now stops on wincap_triggered
   / max_fs_spins. Branching now 0.32; avg feature ~17 spins. Smoke: 4500 sims in 2s.
 
+## Feature pacing + legibility pass (Storybook playtest feedback)
+- PROBLEM: Super/Mega could run 40-60 spins (retriggers chaining on key-rich
+  FR_SUP) -- boring/flawed pacing; and the Vault charged by a random 2..50 per
+  Key, so players couldn't read "what a Key is worth".
+- FIX 1 (length): Super/Mega NO LONGER retrigger (check_fs_condition returns
+  False for them) -> fixed 12 spins. Standard keeps its retrigger. max_fs_spins
+  60->20. MEASURED (12k super books): every feature now exactly 12 spins, tail
+  gone; zero-pay still impossible (check_repeat gate); win-rate ~28%/spin.
+- FIX 2 (legibility): vault_increment_values is now 3 legible tiers
+  {3:75,10:20,25:5} (bronze/silver/gold, mean ~5.5) instead of random 2..50.
+  charge_vault emits per-Key breakdown via update_global_mult_event(key_charges=
+  [{reel,row,value}]) -> new `keyCharges` field on the updateGlobalMult event so
+  the FE can fly a clear "+N" from each Key into the running Vault total.
+- CONSEQUENCES: buy_super avg win ~halved (median 394->209x) so the PROVISIONAL
+  buy cost (~520x) should drop to ~avg/0.96 at production sim count. Wincap still
+  reachable in 12 spins (tested: 0% unreachable) but needs ~155 re-rolls/wincap
+  book (was cheaper with 60 spins) -- slower wincap slice, not a correctness bug.
+- update_global_mult_event key_charges arg defaults None => other games' events
+  unchanged.
+
 ## Gotchas
 - Wilds pay 5-kind only (avoids short wild-line overriding longer real-symbol lines).
 - The Vault multiplier is the genuinely new code vs 0_0_lines — persistent global mult.

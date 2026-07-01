@@ -62,27 +62,37 @@ class GameExecutables(GameCalculations):
         fs_trigger_event(self, freegame_trigger=True, basegame_trigger=False)
 
     def charge_vault(self, scatter_key: str = "scatter") -> None:
-        """Super/Mega FG: each Key on the board adds a random Vault increment.
+        """Super/Mega FG: each Key on the board adds a tiered Vault increment.
 
-        Increments the persistent global multiplier and emits the update
-        event. Standard FG never calls this.
+        Each Key draws a legible tier value (3 / 10 / 25) from
+        config.vault_increment_values. We record every Key's position and its
+        drawn value so the frontend can show a clear "+N" flying from each Key
+        into the running Vault total. Standard FG never calls this.
         """
-        num_keys = self.count_special_symbols(scatter_key)
-        if num_keys == 0:
+        keys_on_board = self.special_syms_on_board[scatter_key]
+        if not keys_on_board:
             return
-        for _ in range(num_keys):
-            self.global_multiplier += get_random_outcome(self.config.vault_increment_values)
-        update_global_mult_event(self)
+        pad = 1 if self.config.include_padding else 0
+        key_charges = []
+        for pos in keys_on_board:
+            value = get_random_outcome(self.config.vault_increment_values)
+            self.global_multiplier += value
+            key_charges.append(
+                {"reel": pos["reel"], "row": pos["row"] + pad, "value": value}
+            )
+        update_global_mult_event(self, key_charges=key_charges)
 
     def check_fs_condition(self, scatter_key: str = "scatter") -> bool:
         """Retrigger gate.
 
-        Super/Mega require 3+ keys to retrigger; Standard (and basegame entry)
-        use the engine default (min trigger key for the current gametype).
+        Super/Mega DO NOT retrigger: their length is fixed (12 spins) so the
+        feature stays short and predictable -- escalation comes from the
+        climbing Vault, not from ever-more spins. Standard FG (and basegame
+        entry) use the engine default (min trigger key for the gametype).
         """
         if (
             self.gametype == self.config.freegame_type
             and self.fs_feature in ("super", "mega")
         ):
-            return self.count_special_symbols(scatter_key) >= 3 and not self.repeat
+            return False
         return super().check_fs_condition(scatter_key)

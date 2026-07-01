@@ -109,9 +109,11 @@ class GameConfig(Config):
             self.basegame_type: {3: 8, 4: 12, 5: 12},
             self.freegame_type: {2: 5, 3: 5},
         }
-        # Hard safety cap on total freegame spins. Even if retriggers chain,
-        # a feature can never exceed this many spins (guarantees termination).
-        self.max_fs_spins = 60
+        # Hard safety cap on total freegame spins. Super/Mega no longer
+        # retrigger (fixed 12 spins), and Standard's wild-rich reel rarely
+        # chains, so 20 is a comfortable ceiling that also kills the old
+        # 40-60 spin drag while still guaranteeing termination.
+        self.max_fs_spins = 20
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
             - 1,
@@ -145,7 +147,12 @@ class GameConfig(Config):
         # to the Vault, which then multiplies EVERY line win (combined
         # multiplier strategy). The Vault persists for the whole feature.
         # Standard FG never charges the Vault (it uses local wild mults).
-        self.vault_increment_values = {2: 100, 3: 80, 5: 50, 8: 25, 12: 12, 20: 6, 35: 3, 50: 1}
+        # Three legible tiers so the Vault climbs in readable steps and the
+        # frontend can show a clear "+N" per Key (bronze 3 / silver 10 /
+        # gold 25). {value: weight}. Weighted mean ~5.5 per Key -- close to
+        # the old random 2-50 table's ~4.7, so balance is largely preserved
+        # while the per-Key value is now something a player can actually read.
+        self.vault_increment_values = {3: 75, 10: 20, 25: 5}
         # Mega Super begins with the Vault pre-charged (bigger starting point);
         # Super begins at 1x and climbs from scratch.
         self.mega_start_vault = 10
