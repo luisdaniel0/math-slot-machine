@@ -115,10 +115,10 @@ class GameConfig(Config):
         # drags like the old 40-60 spin retrigger chains. {spins: weight};
         # weighted mean ~12.6 so the average feature (and RTP/cost) stays put
         # while short (8) vs long (20) features spread the payouts.
-        self.super_spin_values = {8: 30, 12: 35, 16: 25, 20: 10}
+        self.super_spin_values = {8: 40, 12: 20, 16: 20, 24: 20}
         # Hard safety cap on total freegame spins -- matches the max startable
         # count above, and still bounds Standard's occasional retrigger chain.
-        self.max_fs_spins = 20
+        self.max_fs_spins = 24
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
             - 1,
@@ -285,7 +285,7 @@ class GameConfig(Config):
             ),
             BetMode(
                 name="buy_super",
-                cost=390.0,
+                cost=600.0,
                 rtp=self.rtp,
                 max_win=mode_maxwins["buy_super"],
                 auto_close_disabled=False,
