@@ -280,7 +280,7 @@ class GameConfig(Config):
             ),
             BetMode(
                 name="buy_super",
-                cost=520.0,
+                cost=390.0,
                 rtp=self.rtp,
                 max_win=mode_maxwins["buy_super"],
                 auto_close_disabled=False,
