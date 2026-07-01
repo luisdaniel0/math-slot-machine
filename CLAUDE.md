@@ -91,6 +91,14 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
   book (was cheaper with 60 spins) -- slower wincap slice, not a correctness bug.
 - update_global_mult_event key_charges arg defaults None => other games' events
   unchanged.
+- COST RECOMPUTE: shorter feature ~halved the Super avg, so buy_super cost
+  520 -> 390 (super slice rtp .94 => cost ~= super_avg 367 / .94 ~= 390).
+  VALIDATED via full pipeline @100k/mode: buy_super RTP 0.960 exactly
+  (avg_win 374.4 = .96*390), base RTP 0.963 (unchanged), wincap reachable,
+  0% zero-pay on buy. TRADE-OFF: buy_super m2m dropped to ~2.2 (spec target
+  4-8) -- the fixed 12-spin feature is calmer/more consistent than the old
+  high-vol profile. If more volatility wanted without re-lengthening: widen
+  the top key tier (gold 25->50 or add a rare 100) to fatten the Vault tail.
 
 ## Gotchas
 - Wilds pay 5-kind only (avoids short wild-line overriding longer real-symbol lines).
