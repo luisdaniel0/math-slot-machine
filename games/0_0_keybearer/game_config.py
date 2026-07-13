@@ -109,11 +109,16 @@ class GameConfig(Config):
             self.basegame_type: {3: 8, 4: 12, 5: 12},
             self.freegame_type: {2: 5, 3: 5},
         }
-        # Hard safety backstop on total freegame spins. Super/Mega are now
-        # fixed-length (no retriggers); only Standard FG retriggers, and it
-        # runs on key-poor wild-rich reels, so it won't approach this -- it
-        # just guarantees termination.
-        self.max_fs_spins = 30
+        # Super/Mega no longer retrigger; instead they draw a BOUNDED starting
+        # spin count (shown to the player up front). This reintroduces the
+        # length variance that drives volatility -- but capped, so it never
+        # drags like the old 40-60 spin retrigger chains. {spins: weight};
+        # weighted mean ~12.6 so the average feature (and RTP/cost) stays put
+        # while short (8) vs long (20) features spread the payouts.
+        self.super_spin_values = {8: 30, 12: 35, 16: 25, 20: 10}
+        # Hard safety cap on total freegame spins -- matches the max startable
+        # count above, and still bounds Standard's occasional retrigger chain.
+        self.max_fs_spins = 20
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
             - 1,
@@ -147,7 +152,12 @@ class GameConfig(Config):
         # to the Vault, which then multiplies EVERY line win (combined
         # multiplier strategy). The Vault persists for the whole feature.
         # Standard FG never charges the Vault (it uses local wild mults).
-        self.vault_increment_values = {2: 100, 3: 80, 5: 50, 8: 25, 12: 12, 20: 6, 35: 3, 50: 1}
+        # Three legible tiers so the Vault climbs in readable steps and the
+        # frontend can show a clear "+N" per Key (bronze 3 / silver 10 /
+        # gold 25). {value: weight}. Weighted mean ~5.5 per Key -- close to
+        # the old random 2-50 table's ~4.7, so balance is largely preserved
+        # while the per-Key value is now something a player can actually read.
+        self.vault_increment_values = {3: 83, 10: 13, 25: 3, 100: 1}
         # Mega Super begins with the Vault pre-charged (bigger starting point);
         # Super begins at 1x and climbs from scratch.
         self.mega_start_vault = 10
@@ -180,22 +190,6 @@ class GameConfig(Config):
                 self.freegame_type: {"FR_SUP": 1},
             },
             "scatter_triggers": {4: 1},
-            "mult_values": {
-                self.basegame_type: {1: 1},
-                self.freegame_type: fg_wild_mult,
-            },
-            "force_wincap": False,
-            "force_freegame": True,
-        }
-
-        # Mega: 5-key entry (natural OR bought), pre-charged Vault, NOT capped
-        # (capped Megas are claimed by the wincap slice). Same reels as Super.
-        mega_condition = {
-            "reel_weights": {
-                self.basegame_type: {"BR0": 1},
-                self.freegame_type: {"FR_SUP": 1},
-            },
-            "scatter_triggers": {5: 1},
             "mult_values": {
                 self.basegame_type: {1: 1},
                 self.freegame_type: fg_wild_mult,
@@ -251,8 +245,8 @@ class GameConfig(Config):
         # Buy cost is PROVISIONAL (~520x). Final value = Super-FG average win
         # / 0.96, set once simulation reveals the true average.
         # Slice tables (sum of slice RTP must equal self.rtp = 0.96):
-        #   base:      wincap .01 | super .23 | mega .02 | standard .35 | basegame .35 | 0
-        #   buy_super: wincap .02 | super .92 | mega .02  (buy->Mega ≈ 1/150)
+        #   base:      wincap .01 | super .25 | standard .35 | basegame .35 | 0
+        #   buy_super: wincap .02 | super .94
         # wincap is listed first so its sims are claimed before the broader
         # freegame slices (a wincap sim is also a freegame sim).
         mode_maxwins = {"base": 25000, "buy_super": 25000}
@@ -273,10 +267,7 @@ class GameConfig(Config):
                         conditions=base_wincap_condition,
                     ),
                     Distribution(
-                        criteria="super", quota=0.045, conditions=super_condition
-                    ),
-                    Distribution(
-                        criteria="mega", quota=0.005, conditions=mega_condition
+                        criteria="super", quota=0.05, conditions=super_condition
                     ),
                     Distribution(
                         criteria="standard", quota=0.15, conditions=standard_condition
@@ -294,7 +285,7 @@ class GameConfig(Config):
             ),
             BetMode(
                 name="buy_super",
-                cost=520.0,
+                cost=390.0,
                 rtp=self.rtp,
                 max_win=mode_maxwins["buy_super"],
                 auto_close_disabled=False,
@@ -308,10 +299,7 @@ class GameConfig(Config):
                         conditions=buy_wincap_condition,
                     ),
                     Distribution(
-                        criteria="super", quota=0.97, conditions=super_condition
-                    ),
-                    Distribution(
-                        criteria="mega", quota=0.02, conditions=mega_condition
+                        criteria="super", quota=0.99, conditions=super_condition
                     ),
                 ],
             ),

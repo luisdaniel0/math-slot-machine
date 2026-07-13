@@ -3,13 +3,13 @@ from src.calculations.lines import Lines
 from src.calculations.statistics import get_random_outcome
 from src.events.events import update_global_mult_event, fs_trigger_event
 
-# Spins awarded on feature entry, by tier. Super/Mega are FIXED-length (no
-# retriggers) -- 15 gives the climbing Vault room to still reach the wincap.
-FEATURE_SPINS = {"standard": 8, "super": 15, "mega": 15}
-# Spins added per retrigger. Only Standard FG retriggers; Super/Mega decouple
-# length from Keys (Keys charge the Vault instead of adding spins), so a
-# key-rich board can't run those features unbounded.
-RETRIGGER_SPINS = {"standard": 5}
+# Spins awarded on feature entry. Standard is fixed; Super/Mega draw a bounded
+# starting count from config.super_spin_values (set in update_freespin_amount)
+# to give predictable-but-varied feature lengths.
+FEATURE_SPINS = {"standard": 8}
+# Spins added per retrigger, by tier (Standard only -- Super/Mega no longer
+# retrigger). A small award keeps the branching factor < 1.
+RETRIGGER_SPINS = {"standard": 5, "super": 3, "mega": 3}
 
 
 class GameExecutables(GameCalculations):
@@ -50,10 +50,15 @@ class GameExecutables(GameCalculations):
     def update_freespin_amount(self, scatter_key: str = "scatter") -> None:
         """Award entry spins by feature tier (not by exact key count).
 
-        Indexing the config map by exact key count would KeyError on the
-        key-rich boards that can show 6+ Keys.
+        Standard gets a fixed count; Super/Mega draw a bounded starting count
+        from config.super_spin_values so feature length varies (the volatility
+        lever) while staying capped and known up front. Awarding by tier (not
+        exact key count) avoids a KeyError on key-rich boards showing 6+ Keys.
         """
-        self.tot_fs = FEATURE_SPINS[self.fs_feature]
+        if self.fs_feature in ("super", "mega"):
+            self.tot_fs = get_random_outcome(self.config.super_spin_values)
+        else:
+            self.tot_fs = FEATURE_SPINS[self.fs_feature]
         fs_trigger_event(self, basegame_trigger=True, freegame_trigger=False)
 
     def update_fs_retrigger_amt(self, scatter_key: str = "scatter") -> None:
@@ -64,25 +69,34 @@ class GameExecutables(GameCalculations):
         fs_trigger_event(self, freegame_trigger=True, basegame_trigger=False)
 
     def charge_vault(self, scatter_key: str = "scatter") -> None:
-        """Super/Mega FG: each Key on the board adds a random Vault increment.
+        """Super/Mega FG: each Key on the board adds a tiered Vault increment.
 
-        Increments the persistent global multiplier and emits the update
-        event. Standard FG never calls this.
+        Each Key draws a legible tier value (3 / 10 / 25) from
+        config.vault_increment_values. We record every Key's position and its
+        drawn value so the frontend can show a clear "+N" flying from each Key
+        into the running Vault total. Standard FG never calls this.
         """
-        num_keys = self.count_special_symbols(scatter_key)
-        if num_keys == 0:
+        keys_on_board = self.special_syms_on_board[scatter_key]
+        if not keys_on_board:
             return
-        for _ in range(num_keys):
-            self.global_multiplier += get_random_outcome(self.config.vault_increment_values)
-        update_global_mult_event(self)
+        pad = 1 if self.config.include_padding else 0
+        key_charges = []
+        for pos in keys_on_board:
+            value = get_random_outcome(self.config.vault_increment_values)
+            self.global_multiplier += value
+            key_charges.append(
+                {"reel": pos["reel"], "row": pos["row"] + pad, "value": value}
+            )
+        update_global_mult_event(self, key_charges=key_charges)
 
     def check_fs_condition(self, scatter_key: str = "scatter") -> bool:
         """Retrigger gate.
 
-        Super/Mega FG never retrigger -- Keys there charge the climbing Vault
-        instead of adding spins (decoupled, so key-rich reels can't run the
-        feature unbounded). Standard FG (and basegame entry) use the engine
-        default (min trigger key for the current gametype).
+        Super/Mega DO NOT retrigger: their length is a bounded draw (8-20,
+        see config.super_spin_values) so the feature stays short and
+        predictable -- escalation comes from the
+        climbing Vault, not from ever-more spins. Standard FG (and basegame
+        entry) use the engine default (min trigger key for the gametype).
         """
         if (
             self.gametype == self.config.freegame_type

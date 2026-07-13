@@ -218,13 +218,22 @@ def final_win_event(gamestate):
     gamestate.book.add_event(event)
 
 
-def update_global_mult_event(gamestate):
-    """Increment global multiplier value."""
+def update_global_mult_event(gamestate, key_charges=None):
+    """Increment global multiplier value.
+
+    key_charges (optional): list of {"reel", "row", "value"} describing which
+    symbols added to the multiplier this step and by how much, so the client
+    can animate each contribution flying into the running total. Omitted from
+    the event when None (keeps the event unchanged for games that don't use
+    per-symbol charge breakdowns).
+    """
     event = {
         "index": len(gamestate.book.events),
         "type": EventConstants.UPDATE_GLOBAL_MULT.value,
         "globalMult": int(gamestate.global_multiplier),
     }
+    if key_charges is not None:
+        event["keyCharges"] = key_charges
 
     gamestate.book.add_event(event)
 

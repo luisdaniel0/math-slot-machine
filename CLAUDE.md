@@ -100,6 +100,34 @@ Learner project: build step-by-step, explain decisions, don't bulk-complete.
   15 spins; cap lowered to 30 (only Standard can approach it). See the decoupling
   entry under Build status.
 
+## Feature pacing + legibility pass (Storybook playtest feedback)
+- PROBLEM: Super/Mega could run 40-60 spins (retriggers chaining on key-rich
+  FR_SUP) -- boring/flawed pacing; and the Vault charged by a random 2..50 per
+  Key, so players couldn't read "what a Key is worth".
+- FIX 1 (length): Super/Mega NO LONGER retrigger (check_fs_condition returns
+  False for them) -> fixed 12 spins. Standard keeps its retrigger. max_fs_spins
+  60->20. MEASURED (12k super books): every feature now exactly 12 spins, tail
+  gone; zero-pay still impossible (check_repeat gate); win-rate ~28%/spin.
+- FIX 2 (legibility): vault_increment_values is now 3 legible tiers
+  {3:75,10:20,25:5} (bronze/silver/gold, mean ~5.5) instead of random 2..50.
+  charge_vault emits per-Key breakdown via update_global_mult_event(key_charges=
+  [{reel,row,value}]) -> new `keyCharges` field on the updateGlobalMult event so
+  the FE can fly a clear "+N" from each Key into the running Vault total.
+- CONSEQUENCES: buy_super avg win ~halved (median 394->209x) so the PROVISIONAL
+  buy cost (~520x) should drop to ~avg/0.96 at production sim count. Wincap still
+  reachable in 12 spins (tested: 0% unreachable) but needs ~155 re-rolls/wincap
+  book (was cheaper with 60 spins) -- slower wincap slice, not a correctness bug.
+- update_global_mult_event key_charges arg defaults None => other games' events
+  unchanged.
+- COST RECOMPUTE: shorter feature ~halved the Super avg, so buy_super cost
+  520 -> 390 (super slice rtp .94 => cost ~= super_avg 367 / .94 ~= 390).
+  VALIDATED via full pipeline @100k/mode: buy_super RTP 0.960 exactly
+  (avg_win 374.4 = .96*390), base RTP 0.963 (unchanged), wincap reachable,
+  0% zero-pay on buy. TRADE-OFF: buy_super m2m dropped to ~2.2 (spec target
+  4-8) -- the fixed 12-spin feature is calmer/more consistent than the old
+  high-vol profile. If more volatility wanted without re-lengthening: widen
+  the top key tier (gold 25->50 or add a rare 100) to fatten the Vault tail.
+
 ## Gotchas
 - Wilds pay 5-kind only (avoids short wild-line overriding longer real-symbol lines).
 - The Vault multiplier is the genuinely new code vs 0_0_lines — persistent global mult.
