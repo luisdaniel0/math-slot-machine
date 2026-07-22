@@ -131,25 +131,30 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       writes maxWin 25000 for ALL modes -> set BetMode.max_win for corvus/ursa to
       their real 1e6 ceilings (smoke 9965/15581 understate the tail); (c) quotas +
       RTP convergence to ~0.9665 all 6 modes; (d) mystery DISPLAYED odds = measured
-      post-opt proportions; (e) game_optimization.py opt_params still keyed base/bonus
-      -> KeyErrors on wincaps["bonus"] if run_optimization flipped True; rewrite for
-      the 6 modes FIRST in the measure loop.
+      post-opt proportions.
+- [x] Optimization opt_params rewritten for all 6 modes (game_optimization.py).
+      Per-criteria RTP splits sum to 0.9665 (verify_optimization_input PASSES), small
+      DRY builders (wincap_cond/feature_cond/base_cond), per-mode m2m bands encoding
+      the vol identity (buy_draco 5-20 highest, buy_corvus 1.5-5 lowest, ante 2-6).
+      Note ConstructConditions needs rtp PLUS an hr/av_win hint (rtp alone trips its
+      guard). FIRST-PASS targets (rtp splits, hr hints, m2m, scaling) -- the measure
+      loop tunes them against 1e6 reality. Optimizer binary (PigFarmRust) is BUILT.
+      NOT yet run: convergence on smoke-count pools is ambiguous, validate at 1e6.
 - [ ] Run → measure loop (completion rates vs analytic targets, m2m, hit ≥1/20)
 - [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
 
 ### ▶ PICK UP HERE (next session)
 Feature engine DONE (20 tests). Roam window DONE (floor 5). Reel strips DONE
-(inversion fixed). 6 bet modes DONE structurally (smoke-verified; costs/ceilings/
-convergence are measure-loop outputs). Next, in dependency order:
-1. **Rewrite game_optimization.py opt_params for the 6 modes** — currently keyed
-   base/bonus and WILL KeyError on wincaps["bonus"] the moment run_optimization=True.
-   Per-mode conditions must match each mode's distribution criteria (wincap / corvus /
-   ursa / draco / mystery / basegame / 0). This is the gate to the whole measure loop.
-2. **Run → measure loop (1e6/mode)** — the completion-ladder is correct-order but too
-   high/compressed (ursa 70%/draco 65%; want ~50%/rare). Dampen FR wild density in
-   generate_reels.py (regenerate → re-sim), watch the ladder + m2m + hit-rate. Then
-   optimize + converge all 6 modes to ~0.9665; set costs (avg win/rtp) and the honest
-   corvus/ursa display ceilings from the 1e6 max wins.
+(inversion fixed). 6 bet modes DONE structurally. opt_params DONE (verified, 6
+modes). The whole scaffold is in place -- next is the MEASURE LOOP:
+1. **Run → measure loop (1e6/mode)** — flip run.py to production counts +
+   run_optimization=True (binary is built). Iterate: (i) the completion ladder is
+   correct-order but too high/compressed (ursa 70%/draco 65%; want ~50%/rare) ->
+   dampen FR wild density in generate_reels.py, regenerate, re-sim; (ii) converge all
+   6 modes to ~0.9665 (adjust opt_params rtp splits/m2m if a slice can't hit target);
+   (iii) set costs = avg win/rtp and the honest corvus/ursa display ceilings (their
+   BetMode.max_win) from the 1e6 max wins; (iv) verify mystery displayed odds =
+   measured proportions; (v) check m2m, base hit-rate, wincap slice ≥1e-6.
 - Regenerate strips: `./env/bin/python games/starwake/reels/generate_reels.py`
 - Run unit tests:  `./env/bin/python -m pytest tests/starwake/ -v`
 - Smoke sim + books: `cd games/starwake && ../../env/bin/python run.py`
