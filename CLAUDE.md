@@ -117,28 +117,43 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       ursa/draco (target ~50% / rare) via FR wild density (lever 1), then per-reel
       reels-3-4 FR drying (lever 2, machinery not built yet) or harder Draco shape
       (lever 3, game_config.constellation_cells).
-- [ ] 6 bet modes + slice tables; per-mode displayed max wins (Corvus states an
-      honest lower ceiling); wincap slice ≥1e-6 in every mode that claims 25,000x
+- [x] 6 bet modes STRUCTURAL pass (game_config.bet_modes): base | ante_starfall |
+      buy_corvus | buy_ursa | buy_draco | buy_mystery. Tier forced by scatter_triggers
+      (a _tier_condition(count) helper; {3/4/5:1} pin corvus/ursa/draco), mystery =
+      weighted {3:60,4:30,5:10}. Only Draco reaches 25k so every wincap slice forces
+      {5:1}+WCAP; buy_corvus/buy_ursa carry NO wincap slice (unreachable cap would
+      loop). Smoke-verified all 6 (run.py sims all 6): tiers force correctly (buys
+      100% their tier), buys 0% zero, base mix 67/25/8, ante richer 62/27/10 + more
+      triggers (16.5%) + fewer zeros (smoother), mystery 62/26/11 (wincap nudges
+      draco). Measured ceilings: corvus 9965x / ursa 15581x (HONEST lower ceilings,
+      confirmed <25k) / draco+mystery+base+ante 25000x. MEASURE-LOOP PENDING:
+      (a) costs are placeholders -> set cost = avg win/rtp; (b) config.json currently
+      writes maxWin 25000 for ALL modes -> set BetMode.max_win for corvus/ursa to
+      their real 1e6 ceilings (smoke 9965/15581 understate the tail); (c) quotas +
+      RTP convergence to ~0.9665 all 6 modes; (d) mystery DISPLAYED odds = measured
+      post-opt proportions; (e) game_optimization.py opt_params still keyed base/bonus
+      -> KeyErrors on wincaps["bonus"] if run_optimization flipped True; rewrite for
+      the 6 modes FIRST in the measure loop.
 - [ ] Run → measure loop (completion rates vs analytic targets, m2m, hit ≥1/20)
 - [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
 
 ### ▶ PICK UP HERE (next session)
-Feature engine DONE (unit+integration-tested, 20). Roam window DONE (floor 5).
-Reel strips DONE (generate_reels.py; inversion fixed; baseline measured). Next, in
-dependency order:
-1. **6 bet modes + slice tables** — replace the placeholder base/bonus modes with the
-   six specced modes (base, ante_starfall, buy_corvus/ursa/draco/mystery). Buy prices
-   are OUTPUTS (avg win ÷ rtp). Tier mix per mode = scatter_triggers weights (NOT
-   strips — see the corrected model above). wincap slice ≥1e-6 in every mode claiming
-   25,000x.
-2. **Run → measure loop** — the completion-ladder is correct-order but too high/compressed
-   (ursa 70%/draco 65%; want ~50%/rare). Dampen FR wild density in generate_reels.py
-   (regenerate → re-sim), watch the ladder + m2m + hit-rate. Needs production sim counts
-   (1e6), not smoke runs. Then optimize + converge all 6 modes to ~0.9665.
+Feature engine DONE (20 tests). Roam window DONE (floor 5). Reel strips DONE
+(inversion fixed). 6 bet modes DONE structurally (smoke-verified; costs/ceilings/
+convergence are measure-loop outputs). Next, in dependency order:
+1. **Rewrite game_optimization.py opt_params for the 6 modes** — currently keyed
+   base/bonus and WILL KeyError on wincaps["bonus"] the moment run_optimization=True.
+   Per-mode conditions must match each mode's distribution criteria (wincap / corvus /
+   ursa / draco / mystery / basegame / 0). This is the gate to the whole measure loop.
+2. **Run → measure loop (1e6/mode)** — the completion-ladder is correct-order but too
+   high/compressed (ursa 70%/draco 65%; want ~50%/rare). Dampen FR wild density in
+   generate_reels.py (regenerate → re-sim), watch the ladder + m2m + hit-rate. Then
+   optimize + converge all 6 modes to ~0.9665; set costs (avg win/rtp) and the honest
+   corvus/ursa display ceilings from the 1e6 max wins.
 - Regenerate strips: `./env/bin/python games/starwake/reels/generate_reels.py`
 - Run unit tests:  `./env/bin/python -m pytest tests/starwake/ -v`
 - Smoke sim + books: `cd games/starwake && ../../env/bin/python run.py`
-- Inspect a book: decompress `library/publish_files/books_bonus.jsonl.zst`, walk `events`.
+- Inspect a book: decompress `library/publish_files/books_buy_draco.jsonl.zst`, walk `events`.
 
 ## Lessons inherited from Keybearer (do not relearn these)
 - Two-stage pipeline: game_config generates outcomes; optimizer only RE-WEIGHTS

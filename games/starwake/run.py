@@ -21,7 +21,11 @@ if __name__ == "__main__":
     # once paytable/strips/feature are in place
     num_sim_args = {
         "base": int(5e3),
-        "bonus": int(1e3),
+        "ante_starfall": int(3e3),
+        "buy_corvus": int(1e3),
+        "buy_ursa": int(1e3),
+        "buy_draco": int(1e3),
+        "buy_mystery": int(1e3),
     }
 
     run_conditions = {

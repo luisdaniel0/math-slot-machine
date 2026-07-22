@@ -187,117 +187,139 @@ class GameConfig(Config):
             "W": {"multiplier": {2: 100, 3: 50, 4: 50, 5: 50, 10: 30, 20: 20, 50: 5}}
         }
 
-        freegame_condition = {
-            "reel_weights": {
-                self.basegame_type: {"BR0": 1},
-                self.freegame_type: {"FR0": 1},
-            },
-            "scatter_triggers": {3: 50, 4: 20, 5: 5},
-            "mult_values": {
-                self.basegame_type: {1: 1},
-                self.freegame_type: {
-                    2: 60,
-                    3: 80,
-                    4: 50,
-                    5: 20,
-                    10: 15,
-                    20: 10,
-                    50: 5,
-                },
-            },
+        # ----------------------------------------------------------- bet modes (6)
+        # docs/ideas/starwake.md "Bet modes (6)". CORRECTED MODEL: the dealt TIER is
+        # forced by scatter_triggers (an exact star count -> self.scatter_tiers deals
+        # that constellation), NOT by strip star density. Buys pin one tier;
+        # base/ante draw a natural mix (via the per-tier slice quotas); mystery draws
+        # a weighted mix whose displayed odds must match the shipped math.
+        #
+        # COSTS and per-mode DISPLAYED max wins are OUTPUTS measured in the measure
+        # loop (cost = avg win / rtp; displayed max = observed max). Costs below are
+        # PLACEHOLDERS; ante's 1.5x is a design input (the premium). Every BetMode
+        # max_win = the global cap so nothing is silently truncated -- but only Draco
+        # (3x3) can structurally reach 25,000x, so buy_corvus/buy_ursa carry NO forced-
+        # wincap slice (forcing an unreachable cap would loop) and will DISPLAY honest
+        # lower ceilings once measured. Wild-mult ladder is DORMANT under Option A
+        # (game_override pins every wild to x1; the beast is the only multiplier), so
+        # freegame mult_values are {1:1}.
+        fg_mult = {self.basegame_type: {1: 1}, self.freegame_type: {1: 1}}
+
+        def _tier_condition(star_count):
+            """Force exactly `star_count` stars -> deal that one tier, run the feature."""
+            return {
+                "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1}},
+                "scatter_triggers": {star_count: 1},
+                "mult_values": fg_mult,
+                "force_wincap": False,
+                "force_freegame": True,
+            }
+
+        corvus_condition = _tier_condition(3)
+        ursa_condition = _tier_condition(4)
+        draco_condition = _tier_condition(5)
+
+        # "Let the Sky Decide": weighted-random tier. These weights ARE the displayed
+        # odds target (60/30/10, doc L113) -- the shipped odds are the MEASURED post-
+        # optimization proportions (the wincap slice adds a little draco), verified to
+        # match the UI (compliance: probabilities display accurately).
+        mystery_condition = {
+            "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1}},
+            "scatter_triggers": {3: 60, 4: 30, 5: 10},
+            "mult_values": fg_mult,
             "force_wincap": False,
             "force_freegame": True,
         }
 
+        # Wincap: only Draco reaches the cap, so force 5 stars + weight in the juiced
+        # WCAP strip. force_wincap + a slice win_criteria repeat the draw until it caps.
+        draco_wincap_condition = {
+            "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1, "WCAP": 5}},
+            "scatter_triggers": {5: 1},
+            "mult_values": fg_mult,
+            "force_wincap": True,
+            "force_freegame": True,
+        }
+
+        # Non-triggering base spins (draw_board redraws these to <3 stars). "0" is the
+        # forced-loss slice; "basegame" is the paying base slice (funds the hit floor).
         basegame_condition = {
             "reel_weights": {self.basegame_type: {"BR0": 1}},
             "mult_values": {self.basegame_type: {1: 1}},
             "force_wincap": False,
             "force_freegame": False,
         }
-
-        wincap_condition = {
-            "reel_weights": {
-                self.basegame_type: {"BR0": 1},
-                self.freegame_type: {"FR0": 1, "WCAP": 5},
-            },
-            "mult_values": {
-                self.basegame_type: {1: 1},
-                self.freegame_type: {
-                    2: 10,
-                    3: 20,
-                    4: 50,
-                    5: 60,
-                    10: 100,
-                    20: 90,
-                    50: 50,
-                },
-            },
-            "scatter_triggers": {4: 1, 5: 2},
-            "force_wincap": True,
-            "force_freegame": True,
-        }
-
         zerowin_condition = {
             "reel_weights": {self.basegame_type: {"BR0": 1}},
-            "mult_values": {
-                self.basegame_type: {1: 1},
-                self.freegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10, 20: 5, 50: 1},
-            },
+            "mult_values": {self.basegame_type: {1: 1}},
             "force_wincap": False,
             "force_freegame": False,
         }
 
-        mode_maxwins = {"base": self.wincap, "bonus": self.wincap}
-        # Contains all game-logic simulation conditions
+        cap = self.wincap  # engine clamp; per-mode DISPLAYED ceilings are measured
         self.bet_modes = [
+            # base (1x): natural 3/4/5-star mix (quotas ~ the 67/25/8 identity) + a
+            # draco wincap slice + base/zero spins that fund the hit floor.
             BetMode(
-                name="base",
-                cost=1.0,
-                rtp=self.rtp,
-                max_win=mode_maxwins["base"],
-                auto_close_disabled=False,
-                is_feature=True,
-                is_buybonus=False,
+                name="base", cost=1.0, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=True, is_buybonus=False,
                 distributions=[
-                    Distribution(
-                        criteria="wincap",
-                        quota=0.001,
-                        win_criteria=mode_maxwins["base"],
-                        conditions=wincap_condition,
-                    ),
-                    Distribution(
-                        criteria="freegame", quota=0.1, conditions=freegame_condition
-                    ),
-                    Distribution(
-                        criteria="0",
-                        quota=0.4,
-                        win_criteria=0.0,
-                        conditions=zerowin_condition,
-                    ),
-                    Distribution(
-                        criteria="basegame", quota=0.5, conditions=basegame_condition
-                    ),
+                    Distribution(criteria="wincap", quota=0.001, win_criteria=cap, conditions=draco_wincap_condition),
+                    Distribution(criteria="draco", quota=0.007, conditions=draco_condition),
+                    Distribution(criteria="ursa", quota=0.025, conditions=ursa_condition),
+                    Distribution(criteria="corvus", quota=0.067, conditions=corvus_condition),
+                    Distribution(criteria="basegame", quota=0.5, conditions=basegame_condition),
+                    Distribution(criteria="0", quota=0.4, win_criteria=0.0, conditions=zerowin_condition),
                 ],
             ),
+            # ante_starfall (~1.5x, design input): more triggers + a richer tier mix
+            # (higher ursa/draco quotas) + fewer dead spins -> smoother, LOWER vol.
             BetMode(
-                name="bonus",
-                cost=100.0,
-                rtp=self.rtp,
-                max_win=mode_maxwins["bonus"],
-                auto_close_disabled=False,
-                is_feature=False,
-                is_buybonus=True,
+                name="ante_starfall", cost=1.5, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=True, is_buybonus=False,
                 distributions=[
-                    Distribution(
-                        criteria="wincap",
-                        quota=0.001,
-                        win_criteria=mode_maxwins["bonus"],
-                        conditions=wincap_condition,
-                    ),
-                    Distribution(
-                        criteria="freegame", quota=0.1, conditions=freegame_condition
-                    ),
+                    Distribution(criteria="wincap", quota=0.0015, win_criteria=cap, conditions=draco_wincap_condition),
+                    Distribution(criteria="draco", quota=0.015, conditions=draco_condition),
+                    Distribution(criteria="ursa", quota=0.045, conditions=ursa_condition),
+                    Distribution(criteria="corvus", quota=0.10, conditions=corvus_condition),
+                    Distribution(criteria="basegame", quota=0.5, conditions=basegame_condition),
+                    Distribution(criteria="0", quota=0.3, win_criteria=0.0, conditions=zerowin_condition),
+                ],
+            ),
+            # buy_corvus: pin the safe tier. No forced-wincap slice (2x2 can't reach the
+            # cap); the displayed ceiling is an honest measured lower bound.
+            BetMode(
+                name="buy_corvus", cost=6.0, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=False, is_buybonus=True,
+                distributions=[
+                    Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
+                ],
+            ),
+            # buy_ursa: pin the coin-flip tier. Honest measured lower ceiling.
+            BetMode(
+                name="buy_ursa", cost=20.0, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=False, is_buybonus=True,
+                distributions=[
+                    Distribution(criteria="ursa", quota=1.0, conditions=ursa_condition),
+                ],
+            ),
+            # buy_draco: pin the greedy tier -- THE 25,000x product. Wincap slice.
+            BetMode(
+                name="buy_draco", cost=100.0, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=False, is_buybonus=True,
+                distributions=[
+                    Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
+                    Distribution(criteria="draco", quota=0.99, conditions=draco_condition),
+                ],
+            ),
+            # buy_mystery: "Let the Sky Decide" -- weighted mix, discounted vs picking.
+            # Wincap slice funds its draco share reaching the cap.
+            BetMode(
+                name="buy_mystery", cost=40.0, rtp=self.rtp, max_win=cap,
+                auto_close_disabled=False, is_feature=False, is_buybonus=True,
+                distributions=[
+                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),
+                    Distribution(criteria="mystery", quota=0.995, conditions=mystery_condition),
                 ],
             ),
         ]
