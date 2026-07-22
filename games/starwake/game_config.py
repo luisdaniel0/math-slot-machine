@@ -164,6 +164,17 @@ class GameConfig(Config):
         self.beast_start_mult = 2
         self.beast_climb = 1
 
+        # Guaranteed minimum roam window. The beast must get at least this many
+        # on-board (paying) spins after it wakes so "even a last-spin completion
+        # still pays" (docs/ideas/starwake.md L47-48). This is a FLOOR, not the
+        # volatility lever: an early completion already roams to the fixed end
+        # ("finish early = longer roam" = the fat tail, L200-201); the floor only
+        # extends the feature past num_feature_spins when completion lands too
+        # late to fit it. Tuning knob (design doc L255); set to 5 (up from the
+        # initial 3) so a late completion still gets a satisfying roam, while an
+        # early completion is unaffected and keeps its longer roam (the tail).
+        self.min_roam_spins = 5
+
         # Reels
         reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv"}
         self.reels = {}

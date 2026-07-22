@@ -72,6 +72,10 @@ class GameState(GameStateOverride):
         multiplier (Option A: the beast is the ONLY multiplier source). The
         reveal is held until after apply_wilds so the board the player sees
         actually shows its wilds (draw_board would otherwise reveal the bare draw).
+
+        The nominal length is num_feature_spins, but a completion so late that
+        fewer than min_roam_spins spins remain EXTENDS tot_fs so the woken beast
+        always gets its guaranteed roam window (see the wake block below).
         """
         self.reset_fs_spin()
         self._deal_constellation()
@@ -108,6 +112,16 @@ class GameState(GameStateOverride):
             if c.phase == Constellation.CHARGE and c.is_complete:
                 c.wake(random)
                 beast_wake_event(self)
+                # Guarantee the roam window. The beast first appears the spin
+                # AFTER wake, so a completion at spin self.fs needs at least
+                # min_roam_spins spins behind it. An early completion already has
+                # them (tot_fs unchanged -> "finish early = longer roam"); only a
+                # LATE completion pushes tot_fs out, so "even a last-spin
+                # completion still pays" (docs/ideas/starwake.md L47-48). Growing
+                # tot_fs mid-feature is the same shape as a retrigger
+                # (update_fs_retrigger_amt); the update_fs events then report the
+                # extended total, which surfaces the guaranteed roam to the client.
+                self.tot_fs = max(self.tot_fs, self.fs + self.config.min_roam_spins)
 
             self.win_manager.update_gametype_wins(self.gametype)
 

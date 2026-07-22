@@ -24,7 +24,8 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
   Ursa 2x3 / Draco 3x3) that ROAMS to a random position each spin (C&C/MIKO style;
   fine because the fat tail depends on how LONG it stays, not the path — it never
   exits), multiplier climbs +1/spin (enumerable ladder — compliance requires listing
-  all values). Guaranteed min roam window (~3 spins). Fixed ~10 feature spins, no
+  all values). Guaranteed min roam window (5 spins; a late completion extends the
+  feature to honor it, worst case 15 spins). Fixed ~10 feature spins, no
   retrigger. Completion rates are now SIM-DERIVED (coupon-collector model retired);
   tier ladder still holds (more cells = harder) BUT constellation SHAPE now matters
   (cells on more paylines light faster). Cold-start risk: no early wins → snowball
@@ -79,9 +80,8 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       event_config generator). Option A chosen: BEAST is the ONLY multiplier
       (sticky stars x1); inherited freegame wild-mult neutralized in game_override.
       Smoke-verified: book tape correct, snowball visible (wins escalate as wilds
-      stick), beast roams on-grid climbing 2->10. TWO KNOWN FOLLOW-UPS:
-      (a) guaranteed roam window NOT yet implemented — completing on the last spin
-      wakes the beast with no spin left to roam (wasted); (b) completion ladder
+      stick), beast roams on-grid climbing 2->10. ONE KNOWN FOLLOW-UP REMAINS:
+      completion ladder
       INVERTED on scaffold strips (Draco ~59% > Ursa ~52%; Draco should be rarest)
       — the snowball makes 5-kind wins common, and 5-kinds span all reels so they
       cross the "hard" reels-3-4 cells anyway, collapsing reel-position difficulty.
@@ -92,24 +92,50 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       reels 3-4 need long wins): hard-cell ladder Corvus 0 / Ursa 2 / Draco 5 = the
       tier ladder. Validated (counts 4/7/11, on-grid, no dupes). Exact rates
       sim-derived — nudge cells in the measure loop. Cell-map figure shown in chat.
-- [ ] Reel strips via re-runnable weight-table script (BR star density → tier
-      rates ~1/150 / ~1/2000 / ~1/100k start; FR density = λ; WCAP juiced)
+- [x] Guaranteed roam window (config.min_roam_spins = 5). A late completion (fewer
+      than 5 spins left) EXTENDS tot_fs to fs+min_roam so the woken beast always gets
+      ≥5 on-board/paying spins ("even a last-spin completion still pays"); early
+      completions are untouched, keeping "finish early = longer roam" (the fat tail).
+      It is a FLOOR, not a flat +5: roam = max(10-K, 5); worst-case length 15 (complete
+      on spin 10). Same mid-feature tot_fs mutation as a retrigger; update_fs events
+      report the extended total. Integration-tested — tests/starwake/test_run_freespin.py
+      drives the real run_freespin loop with scripted completion timing (7 tests);
+      verified in real books too (187/1000 smoke books extended past 10).
+- [x] Reel strips via re-runnable weight-table script
+      (games/starwake/reels/generate_reels.py — "edit a weight, re-run", seeded).
+      CORRECTED MENTAL MODEL: trigger RATE + TIER MIX are DISTRIBUTION-driven (betmode
+      quotas + scatter_triggers), NOT strip star density — draw_board redraws away
+      >=3-scatter boards in the non-forced branch and forces the count in the forced
+      branches (verified: bonus tier mix 67/25/8% tracks freegame {3:50,4:20,5:5}).
+      So strips = WIN composition only: BR0 lows-heavy (hit-rate = RTP dial) + wilds
+      rare + ~5 stars/reel just to seed forced triggers/anticipation; FR0 wild-rich
+      (~8%, NO stars) = the snowball → completion+roam; FRWCAP juiced (~20% W + H1
+      boost, NO stars). First-pass UNIFORM weights, sim-tunable. Baseline on new
+      strips (1k bonus books): completion corvus 96.9% / ursa 69.8% / draco 64.5% —
+      the scaffold INVERSION is FIXED (draco now < ursa; the scaffold's reel-4-densest
+      wilds were the accident). REMAINING = measure-loop tuning: separate + lower
+      ursa/draco (target ~50% / rare) via FR wild density (lever 1), then per-reel
+      reels-3-4 FR drying (lever 2, machinery not built yet) or harder Draco shape
+      (lever 3, game_config.constellation_cells).
 - [ ] 6 bet modes + slice tables; per-mode displayed max wins (Corvus states an
       honest lower ceiling); wincap slice ≥1e-6 in every mode that claims 25,000x
 - [ ] Run → measure loop (completion rates vs analytic targets, m2m, hit ≥1/20)
 - [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
 
 ### ▶ PICK UP HERE (next session)
-Feature engine is DONE, unit-tested (13), smoke-verified, and pushed. Resume options
-in dependency order:
-1. **Guaranteed roam window** — small self-contained `run_freespin` change; closes the
-   "complete on the last spin ⇒ beast wakes with no spin to roam" waste (see feature-
-   engine note). No dependency on strips — good warm-up.
-2. **Reel strips (weight-table script)** — the real unblock. The completion-ladder bug
-   (Draco over-completes on scaffold strips) can only be measured/fixed on NATURAL
-   (unforced) sims with real strips. This gates the whole measure loop.
-Optional first: integration tests for `run_freespin` (a completed book always has
-`beastWake`; event ordering; beast on-grid in real books) to lock the wiring.
+Feature engine DONE (unit+integration-tested, 20). Roam window DONE (floor 5).
+Reel strips DONE (generate_reels.py; inversion fixed; baseline measured). Next, in
+dependency order:
+1. **6 bet modes + slice tables** — replace the placeholder base/bonus modes with the
+   six specced modes (base, ante_starfall, buy_corvus/ursa/draco/mystery). Buy prices
+   are OUTPUTS (avg win ÷ rtp). Tier mix per mode = scatter_triggers weights (NOT
+   strips — see the corrected model above). wincap slice ≥1e-6 in every mode claiming
+   25,000x.
+2. **Run → measure loop** — the completion-ladder is correct-order but too high/compressed
+   (ursa 70%/draco 65%; want ~50%/rare). Dampen FR wild density in generate_reels.py
+   (regenerate → re-sim), watch the ladder + m2m + hit-rate. Needs production sim counts
+   (1e6), not smoke runs. Then optimize + converge all 6 modes to ~0.9665.
+- Regenerate strips: `./env/bin/python games/starwake/reels/generate_reels.py`
 - Run unit tests:  `./env/bin/python -m pytest tests/starwake/ -v`
 - Smoke sim + books: `cd games/starwake && ../../env/bin/python run.py`
 - Inspect a book: decompress `library/publish_files/books_bonus.jsonl.zst`, walk `events`.
