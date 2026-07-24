@@ -34,18 +34,19 @@ over-completes vs Ursa (~52%); Draco must be the RAREST. The snowball makes
 3-4 cells anyway, collapsing the reel-position difficulty the cell-maps rely on.
 Levers, in order of preference, all measured on NATURAL (bonus-mode) sims:
   1. FR wild density here  -> snowball intensity (dampen = drier completion ladder).
-  2. Per-reel FR drying    -> fewer wilds on reels 3-4 makes reel-4 wins rarer,
-     which hurts Draco (5 hard cells) MORE than Ursa (2), re-separating the tiers.
-     Not shipped yet: build_reel takes a flat table today; add per-reel overrides
-     here when the measure loop calls for it.
+  2. Per-reel FR drying    -> fewer wilds on reels 3-4 makes reel-3/4 wins rarer,
+     which hurts Draco (5 hard cells) MORE than Ursa (2), re-separating the tiers
+     WITHOUT starving ignition (reels 0-2 stay wet -> Corvus + carpet still pay, no
+     cold-start bust). IMPLEMENTED via the {"base","per_reel"} spec form below --
+     this is the active ladder lever (measure loop iteration).
   3. Draco SHAPE (game_config.constellation_cells) -- a strip-independent lever.
-First-pass weights below are UNIFORM per reel and SIM-TUNABLE -- they exist to
-give the measure loop a principled baseline, not to be final.
+The weights below are SIM-TUNABLE, iterated by the measure loop against the buy-mode
+completion ladder (target corvus ~90-97% / ursa ~50% / draco ~15-25%).
 
 Symbols: W wild, S Star (scatter+filler), H1-H4 highs (Leo/Cygnus/Aquila/Lupus),
 L1-L5 low card-ranks. Higher pay => rarer (H1 rarest high, L1 rarest low).
-Weights are per-reel symbol COUNTS; every reel shares one table so the CSV stays
-rectangular (equal column length).
+Weights are per-reel symbol COUNTS. Reels of unequal length (a dried reel has fewer
+symbols) are padded with FILLER dust so the CSV stays rectangular.
 """
 
 import csv
@@ -56,7 +57,11 @@ SEED = 1
 STARWAKE_REELS = os.path.dirname(os.path.abspath(__file__))
 NUM_REELS = 5
 
-# filename -> {symbol: count_per_reel}
+# dried reels are padded back to rectangular with this symbol (cheap dust)
+FILLER = "L5"
+
+# filename -> weight SPEC: either a flat {symbol: count} table (same on every reel)
+# or {"base": {...}, "per_reel": {reel: {sym: count}}} to override specific reels.
 STRIP_WEIGHTS = {
     # Base: lows-heavy (frequent crumbs = hit-rate floor), wilds rare, stars only
     # to seed forced triggers + anticipation. Higher-paying symbol = lower count.
@@ -65,12 +70,20 @@ STRIP_WEIGHTS = {
         "L1": 18, "L2": 20, "L3": 22, "L4": 24, "L5": 26,
         "W": 2, "S": 5,
     },
-    # Freegame: wild-rich (~8%) to power the snowball; NO stars. This is the strip
-    # the completion ladder is tuned on -- drop W to dry completions, raise to wet.
+    # Freegame: THE completion-ladder strip. Reels 0-2 stay wet (W=12 -> snowball
+    # ignites, Corvus + carpet pay, no cold-start bust); reels 3-4 are DRIED (W=4 ->
+    # the "hard" reel-3/4 cells rarely light -> Ursa drops, Draco drops MORE, the
+    # tiers separate). The per-reel W counts are the ladder knob. NO stars.
     "FR0.csv": {
-        "H1": 8, "H2": 10, "H3": 12, "H4": 14,
-        "L1": 16, "L2": 18, "L3": 20, "L4": 22, "L5": 24,
-        "W": 12, "S": 0,
+        "base": {
+            "H1": 8, "H2": 10, "H3": 12, "H4": 14,
+            "L1": 16, "L2": 18, "L3": 20, "L4": 22, "L5": 24,
+            "W": 12, "S": 0,
+        },
+        # reel 4 dried HARDER than reel 3 (Draco has 3 reel-4 cells to Ursa's 1, and
+        # 2 reel-3 cells to Ursa's 1): a bone-dry reel 4 + drier reel 3 pushes Draco
+        # into "rarely wakes" territory while Ursa holds near the coin-flip.
+        "per_reel": {3: {"W": 3}, 4: {"W": 0}},
     },
     # Wincap helper: wild-rich (~20%) + boosted H1 (the top 5-kind) so the FORCED
     # max-win is reachable; NO stars. Weighted 5:1 alongside FR0 in wincap books.
@@ -82,35 +95,48 @@ STRIP_WEIGHTS = {
 }
 
 
-def build_reel(weights, rng):
-    """Return a shuffled list of symbols for one reel from a weight table."""
+def reel_tables(spec):
+    """Normalize a spec to a per-reel list of NUM_REELS weight tables."""
+    if "base" in spec:
+        overrides = spec.get("per_reel", {})
+        tables = []
+        for reel in range(NUM_REELS):
+            w = dict(spec["base"])
+            w.update(overrides.get(reel, {}))
+            tables.append(w)
+        return tables
+    return [dict(spec) for _ in range(NUM_REELS)]  # flat: same table every reel
+
+
+def build_reel(weights, target_len, rng):
+    """One shuffled reel from a weight table, padded to target_len with FILLER."""
     strip = []
     for sym, count in weights.items():
         strip.extend([sym] * count)
+    strip.extend([FILLER] * (target_len - len(strip)))
     rng.shuffle(strip)
     return strip
 
 
-def write_strip(filename, weights):
-    """Write one rectangular CSV (NUM_REELS columns), each column its own shuffle."""
+def write_strip(filename, spec):
+    """Write one rectangular CSV (NUM_REELS columns), each column its own shuffle.
+    Reels are padded to the longest column so per-reel drying stays rectangular."""
     rng = random.Random(SEED + hash(filename) % 10_000)
-    reels = [build_reel(weights, rng) for _ in range(NUM_REELS)]
-    length = len(reels[0])
+    tables = reel_tables(spec)
+    target_len = max(sum(t.values()) for t in tables)
+    reels = [build_reel(tables[r], target_len, rng) for r in range(NUM_REELS)]
     path = os.path.join(STARWAKE_REELS, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
-        for row in range(length):
+        for row in range(target_len):
             writer.writerow([reels[r][row] for r in range(NUM_REELS)])
-    return length
+    return target_len, tables
 
 
 if __name__ == "__main__":
-    for filename, weights in STRIP_WEIGHTS.items():
-        length = write_strip(filename, weights)
-        wild = weights.get("W", 0)
-        star = weights.get("S", 0)
-        print(
-            f"{filename:12s} len={length:3d}/reel  "
-            f"W={wild:2d} ({100 * wild / length:4.1f}%)  S={star:2d}"
-        )
+    for filename, spec in STRIP_WEIGHTS.items():
+        length, tables = write_strip(filename, spec)
+        wilds = [t.get("W", 0) for t in tables]
+        wstr = "/".join(map(str, wilds)) if len(set(wilds)) > 1 else str(wilds[0])
+        print(f"{filename:12s} len={length:3d}/reel  W={wstr:12s}  S={tables[0].get('S', 0)}")
     print("done.")
