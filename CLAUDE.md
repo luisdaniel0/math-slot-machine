@@ -140,21 +140,36 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       guard). FIRST-PASS targets (rtp splits, hr hints, m2m, scaling) -- the measure
       loop tunes them against 1e6 reality. Optimizer binary (PigFarmRust) is BUILT.
       NOT yet run: convergence on smoke-count pools is ambiguous, validate at 1e6.
-- [ ] Run → measure loop (completion rates vs analytic targets, m2m, hit ≥1/20)
+- [x] Run → measure loop PHASE A (completion ladder) DONE. FR drying via per-reel
+      generate_reels.py (base + per_reel overrides): FR0 wet left / dry right (reels
+      0-2 W=12, reel 3 W=3, reel 4 W=0). Ladder 97/70/66 -> 95/54/28 (corvus/ursa/
+      draco, buy-mode books). Draco RESHAPED to fix the ~46% plateau: KEY FINDING
+      (sim-derived, no analytic rate) -- completion is driven overwhelmingly by how
+      many hard cells sit on reel 4, the DRIEST strip (W=0), NOT by payline traffic
+      or adjacency (my first traffic-based reshape went the WRONG way, 46->57%). New
+      draco hard cells = FULL reel-4 column (4,0..4,3) + one easy reel-3 neck (3,2);
+      full column alone ~11-15%, the neck lifts to ~28% (the ~30% dragon-lottery
+      target; neck row 1 -> ~36% is the finer knob). Corvus/ursa unchanged (separate
+      cell-maps). VERIFIED: all 3 buys still bust 0.00% (carpet pays structurally
+      despite 72% draco non-completion), buy_draco still reaches 25000x wincap.
+      Sweep harness: scratchpad/sweep_draco.py (patches cells in-process, regens
+      one mode, counts beastWake books). PHASE B (RTP convergence + costs/ceilings
+      at 1e6) NOT started.
 - [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
 
 ### ▶ PICK UP HERE (next session)
-Feature engine DONE (20 tests). Roam window DONE (floor 5). Reel strips DONE
-(inversion fixed). 6 bet modes DONE structurally. opt_params DONE (verified, 6
-modes). The whole scaffold is in place -- next is the MEASURE LOOP:
-1. **Run → measure loop (1e6/mode)** — flip run.py to production counts +
-   run_optimization=True (binary is built). Iterate: (i) the completion ladder is
-   correct-order but too high/compressed (ursa 70%/draco 65%; want ~50%/rare) ->
-   dampen FR wild density in generate_reels.py, regenerate, re-sim; (ii) converge all
-   6 modes to ~0.9665 (adjust opt_params rtp splits/m2m if a slice can't hit target);
-   (iii) set costs = avg win/rtp and the honest corvus/ursa display ceilings (their
-   BetMode.max_win) from the 1e6 max wins; (iv) verify mystery displayed odds =
-   measured proportions; (v) check m2m, base hit-rate, wincap slice ≥1e-6.
+Scaffold complete + MEASURE LOOP PHASE A DONE (ladder 95/54/28; all three tiers on
+identity, buys bust 0%). NEXT = PHASE B (RTP convergence + costs/ceilings at 1e6):
+flip run.py to production counts (1e6) + run_optimization=True (binary built).
+Converge all 6 modes to ~0.9665 (adjust opt_params rtp splits/m2m if a slice can't
+hit target); set costs = avg win/rtp + honest corvus/ursa display ceilings
+(BetMode.max_win) from the 1e6 max wins (smoke 1k understates the tail: corvus
+~7141x / ursa ~12776x here but earlier reads went 9965/15581 -- use the 1e6 max);
+verify mystery displayed odds = measured post-opt; check m2m, base hit-rate,
+wincap slice >=1e-6.
+- KNOWN NIT: generate_reels.py seeds off hash(filename) (randomized per process), so
+  every regen reshuffles ALL strips (churns BR0/FRWCAP even when only FR0 changed).
+  Content is weight-equivalent; swap for a stable seed (crc32/index) when convenient.
 - Regenerate strips: `./env/bin/python games/starwake/reels/generate_reels.py`
 - Run unit tests:  `./env/bin/python -m pytest tests/starwake/ -v`
 - Smoke sim + books: `cd games/starwake && ../../env/bin/python run.py`

@@ -141,10 +141,23 @@ class GameConfig(Config):
             # reaches 2 hard cells (3,0),(4,1) -> coin-flip completion
             "ursa": [(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (3, 0), (4, 1)],
             # 11-star serpent: 6-star body (left, easy = the wild carpet) + 5 hard
-            # head/tail cells on reels 3-4 -> rarely completes (dragon lottery)
+            # head cells -> rarely completes (dragon lottery). Hard cells = the
+            # FULL reel-4 column (4,0..4,3) + one reel-3 neck (3,2). RESHAPED from
+            # the old (3,0)(3,1)+(4,1)(4,2)(4,3) which plateaued ~46% (too warm).
+            # KEY FINDING (sim-derived, no clean analytic rate): completion is
+            # driven overwhelmingly by how many hard cells sit on reel 4 -- the
+            # DRIEST strip (FR0 reel-4 W=0), so a reel-4 cell can only light when a
+            # winning line crosses it, not from a native wild. Reel-3 (FR0 W=3) is
+            # a much softer gate; a single easy reel-3 neck (row 2, high payline
+            # traffic) is the fine knob. Full reel-4 column alone = ~11-15%; adding
+            # the (3,2) neck lifts it to ~28% (measured, buy_draco 4k books) = the
+            # ~30% dragon-lottery target. Ladder now corvus ~95 / ursa ~54 / draco
+            # ~28. Thematically the dragon's head forms LAST, only once the wild
+            # carpet floods the whole right edge. Nudge the neck (row 1 -> ~36%,
+            # rows 0/3 hard -> ~11-15%) if the measure loop wants a different rate.
             "draco": [
                 (0, 2), (0, 3), (1, 1), (1, 2), (2, 0), (2, 1),
-                (3, 0), (3, 1), (4, 1), (4, 2), (4, 3),
+                (3, 2), (4, 0), (4, 1), (4, 2), (4, 3),
             ],
         }
 
