@@ -15,5 +15,14 @@
         "reelset",
         "reelstop",
         "Reelstrips"
-    ]
+    ],
+    "files.watcherExclude": {
+        "**/library/**": true,
+        "**/__pycache__/**": true,
+        "**/*.zst": true,
+        "**/*.jsonl": true
+    },
+    "search.exclude": {
+        "**/library/**": true
+    }
 }

@@ -33,40 +33,48 @@ class GameConfig(Config):
         # Values are total-bet multiples PER LINE, stacking across lines.
         # W pays 5-kind ONLY (no 3/4-kind entries -> short wild lines can never
         # override longer real-symbol lines; critical because the feature
-        # manufactures sticky wilds). Top at 50x (cooler than keybearer's 80)
-        # because the carpet + climbing beast amplify substituted 5-kinds.
-        # Low 3-kinds pay dust on purpose: frequent-crumb texture (market's
-        # biggest paying bucket is 0.25-0.5x) funds the hit-rate floor cheaply,
-        # keeping the RTP budget in the tail. Steep ladders (~x4/step) = vol.
+        # manufactures sticky wilds).
+        # ASYMMETRIC RESCALE (measure loop): 5-kinds /4, 4-kinds /2, 3-kinds HELD.
+        # The wild carpet extends nearly every line to full length, so the feature
+        # takes 61% of its money from 5-kinds while the base game takes only 13%
+        # (measured, pre-multiplier, over 40k base + 3k feature books). Cutting the
+        # TOP of the ladder therefore drains the feature x2.49 while costing the
+        # base only x1.29 -- a uniform cut of the same feature size would have cost
+        # the base x2.50. Holding the 3-kinds keeps the dust intact: frequent-crumb
+        # texture (market's biggest paying bucket is 0.25-0.5x) funds the hit-rate
+        # floor cheaply, keeping the RTP budget in the tail.
+        # The trade this makes: ladder steepness drops from ~x4/step to ~x2/step,
+        # so volatility must come from where the design always said it does --
+        # completion-time x tier tail -- not from symbol steepness.
         # H1=Leo, H2=Cygnus, H3=Aquila, H4=Lupus; lows = card-rank line-art.
         self.paytable = {
-            (5, "W"): 60,
-            (5, "H1"): 50,
-            (4, "H1"): 12,
+            (5, "W"): 15,
+            (5, "H1"): 12,
+            (4, "H1"): 6,
             (3, "H1"): 3,
-            (5, "H2"): 25,
-            (4, "H2"): 8,
+            (5, "H2"): 6,
+            (4, "H2"): 4,
             (3, "H2"): 2,
-            (5, "H3"): 15,
-            (4, "H3"): 5,
+            (5, "H3"): 4,
+            (4, "H3"): 2.5,
             (3, "H3"): 1.5,
-            (5, "H4"): 12,
-            (4, "H4"): 4,
+            (5, "H4"): 3,
+            (4, "H4"): 2,
             (3, "H4"): 1,
-            (5, "L1"): 5,
-            (4, "L1"): 1.5,
+            (5, "L1"): 1.2,
+            (4, "L1"): 0.75,
             (3, "L1"): 0.5,
-            (5, "L2"): 4,
-            (4, "L2"): 1.2,
+            (5, "L2"): 1,
+            (4, "L2"): 0.6,
             (3, "L2"): 0.4,
-            (5, "L3"): 3,
-            (4, "L3"): 1.0,
+            (5, "L3"): 0.75,
+            (4, "L3"): 0.5,
             (3, "L3"): 0.3,
-            (5, "L4"): 2.5,
-            (4, "L4"): 0.8,
+            (5, "L4"): 0.6,
+            (4, "L4"): 0.4,
             (3, "L4"): 0.2,
-            (5, "L5"): 2,
-            (4, "L5"): 0.6,
+            (5, "L5"): 0.5,
+            (4, "L5"): 0.3,
             (3, "L5"): 0.2,
         }
 
@@ -155,6 +163,19 @@ class GameConfig(Config):
             # ~28. Thematically the dragon's head forms LAST, only once the wild
             # carpet floods the whole right edge. Nudge the neck (row 1 -> ~36%,
             # rows 0/3 hard -> ~11-15%) if the measure loop wants a different rate.
+            #
+            # SHAPE SWEEP (sweep_draco_cells.py, n=40k each, FR0 W=4/3/0):
+            #   easy/gate  6/5 (this)  11.9%  cost  651x  max/cost 30x   <- best
+            #              8/3         40.4%  cost 1965x  max/cost 11x
+            #              5/6         19.7%  cost 1111x  max/cost 18x
+            #              7/4         16.2%  cost  894x  max/cost 24x
+            # This shape won on every axis, so it STAYS -- and note the reason 5/6
+            # loses. A reel-3 cell is a gate AND A KEY: once lit it is a sticky wild
+            # sitting on reel 3, which is precisely the bridge a 5-kind needs to
+            # reach the reel-4 column. ONE neck cell is a net gate; TWO flip it into
+            # a net key and completion goes UP despite there being more cells to
+            # light. Cell count is not difficulty -- position relative to the dry
+            # column is. Do not "harden" Draco by adding reel-3 cells.
             "draco": [
                 (0, 2), (0, 3), (1, 1), (1, 2), (2, 0), (2, 1),
                 (3, 2), (4, 0), (4, 1), (4, 2), (4, 3),
@@ -171,11 +192,34 @@ class GameConfig(Config):
         }
         # Option A (see the sticky-star analysis): the BEAST is the only multiplier
         # source. Sticky lit stars are plain wilds (x1); the beast carries an
-        # enumerable climbing ladder -- starts at beast_start_mult on wake, +climb
-        # each roam spin. Both are TUNING knobs (doc lines 255-257) and the primary
-        # high-vol dial alongside the tier spread.
-        self.beast_start_mult = 2
-        self.beast_climb = 1
+        # enumerable ladder, one rung per roam spin. This list IS the compliance
+        # "all obtainable values" table, so it is written out rather than derived.
+        #
+        # The SHAPE is the tail, and the tail is the product. A flat +1 climb
+        # (the first-pass 2..10) made the luckiest run only ~3x an ordinary one,
+        # which measured out as buy_draco mean 787x / max 5,040x -- a dependable
+        # grinder with 28.8% of features over 1000x and NO reachable 25,000x.
+        # Accelerating rungs fix that without touching the median: the early rungs
+        # stay near the old values, so a LATE completion (common -> short roam)
+        # plays as before, while a rare EARLY completion rides all nine rungs.
+        # Nine rungs = the longest possible roam (num_feature_spins - 1); roam()
+        # clamps at the top so a length change can never run off the end.
+        #
+        # Tier spread is the other half of the identity (CLAUDE.md): corvus stays
+        # the tame "reliable beast hunt", draco becomes the lottery.
+        # Every ladder STARTS AT 1-2, not 2-3. Measured: the feature's raw payout
+        # before any multiplier already costs 89/101/165x against a 50/100/200x
+        # budget, so a starting rung above 1 is a tax charged on the common case
+        # (a short roam) on every single feature. Low early rungs pull the mean
+        # down; high tops push the ceiling up; the same edit does both, which no
+        # paytable change can. Corvus accelerates too -- it completes 96% of the
+        # time and used to pay nearly the same every run (max/cost 4x), so even
+        # the "reliable" tier needs a reason to want a FAST completion.
+        self.constellation_mult_ladders = {
+            "corvus": [1, 1, 2, 3, 4, 6, 8, 11, 15],
+            "ursa": [1, 2, 3, 5, 8, 12, 18, 26, 38],
+            "draco": [2, 3, 6, 11, 20, 35, 60, 100, 165],
+        }
 
         # Guaranteed minimum roam window. The beast must get at least this many
         # on-board (paying) spins after it wakes so "even a last-spin completion
@@ -270,6 +314,17 @@ class GameConfig(Config):
         }
 
         cap = self.wincap  # engine clamp; per-mode DISPLAYED ceilings are measured
+
+        # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
+        # sweep_fr0.py at n=40k with the forced-wincap slice REMOVED -- that slice is a
+        # sampling quota, not a probability, so leaving it in inflates the average and
+        # would price the mode off a pool the optimizer is about to re-weight anyway.
+        # corvus/ursa are single-distribution modes, so their pools ARE natural.
+        # mystery is the 60/30/10 blend of the three tier means (0.6*217 + 0.3*274 +
+        # 0.1*630 = 275x). These are INPUTS to optimization even though they are
+        # OUTPUTS of design -- refine them from the 1e6 pool, then re-run `run.py
+        # optimize` alone (the optimizer step does not need the sims regenerated).
+        # base stays 1.0 by definition; ante is a bet multiplier chosen by design.
         self.bet_modes = [
             # base (1x): natural 3/4/5-star mix (quotas ~ the 67/25/8 identity) + a
             # draco wincap slice + base/zero spins that fund the hit floor.
@@ -302,7 +357,7 @@ class GameConfig(Config):
             # buy_corvus: pin the safe tier. No forced-wincap slice (2x2 can't reach the
             # cap); the displayed ceiling is an honest measured lower bound.
             BetMode(
-                name="buy_corvus", cost=6.0, rtp=self.rtp, max_win=cap,
+                name="buy_corvus", cost=224.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
@@ -310,7 +365,7 @@ class GameConfig(Config):
             ),
             # buy_ursa: pin the coin-flip tier. Honest measured lower ceiling.
             BetMode(
-                name="buy_ursa", cost=20.0, rtp=self.rtp, max_win=cap,
+                name="buy_ursa", cost=283.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="ursa", quota=1.0, conditions=ursa_condition),
@@ -318,7 +373,7 @@ class GameConfig(Config):
             ),
             # buy_draco: pin the greedy tier -- THE 25,000x product. Wincap slice.
             BetMode(
-                name="buy_draco", cost=100.0, rtp=self.rtp, max_win=cap,
+                name="buy_draco", cost=651.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
@@ -328,7 +383,7 @@ class GameConfig(Config):
             # buy_mystery: "Let the Sky Decide" -- weighted mix, discounted vs picking.
             # Wincap slice funds its draco share reaching the cap.
             BetMode(
-                name="buy_mystery", cost=40.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=285.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),

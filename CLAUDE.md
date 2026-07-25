@@ -157,22 +157,65 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       at 1e6) NOT started.
 - [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
 
+- [x] ECONOMY RE-TUNE (the buy prices were ~10x too high; cost = avg win/rtp, and
+      Stake caps buy cost at 1000x). Buy cost 2208/2907/7258x -> **224/283/651x**,
+      correctly ordered, all under the gate, 0.00% zero-pay throughout. Four changes:
+      (1) MULTIPLIER BUG -- the beast stamps its multiplier on EVERY block cell and
+      the SDK's "symbol" strategy SUMS multipliers along a line, so a payline crossing
+      2 block cells paid 2*M (3*M for the 3-wide blocks). 87% of buy_corvus's payout
+      came from double-crossings, and the enumerable ladder was really {M,2M,3M}.
+      Fixed with a new `max_symbol` strategy (src/wins/multiplier_strategy.py, also
+      made apply_mult dispatch lazily instead of building all strategies per line win);
+      game_executables opts in. (2) PAYTABLE asymmetric rescale 5-kinds /4, 4-kinds /2,
+      3-kinds HELD -- feature takes 61% of its money from 5-kinds vs base's 13%, so
+      this drains the feature x2.49 for only x1.29 off the base. (3) PER-TIER MULT
+      LADDERS replacing beast_start_mult/beast_climb: explicit lists, rung per roam
+      spin, clamped at the top (config.constellation_mult_ladders). (4) FR0 dried
+      12->4 on reels 0-2.
+- [x] PHASE B RUN AT 1e6/MODE + OPTIMIZER CONVERGED. All six modes land on
+      RTP 0.9665/0.9665/0.9665/0.9665/0.9652/0.9661, band spread 0.126% (limit 0.5%),
+      every mode <= the 0.9670 Stake ceiling. Base hit rate 29.25% (1 in 3.4, gate is
+      1 in 20). Two optimizer-config bugs found and fixed, BOTH about fence ORDER --
+      fences are assigned in sequence and CONSUME the books they match:
+      (a) base/ante had three tier fences all searching {"symbol":"scatter"}, so draco
+      swallowed all ~100k feature books and the run died with "ursa matched 0 books".
+      Fixed by adding kind=5/4/3 (the scatter count the engine already records at
+      trigger) -- exactly what keybearer's game_optimization.py:40 already did.
+      (b) basegame is the ONLY fence with no identity condition (a catch-all) and it
+      sat BEFORE the "0" fence, absorbing the zero-win books that "0" should hold.
+      That skewed the weight denominator and every slice overshot by a UNIFORM 1.019x
+      (base 0.9850, ante 0.9781 -- both over the ceiling). Moving "0" ahead of the
+      catch-all made every slice hit its target to 4dp. NOTE verify_optimization_input
+      catches NEITHER: it only checks the rtp splits sum and that criteria match.
+- [ ] Set per-mode displayed ceilings + mystery odds (below); event-ID finder
+
 ### ▶ PICK UP HERE (next session)
-Scaffold complete + MEASURE LOOP PHASE A DONE (ladder 95/54/28; all three tiers on
-identity, buys bust 0%). NEXT = PHASE B (RTP convergence + costs/ceilings at 1e6):
-flip run.py to production counts (1e6) + run_optimization=True (binary built).
-Converge all 6 modes to ~0.9665 (adjust opt_params rtp splits/m2m if a slice can't
-hit target); set costs = avg win/rtp + honest corvus/ursa display ceilings
-(BetMode.max_win) from the 1e6 max wins (smoke 1k understates the tail: corvus
-~7141x / ursa ~12776x here but earlier reads went 9965/15581 -- use the 1e6 max);
-verify mystery displayed odds = measured post-opt; check m2m, base hit-rate,
-wincap slice >=1e-6.
-- KNOWN NIT: generate_reels.py seeds off hash(filename) (randomized per process), so
-  every regen reshuffles ALL strips (churns BR0/FRWCAP even when only FR0 changed).
-  Content is weight-equivalent; swap for a stable seed (crc32/index) when convenient.
+PHASE B IS CONVERGED at 1e6. Costs 1 / 1.5 / 224 / 283 / 651 / 285x. Remaining:
+1. DISPLAYED CEILINGS: corvus and ursa still publish max_win=25000 they cannot reach.
+   Measured 1e6 ceilings are corvus 1,515x (P=7.3e-06) and ursa 4,774x (P=7.5e-07).
+   Setting BetMode.max_win also sets the ENGINE CLAMP (run_sims.py:48 assigns
+   config.wincap = bm.get_wincap()), so change it and re-run those two modes to
+   confirm; the clamped tail is below measurement resolution but should be verified.
+2. MYSTERY ODDS: measured post-opt mix is 25.74 / 63.20 / 11.06% against the intended
+   60/30/10. Compliance requires the UI to display the TRUE odds, so either publish
+   26/63/11 or give buy_mystery per-tier fences (kind=3/4/5, like base) so the mix
+   becomes a designed quantity instead of whatever hits RTP. Design call.
+3. Still open: the two STRUCTURAL feel levers (feature length 10 spins, and beast
+   block sizes -- both FEEL calls, doc L255/L259, worth a playtest first). They are
+   the only levers left for corvus, whose raw pre-multiplier cost is 89x -- i.e. the
+   feature's base payout is already its whole budget and every multiplier is over it.
+   Changing either invalidates this whole Phase B run.
+- base wincap slice sits at P=8.0e-07: clears the doc's ">= ~1e-7 / better than 1 in
+  10M" gate, marginally under the stricter 1e-6 written elsewhere in this file.
+- ⚠ ANY forced-wincap slice LOOPS FOREVER if the cap drifts out of structural reach
+  (base/ante/buy_draco/buy_mystery all carry one). That is what a "hang" means here,
+  not a crash. Both sweep harnesses strip the slice for exactly this reason.
 - Regenerate strips: `./env/bin/python games/starwake/reels/generate_reels.py`
 - Run unit tests:  `./env/bin/python -m pytest tests/starwake/ -v`
-- Smoke sim + books: `cd games/starwake && ../../env/bin/python run.py`
+- Measure loop (~15s/mode): `cd games/starwake && ../../env/bin/python run.py buy_corvus 20000`
+- FR0 density sweep: `./env/bin/python games/starwake/reels/sweep_fr0.py 4 3 0 40000`
+- Draco shape sweep: `./env/bin/python games/starwake/reels/sweep_draco_cells.py 40000`
+- Full detached pool: `cd games/starwake && ./run_modes.sh`   (log in library/logs/)
 - Inspect a book: decompress `library/publish_files/books_buy_draco.jsonl.zst`, walk `events`.
 
 ## Lessons inherited from Keybearer (do not relearn these)
@@ -195,6 +238,20 @@ wincap slice >=1e-6.
   spins guarantees this; Keybearer's 60-spin cap book took ~10min — never again).
 
 ## Gotchas
+- MEMORY: `batching_size` is a memory knob, not a speed knob. The SDK derives batch
+  count as round(sims/threads/batching_size), so at 1e5/14/5000 it rounds to ONE batch
+  and every thread holds 7,142 books at once -- MORE than at 1e6. A buy book is ~34 KB
+  of JSON vs ~4.6 KB for a base book, so that was ~15 GB live and it took the whole WSL
+  VM down mid-buy_corvus. 1000 pins the in-flight set to ~14k books at any sim count.
+  Lowering a sim count can make memory WORSE.
+- Drying FR0 moves the COMPLETION RATE, not the payout per completion (draco's
+  completed-feature mean held 6451 -> 6074 -> 5945x across W=12/4/2). So density is
+  the lever for Draco's rarity and the WRONG lever for Corvus's price.
+- A ladder is the only knob that lowers the mean and raises the ceiling at once. A
+  paytable cut scales body and tail together, so it can never widen max-vs-typical --
+  and cutting it far enough to fix the price put the 25,000x cap out of reach.
+- Reel-3 constellation cells are a gate AND A KEY -- see the shape sweep in
+  game_config.constellation_cells. Never "harden" a tier by adding reel-3 cells.
 - Fill rule = WIN-LINE crosses cell (NOT star-landing; λ/fly-to-cell retired). This
   couples completion to win-rate + paytable + strips + shape simultaneously — no clean
   analytic completion rate, derive by sim, expect slower convergence (interdependent

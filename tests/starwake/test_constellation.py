@@ -23,6 +23,7 @@ import pytest
 # games/starwake isn't a package on sys.path; add it so we can import the module.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "games", "starwake"))
 from constellation import Constellation  # noqa: E402
+from game_config import GameConfig  # noqa: E402
 
 from tests.win_calculations.game_test_config import GamestateTest, create_blank_board  # noqa: E402
 from src.calculations.lines import Lines  # noqa: E402
@@ -150,13 +151,13 @@ def test_snowball_sticky_wild_lights_a_new_cell(gs):
 
 # ------------------------------------------------------------------ beast / roam
 def test_wake_requires_completion_then_sets_roam_state():
-    c = make_constellation([(0, 0), (1, 0)], beast_shape=(2, 2), beast_start_mult=3)
+    c = make_constellation([(0, 0), (1, 0)], beast_shape=(2, 2), mult_ladder=[3, 4, 5])
     with pytest.raises(AssertionError):
         c.wake(random.Random(0))           # not complete yet
     c.light_from_wins([(0, 0), (1, 0)])
     c.wake(random.Random(0))
     assert c.phase == Constellation.ROAM
-    assert c.multiplier == 3               # start multiplier on wake
+    assert c.multiplier == 3               # rung 0 on wake
     assert c.woke_this_spin is True
     assert c.beast_origin in c._valid_origins()
 
@@ -178,23 +179,49 @@ def test_beast_block_covers_shape_and_stays_on_grid(shape, expected):
 
 
 def test_beast_never_exits_and_multiplier_ladder_is_enumerable():
-    c = make_constellation([(0, 0), (1, 0)], beast_shape=(3, 3),
-                           beast_start_mult=2, beast_climb=1)
+    ladder = [2, 3, 5, 8, 12]
+    c = make_constellation([(0, 0), (1, 0)], beast_shape=(3, 3), mult_ladder=ladder)
     c.light_from_wins([(0, 0), (1, 0)])
     rng = random.Random(1234)
     c.wake(rng)
-    assert c.multiplier == 2               # ladder rung 0 = start
+    assert c.multiplier == ladder[0]       # rung 0 on wake
+    seen = {c.multiplier}
     for step in range(1, 500):
         c.roam(rng)
         # never exits, on every single roam
         assert all(0 <= r < 5 and 0 <= row < 4 for (r, row) in c.beast_cells())
-        # deterministic +1 ladder: 2, 3, 4, ... (compliance can list every value)
-        assert c.multiplier == 2 + step
+        # walks the ladder rung by rung, then HOLDS the top -- a roam longer than
+        # the ladder must never index off the end or invent an unpublished value
+        assert c.multiplier == ladder[min(step, len(ladder) - 1)]
+        seen.add(c.multiplier)
+    # compliance: the obtainable set is exactly the published list, nothing else
+    assert seen == set(ladder)
+
+
+def test_accelerating_ladder_pays_a_long_roam_far_more_than_a_short_one():
+    """The tail mechanism itself: rung 0 is where a late completion lands and the
+    top rung is where a rare early completion lands. A flat +1 ladder made those
+    two nearly equal, which is why the feature had no tail (buy_draco max was only
+    6.4x its mean). Guard the SHAPE, not the exact numbers."""
+    draco = GameConfig().constellation_mult_ladders["draco"]
+    assert draco[-1] / draco[0] >= 20, "top rung must dwarf the first, or there is no tail"
+    gaps = [b - a for a, b in zip(draco, draco[1:])]
+    assert all(b >= a for a, b in zip(gaps, gaps[1:])), "steps must accelerate, never flatten"
+    assert all(isinstance(v, int) and v > 0 for v in draco), "rungs must be publishable integers"
+
+
+def test_every_tier_ladder_covers_the_longest_possible_roam():
+    """An immediate completion leaves num_feature_spins-1 roam spins. Short ladders
+    would silently clamp, capping the tail exactly where it is supposed to pay."""
+    config = GameConfig()
+    longest_roam = config.num_feature_spins - 1
+    for tier, ladder in config.constellation_mult_ladders.items():
+        assert len(ladder) >= longest_roam, f"{tier} ladder clamps before the roam ends"
 
 
 def test_beast_cells_are_wild_and_carry_the_climbing_multiplier(gs):
     c = make_constellation([(0, 0), (1, 0)], beast_shape=(2, 2),
-                           beast_start_mult=3, beast_climb=1)
+                           mult_ladder=[3, 4, 5])
     c.light_from_wins([(0, 0), (1, 0)])
     c.wake(random.Random(0))
     for reel in range(5):

@@ -48,8 +48,7 @@ class GameState(GameStateOverride):
             num_reels=self.config.num_reels,
             num_rows=self.config.num_rows[0],  # uniform (4 on every reel)
             beast_shape=self.config.constellation_beast_shapes[tier],
-            beast_start_mult=self.config.beast_start_mult,
-            beast_climb=self.config.beast_climb,
+            mult_ladder=self.config.constellation_mult_ladders[tier],
         )
         constellation_dealt_event(self)
 

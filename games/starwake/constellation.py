@@ -16,10 +16,17 @@ Rules encoded here (source of truth = docs/ideas/starwake.md + CLAUDE.md):
   - Complete the set -> the beast wakes: an oversized block wild (Corvus 2x2 /
     Ursa 2x3 / Draco 3x3) that ROAMS to a random valid position each spin and
     NEVER exits the grid (the tail depends on how long it stays, not the path).
-  - The multiplier lives on the beast (not a global meter): it starts on wake
-    and climbs +1 each spin. Enumerable ladder (compliance lists every value).
-Values like start-multiplier / climb are TUNING knobs (design doc lines 255-257);
-they are constructor args, not magic numbers baked into the logic.
+  - The multiplier lives on the beast (not a global meter): it takes the next
+    rung of an explicit per-tier LADDER on every roam spin. Enumerable by
+    construction -- the published "all obtainable values" list IS the config
+    list, rather than something derived from a start+climb formula.
+The ladder is a TUNING knob (design doc lines 256-257: "primary high-vol dial
+alongside tier spread") and a constructor arg, not baked into the logic. Its
+SHAPE is what generates the tail: rungs that accelerate pay an early completion
+(rare -> long roam) enormously while leaving a late completion (common -> short
+roam) almost untouched, which is the only way to widen max-vs-typical. A flat
++1 ladder cannot do that -- it makes the best run barely better than an ordinary
+one, and no paytable change can add a tail back.
 """
 
 
@@ -36,8 +43,7 @@ class Constellation:
         num_reels,
         num_rows,
         beast_shape,
-        beast_start_mult=2,
-        beast_climb=1,
+        mult_ladder=(2, 3, 4, 5, 6, 7, 8, 9, 10),
     ):
         """
         tier:            "corvus" | "ursa" | "draco" (label only, for events).
@@ -45,21 +51,24 @@ class Constellation:
         num_reels:       grid width.
         num_rows:        grid height (uniform; Starwake is 4 on every reel).
         beast_shape:     (reel_span, row_span) of the block wild on completion.
-        beast_start_mult:multiplier the beast shows the spin it wakes.
-        beast_climb:     added to the multiplier every roam spin after wake.
+        mult_ladder:     the beast's multiplier per roam spin -- rung 0 is what it
+                         shows the spin it appears, and each further roam takes the
+                         next rung. This list IS the enumerable ladder published in
+                         the rules, so keep it explicit rather than computed.
         """
         self.tier = tier
         self.target_cells = [tuple(c) for c in target_cells]
         self.num_reels = num_reels
         self.num_rows = num_rows
         self.beast_w, self.beast_h = beast_shape
-        self.beast_start_mult = beast_start_mult
-        self.beast_climb = beast_climb
+        self.mult_ladder = list(mult_ladder)
+        assert self.mult_ladder, "the beast needs at least one multiplier rung"
 
         # --- persistent state (this is the stuff that must survive the loop) ---
         self.lit = set()             # (reel,row) cells lit so far -- sticky, grows only
         self.phase = self.CHARGE
         self.multiplier = 1          # only meaningful once the beast is awake
+        self._rung = None            # index into mult_ladder; None until wake
         self.beast_origin = None     # (reel,row) top-left of the block; None until wake
         # --- per-spin scratch (consumed by the event emitters each spin) ---
         self.newly_lit = []          # cells lit THIS spin -> starLit events
@@ -131,15 +140,24 @@ class Constellation:
         assert self.is_complete, "beast cannot wake before the set is complete"
         assert self.phase == self.CHARGE, "beast already awake"
         self.phase = self.ROAM
-        self.multiplier = self.beast_start_mult
+        self._rung = 0
+        self.multiplier = self.mult_ladder[0]
         self.beast_origin = rng.choice(self._valid_origins())
         self.woke_this_spin = True
 
     def roam(self, rng):
-        """A post-wake spin: move the block to a new valid cell and climb the mult."""
+        """A post-wake spin: move the block to a new valid cell and climb the mult.
+
+        The rung clamps at the top of the ladder. A ladder long enough for the
+        longest possible roam never hits that clamp (an immediate completion
+        gives num_feature_spins-1 roam spins), but clamping means changing the
+        feature length can never index off the end -- it just holds the top
+        value, which is also the only behaviour that stays publishable.
+        """
         assert self.phase == self.ROAM, "roam() before the beast woke"
         self.beast_origin = rng.choice(self._valid_origins())
-        self.multiplier += self.beast_climb
+        self._rung = min(self._rung + 1, len(self.mult_ladder) - 1)
+        self.multiplier = self.mult_ladder[self._rung]
         self.woke_this_spin = False
 
     # ------------------------------------------------------------------- board

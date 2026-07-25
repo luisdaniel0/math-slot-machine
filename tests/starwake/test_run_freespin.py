@@ -121,9 +121,12 @@ def test_last_spin_completion_still_gets_full_roam_window():
     assert gs.tot_fs == 15
     # the beast pays on every one of those spins and never leaves the grid
     assert all(_on_grid(r["cells"]) for r in roams)
-    # enumerable climbing ladder: start 2, then +1 per roam -> 2,3,4,5,6
-    assert [r["multiplier"] for r in roams] == [2, 3, 4, 5, 6]
-    assert [e["multiplier"] for e in events_of(gs, "multiplierClimb")] == [3, 4, 5, 6]
+    # the beast walks the DRACO ladder from rung 0, one rung per roam spin. A
+    # last-spin completion only ever reaches rung 4 -- the accelerating top of
+    # the ladder is reserved for the rare early completion, which is the tail.
+    draco = GameConfig().constellation_mult_ladders["draco"]
+    assert [r["multiplier"] for r in roams] == draco[:5]
+    assert [e["multiplier"] for e in events_of(gs, "multiplierClimb")] == draco[1:5]
 
 
 def test_late_completion_extends_by_the_minimum_only():
@@ -151,7 +154,9 @@ def test_early_completion_roams_to_the_fixed_end_no_extension():
     assert gs.tot_fs == 10, "early completion must not extend the feature"
     roams = events_of(gs, "beastRoam")
     assert len(roams) == 7, "completing at spin 3 roams spins 4..10 -- more than the floor of 5"
-    assert [r["multiplier"] for r in roams] == [2, 3, 4, 5, 6, 7, 8]
+    # seven roam spins = the first seven rungs of the CORVUS ladder, in order
+    corvus = GameConfig().constellation_mult_ladders["corvus"]
+    assert [r["multiplier"] for r in roams] == corvus[:7]
     assert all(_on_grid(r["cells"]) for r in roams)
 
 

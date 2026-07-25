@@ -52,6 +52,7 @@ symbols) are padded with FILLER dust so the CSV stays rectangular.
 import csv
 import os
 import random
+import zlib
 
 SEED = 1
 STARWAKE_REELS = os.path.dirname(os.path.abspath(__file__))
@@ -70,15 +71,25 @@ STRIP_WEIGHTS = {
         "L1": 18, "L2": 20, "L3": 22, "L4": 24, "L5": 26,
         "W": 2, "S": 5,
     },
-    # Freegame: THE completion-ladder strip. Reels 0-2 stay wet (W=12 -> snowball
-    # ignites, Corvus + carpet pay, no cold-start bust); reels 3-4 are DRIED (W=4 ->
-    # the "hard" reel-3/4 cells rarely light -> Ursa drops, Draco drops MORE, the
-    # tiers separate). The per-reel W counts are the ladder knob. NO stars.
+    # Freegame: THE completion-ladder strip. Reels 0-2 wet enough that the snowball
+    # ignites (Corvus stays a reliable beast hunt, no cold-start bust); reels 3-4
+    # DRIED so the "hard" reel-3/4 cells rarely light -> Ursa drops, Draco drops
+    # MORE, the tiers separate. The per-reel W counts are the ladder knob. NO stars.
+    #
+    # Measured sweep at n=40k/mode (sweep_fr0.py), buy-mode cost = mean/rtp:
+    #   W=12/3/0  completion 96.4/54.5/28.7%   cost   460/661/2030x
+    #   W= 4/3/0  completion 83.6/33.0/11.9%   cost   333/381/ 832x
+    #   W= 2/1/0  completion 78.2/23.9/ 7.5%   cost   299/276/ 539x
+    # Drying moves the COMPLETION RATE, not the payout per completion (draco's
+    # beast phase held 6,451 -> 6,074 -> 5,945x across all three). So it is the
+    # right lever for Draco's "rarely completes" identity and the wrong one for
+    # Corvus's price. 4/3/0 is the interim hold: Corvus still reads as reliable,
+    # Draco's carpet thins to 95x, and Draco's remaining gap is cell-shape work.
     "FR0.csv": {
         "base": {
             "H1": 8, "H2": 10, "H3": 12, "H4": 14,
             "L1": 16, "L2": 18, "L3": 20, "L4": 22, "L5": 24,
-            "W": 12, "S": 0,
+            "W": 4, "S": 0,
         },
         # reel 4 dried HARDER than reel 3 (Draco has 3 reel-4 cells to Ursa's 1, and
         # 2 reel-3 cells to Ursa's 1): a bone-dry reel 4 + drier reel 3 pushes Draco
@@ -121,7 +132,13 @@ def build_reel(weights, target_len, rng):
 def write_strip(filename, spec):
     """Write one rectangular CSV (NUM_REELS columns), each column its own shuffle.
     Reels are padded to the longest column so per-reel drying stays rectangular."""
-    rng = random.Random(SEED + hash(filename) % 10_000)
+    # crc32, NOT hash(): Python randomises str hashing per process, so seeding off
+    # hash(filename) reshuffled EVERY strip on every regeneration. That makes the
+    # measure loop unattributable -- edit an FR0 weight and BR0/FRWCAP silently
+    # change too, so the base game moves underneath whatever you were measuring.
+    # crc32 is stable across processes, so a strip only changes when its own
+    # weights change.
+    rng = random.Random(SEED + zlib.crc32(filename.encode()) % 10_000)
     tables = reel_tables(spec)
     target_len = max(sum(t.values()) for t in tables)
     reels = [build_reel(tables[r], target_len, rng) for r in range(NUM_REELS)]

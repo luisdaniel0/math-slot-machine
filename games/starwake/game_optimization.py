@@ -52,12 +52,23 @@ class OptimizationSetup:
                 rtp=slice_rtp, av_win=wincaps[mode], search_conditions=wincaps[mode]
             ).return_dict()
 
-        def feature_cond(slice_rtp, hr):
+        def feature_cond(slice_rtp, hr, kind=None):
             """A tier/feature slice: rtp is authoritative, hr the trigger-rate hint
-            (buys feature every spin -> hr=1; base/ante trigger 1-per-hr spins)."""
-            return ConstructConditions(
-                rtp=slice_rtp, hr=hr, search_conditions={"symbol": "scatter"}
-            ).return_dict()
+            (buys feature every spin -> hr=1; base/ante trigger 1-per-hr spins).
+
+            `kind` is the scatter COUNT recorded at trigger (3/4/5 = corvus/ursa/
+            draco) and it is mandatory wherever a mode has more than one tier fence.
+            Fences are assigned IN ORDER and consume every book they match, so three
+            fences all searching {"symbol": "scatter"} let the first one swallow all
+            the feature books and the optimizer dies on the next with "matched 0
+            books after prior fences were assigned". Single-tier modes (the buys)
+            can omit it; buy_mystery MUST omit it, since its one fence is meant to
+            cover the whole 3/4/5 blend.
+            """
+            search = {"symbol": "scatter"}
+            if kind is not None:
+                search["kind"] = kind
+            return ConstructConditions(rtp=slice_rtp, hr=hr, search_conditions=search).return_dict()
 
         def base_cond(slice_rtp, hr):
             """Paying base-game slice: rtp + the any-win hit-rate hint."""
@@ -84,11 +95,15 @@ class OptimizationSetup:
             "base": {
                 "conditions": {
                     "wincap": wincap_cond("base", 0.02),
-                    "draco": feature_cond(0.13, hr=1900),
-                    "ursa": feature_cond(0.11, hr=600),
-                    "corvus": feature_cond(0.10, hr=220),
-                    "basegame": base_cond(0.6065, hr=3.5),
+                    "draco": feature_cond(0.13, hr=1900, kind=5),
+                    "ursa": feature_cond(0.11, hr=600, kind=4),
+                    "corvus": feature_cond(0.10, hr=220, kind=3),
+                    # "0" BEFORE "basegame": fences are assigned in order and consume
+                    # what they match, and basegame is the only fence with NO identity
+                    # condition -- a catch-all must come last or it eats the zero-win
+                    # books that "0" (win_range 0,0) is supposed to hold.
                     "0": zero_cond,
+                    "basegame": base_cond(0.6065, hr=3.5),
                 },
                 "scaling": ConstructScaling(base_small_scaling + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 10, [50, 100, 200], [0.3, 0.4, 0.3]),
@@ -99,11 +114,11 @@ class OptimizationSetup:
             "ante_starfall": {
                 "conditions": {
                     "wincap": wincap_cond("ante_starfall", 0.025),
-                    "draco": feature_cond(0.15, hr=1000),
-                    "ursa": feature_cond(0.13, hr=370),
-                    "corvus": feature_cond(0.12, hr=160),
+                    "draco": feature_cond(0.15, hr=1000, kind=5),
+                    "ursa": feature_cond(0.13, hr=370, kind=4),
+                    "corvus": feature_cond(0.12, hr=160, kind=3),
+                    "0": zero_cond,                      # catch-all last -- see base
                     "basegame": base_cond(0.5415, hr=3.0),
-                    "0": zero_cond,
                 },
                 "scaling": ConstructScaling(base_small_scaling + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(2, 6, [50, 100, 200], [0.3, 0.4, 0.3]),
