@@ -252,12 +252,11 @@ class GameConfig(Config):
         # a weighted mix whose displayed odds must match the shipped math.
         #
         # COSTS and per-mode DISPLAYED max wins are OUTPUTS measured in the measure
-        # loop (cost = avg win / rtp; displayed max = observed max). Costs below are
-        # PLACEHOLDERS; ante's 1.5x is a design input (the premium). Every BetMode
-        # max_win = the global cap so nothing is silently truncated -- but only Draco
-        # (3x3) can structurally reach 25,000x, so buy_corvus/buy_ursa carry NO forced-
-        # wincap slice (forcing an unreachable cap would loop) and will DISPLAY honest
-        # lower ceilings once measured. Wild-mult ladder is DORMANT under Option A
+        # loop (cost = avg win / rtp; displayed max = observed max); ante's 1.5x is a
+        # design input (the premium). Only Draco (3x3) can structurally reach 25,000x,
+        # so buy_corvus/buy_ursa carry NO forced-wincap slice (forcing an unreachable
+        # cap would loop) and publish measured lower ceilings instead -- see the
+        # BetMode.max_win note below. Wild-mult ladder is DORMANT under Option A
         # (game_override pins every wild to x1; the beast is the only multiplier), so
         # freegame mult_values are {1:1}.
         fg_mult = {self.basegame_type: {1: 1}, self.freegame_type: {1: 1}}
@@ -313,7 +312,30 @@ class GameConfig(Config):
             "force_freegame": False,
         }
 
-        cap = self.wincap  # engine clamp; per-mode DISPLAYED ceilings are measured
+        cap = self.wincap  # 25,000x -- reachable by Draco only
+
+        # PER-MODE DISPLAYED CEILINGS. BetMode.max_win is BOTH the published "max win"
+        # (write_configs.py:356 -> config.json "maxWin") AND the engine clamp: run_sims
+        # assigns it to config.wincap for that mode, state.py rebuilds WinManager from
+        # it per thread, and executables.evaluate_wincap stops the book the moment
+        # running_bet_win reaches it. So a ceiling is honest BY CONSTRUCTION once set --
+        # the question is only which number to advertise. Corvus/ursa have no
+        # win_criteria and force_wincap=False, and check_repeat only repeats on a
+        # win_criteria mismatch, so capped books are KEPT (clamped), not redrawn.
+        #
+        # Measured on the converged 1e6 pool (post-optimization lookup tables):
+        #   corvus natural max 1,515.35x -> publish 1,500x  (1 in 136,561, RTP -0.00000)
+        #   ursa   natural max 4,773.80x -> publish 4,750x  (1 in 671,949, RTP -0.00000)
+        # Rounded DOWN to the nearest clean number under the natural max: the sliver
+        # above it is all that clamps, so RTP is untouched to 5dp and the Phase B
+        # convergence survives, while corvus keeps the 6.7x max/cost ratio the
+        # accelerating ladder was re-tuned to buy (it was 4x before). Cutting deeper
+        # would make the ceiling far more frequent (corvus 1,250x is 1 in 2,262) at the
+        # cost of that ratio -- a volatility change, not a display fix, so it waits for
+        # the structural/playtest pass. Both are DECISIONS the clamp enforces, not
+        # sample statistics: a deeper future sample cannot push the true max past them.
+        corvus_cap = 1500.0
+        ursa_cap = 4750.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # sweep_fr0.py at n=40k with the forced-wincap slice REMOVED -- that slice is a
@@ -355,17 +377,17 @@ class GameConfig(Config):
                 ],
             ),
             # buy_corvus: pin the safe tier. No forced-wincap slice (2x2 can't reach the
-            # cap); the displayed ceiling is an honest measured lower bound.
+            # global cap); publishes -- and clamps at -- its own measured ceiling.
             BetMode(
-                name="buy_corvus", cost=224.0, rtp=self.rtp, max_win=cap,
+                name="buy_corvus", cost=224.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
                 ],
             ),
-            # buy_ursa: pin the coin-flip tier. Honest measured lower ceiling.
+            # buy_ursa: pin the coin-flip tier. Same story as corvus, higher ceiling.
             BetMode(
-                name="buy_ursa", cost=283.0, rtp=self.rtp, max_win=cap,
+                name="buy_ursa", cost=283.0, rtp=self.rtp, max_win=ursa_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="ursa", quota=1.0, conditions=ursa_condition),

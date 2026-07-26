@@ -187,20 +187,34 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       (base 0.9850, ante 0.9781 -- both over the ceiling). Moving "0" ahead of the
       catch-all made every slice hit its target to 4dp. NOTE verify_optimization_input
       catches NEITHER: it only checks the rtp splits sum and that criteria match.
-- [ ] Set per-mode displayed ceilings + mystery odds (below); event-ID finder
+- [x] PER-MODE DISPLAYED CEILINGS. corvus/ursa published maxWin 25000 they cannot
+      reach; now 1500x and 4750x, rounded DOWN from the measured natural maxima
+      (1,515.35x / 4,773.80x) so only the sliver above clamps -- RTP untouched to 5dp,
+      band spread still 0.126%, buys still 0.00% zero. KEY MECHANIC: BetMode.max_win is
+      BOTH the published maxWin (write_configs.py:356 -> config.json bookShelfConfig)
+      AND the engine clamp (run_sims.py:48 -> config.wincap; state.py:256 rebuilds
+      WinManager per thread from it; executables.evaluate_wincap ends the book at it).
+      So a ceiling is honest BY CONSTRUCTION once set -- the only question is which
+      number to advertise, and a deeper future sample can never exceed it. Capped books
+      are KEPT, not redrawn: check_repeat repeats only on a win_criteria mismatch or a
+      missing freegame, and corvus/ursa set neither (verified -- if they had, the
+      published ceiling would have been silently redrawn away and unreachable).
+      Re-ran ONLY those two modes at 1e6 + optimizer (~30 min); the other four lookup
+      tables were confirmed untouched by mtime. VERIFIED: both now top out at EXACTLY
+      their cap, RTP 0.9665 both. Ceiling frequency on the NEW pool reads 1 in 428k
+      (corvus) / 1 in 1.78M (ursa) vs 1 in 137k / 672k on the old one -- pure tail
+      sampling noise at 1e6, where such an event is seen only 2-3 times; do not treat
+      the top-bucket probability as a stable measurement.
+- [ ] Set mystery odds (below); event-ID finder
 
 ### ▶ PICK UP HERE (next session)
-PHASE B IS CONVERGED at 1e6. Costs 1 / 1.5 / 224 / 283 / 651 / 285x. Remaining:
-1. DISPLAYED CEILINGS: corvus and ursa still publish max_win=25000 they cannot reach.
-   Measured 1e6 ceilings are corvus 1,515x (P=7.3e-06) and ursa 4,774x (P=7.5e-07).
-   Setting BetMode.max_win also sets the ENGINE CLAMP (run_sims.py:48 assigns
-   config.wincap = bm.get_wincap()), so change it and re-run those two modes to
-   confirm; the clamped tail is below measurement resolution but should be verified.
-2. MYSTERY ODDS: measured post-opt mix is 25.74 / 63.20 / 11.06% against the intended
+PHASE B IS CONVERGED at 1e6. Costs 1 / 1.5 / 224 / 283 / 651 / 285x. Displayed
+ceilings 25000 / 25000 / 1500 / 4750 / 25000 / 25000. Remaining:
+1. MYSTERY ODDS: measured post-opt mix is 25.74 / 63.20 / 11.06% against the intended
    60/30/10. Compliance requires the UI to display the TRUE odds, so either publish
    26/63/11 or give buy_mystery per-tier fences (kind=3/4/5, like base) so the mix
    becomes a designed quantity instead of whatever hits RTP. Design call.
-3. Still open: the two STRUCTURAL feel levers (feature length 10 spins, and beast
+2. Still open: the two STRUCTURAL feel levers (feature length 10 spins, and beast
    block sizes -- both FEEL calls, doc L255/L259, worth a playtest first). They are
    the only levers left for corvus, whose raw pre-multiplier cost is 89x -- i.e. the
    feature's base payout is already its whole budget and every multiplier is over it.
