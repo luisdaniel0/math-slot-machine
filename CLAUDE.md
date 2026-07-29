@@ -20,13 +20,17 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
   constellation). NOTE: this replaced the earlier star-landing / λ / fly-to-cell
   fill rule — no star-landing rate anymore; fill is driven by wins. Each lit cell =
   STICKY WILD for the rest of the feature → SNOWBALL (lit wild → more wins → more
-  cells light). Complete the set → beast wakes: oversized block wild (Corvus 2x2 /
-  Ursa 2x3 / Draco 3x3) that ROAMS to a random position each spin (C&C/MIKO style;
-  fine because the fat tail depends on how LONG it stays, not the path — it never
-  exits), multiplier climbs +1/spin (enumerable ladder — compliance requires listing
-  all values). Guaranteed min roam window (5 spins; a late completion extends the
-  feature to honor it, worst case 15 spins). Fixed ~10 feature spins, no
-  retrigger. Completion rates are now SIM-DERIVED (coupon-collector model retired);
+  cells light). Complete the set → beast wakes: a 2x2 block wild (ALL THREE tiers —
+  a 3x3 has only 6 roam positions on a 5x4, which breaks the roam on the showpiece
+  tier; tier identity rides the 4/7/11 sticky cells instead) that ROAMS to a random
+  position each spin (C&C/MIKO style; fine because the fat tail depends on how LONG
+  it stays, not the path — it never exits), multiplier climbs one GEOMETRIC LADDER
+  rung per roam spin (enumerable — compliance requires listing all values).
+  Guaranteed min roam window (2 spins; a late completion extends the feature to honor
+  it). Feature length is FIXED PER TIER — Corvus 10, Ursa/Draco 15 — with no
+  retrigger; the split is a PRICE lever (spins move completion, completion is what a
+  buy's economy rides on), not a volatility one.
+  Completion rates are now SIM-DERIVED (coupon-collector model retired);
   tier ladder still holds (more cells = harder) BUT constellation SHAPE now matters
   (cells on more paylines light faster). Cold-start risk: no early wins → snowball
   never ignites → near-bust; may need a fill floor.
@@ -65,7 +69,8 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       floor cheaply, budget stays in tail). Values = total-bet multiples PER LINE,
       stacking (verified in src/calculations/lines.py). Smoke-verified. First-pass
       numbers — the measure loop will re-tune.
-- [x] Trigger table: fixed 10 spins ALL tiers (config.num_feature_spins), no
+- [x] Trigger table [SPIN COUNT SUPERSEDED Jul 28 -> per-tier 10/15/15; the rest
+      stands]: fixed 10 spins ALL tiers (config.num_feature_spins), no
       retriggers (removed from run_freespin), 6+ scatters clamp to draco
       (update_freespin_amount override), count→tier mapping stored as
       gamestate.constellation_tier (config.scatter_tiers). Book-verified:
@@ -92,7 +97,10 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       reels 3-4 need long wins): hard-cell ladder Corvus 0 / Ursa 2 / Draco 5 = the
       tier ladder. Validated (counts 4/7/11, on-grid, no dupes). Exact rates
       sim-derived — nudge cells in the measure loop. Cell-map figure shown in chat.
-- [x] Guaranteed roam window (config.min_roam_spins = 5). A late completion (fewer
+- [x] Guaranteed roam window [FLOOR SUPERSEDED Jul 27 -> 2, because at 5 it was
+      carrying ~70% of buy_draco's value and CREATING the win-range gap; the
+      extend-to-honor-the-floor MECHANISM below is unchanged and still tested].
+      (config.min_roam_spins = 5). A late completion (fewer
       than 5 spins left) EXTENDS tot_fs to fs+min_roam so the woken beast always gets
       ≥5 on-board/paying spins ("even a last-spin completion still pays"); early
       completions are untouched, keeping "finish early = longer roam" (the fat tail).
@@ -205,20 +213,485 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       (corvus) / 1 in 1.78M (ursa) vs 1 in 137k / 672k on the old one -- pure tail
       sampling noise at 1e6, where such an event is seen only 2-3 times; do not treat
       the top-bucket probability as a stable measurement.
+- [x] ECONOMY REBUILD APPLIED + CONFIRMED AT 100k/TIER (Jul 28 2026). Per-tier
+      feature length (corvus 10 / ursa 15 / draco 15), all beasts 2x2, roam floor 2,
+      and the three swept ladders are now IN game_config.py; tests derive from config
+      and guard the rung count (23 passing); the design doc's open questions on
+      length / beast size / multiplier scale are struck through as resolved.
+      Confirmation run reproduced the 20k sweep to within 4x on price (240 / 268 /
+      520x) and CLOSED THE DRACO CLIFF on every tier -- cheapest completion now lands
+      BELOW carpet max, widest hole <=1.24x and only in the >9,000x tail. Zero-pay
+      still 0.00% on all three buys. Full table + the four things the deeper sample
+      changed: "CONFIRMATION RUN @ 100k/TIER" below.
 - [ ] Set mystery odds (below); event-ID finder
 
-### ▶ PICK UP HERE (next session)
-PHASE B IS CONVERGED at 1e6. Costs 1 / 1.5 / 224 / 283 / 651 / 285x. Displayed
-ceilings 25000 / 25000 / 1500 / 4750 / 25000 / 25000. Remaining:
-1. MYSTERY ODDS: measured post-opt mix is 25.74 / 63.20 / 11.06% against the intended
-   60/30/10. Compliance requires the UI to display the TRUE odds, so either publish
-   26/63/11 or give buy_mystery per-tier fences (kind=3/4/5, like base) so the mix
-   becomes a designed quantity instead of whatever hits RTP. Design call.
-2. Still open: the two STRUCTURAL feel levers (feature length 10 spins, and beast
-   block sizes -- both FEEL calls, doc L255/L259, worth a playtest first). They are
-   the only levers left for corvus, whose raw pre-multiplier cost is 89x -- i.e. the
-   feature's base payout is already its whole budget and every multiplier is over it.
-   Changing either invalidates this whole Phase B run.
+### ▶ THE ECONOMY REBUILD -- RATIONALE (Jul 27 2026; EXECUTED Jul 28, see below)
+⚠ READ ORDER: this section and the two ladder sweeps under it are the WHY. They are
+kept because every argument still holds, but the live numbers are in "CONFIRMATION
+RUN @ 100k/TIER" and the live to-do list is "▶▶ NEXT SESSION STARTS HERE" -- both
+further down. Where a number here disagrees with those, THEY win.
+
+PHASE B WAS CONVERGED at 1e6 (costs 1 / 1.5 / 224 / 283 / 651 / 285x, ceilings
+25000 / 25000 / 1500 / 4750 / 25000 / 25000) and is SUPERSEDED. The Jul 27 2026
+session RESOLVED THE WHOLE ECONOMY DESIGN; what remains is execution. It is a full
+Phase B re-converge (base/ante/mystery all contain Draco features).
+
+TARGET STRUCTURE (decided Jul 27 2026):
+  buy_corvus 200x | buy_ursa 300x | buy_draco 500x | buy_mystery 500x
+  num_feature_spins 10 -> 15 | ALL beasts 2x2 | min_roam_spins 5 -> 2
+  every tier gets a REAL ceiling (25,000x wherever structurally clean)
+  buy_mystery = 35% corvus / 30% ursa / 25% draco / 10% DRACO ASCENDANT
+  ⚠ MEASURED OUTCOME (Jul 28): prices came in at 240 / 268 / 520x -- draco on target,
+  corvus 20% over, and the corvus-ursa gap nearly closed. "Every tier reaches
+  25,000x" is DISPROVEN for corvus (natural max 11,438x, zero cap hits in 100k) and
+  CONFIRMED for ursa. The 15-spin length also had to become per-tier: corvus reverted
+  to 10 because at 15 no ladder could price it under ~375x.
+
+WHY ALL-2x2 (measured this session):
+- THE ROAM BARELY WORKS AT 3x3. Roam positions on a 5x4: 2x2=12, 2x3=8, 3x3=6,
+  2x4=4. The 3x3 dragon shuffles between six spots covering 45% of the board --
+  the signature "beast roams each spin" mechanic is undermined on the showpiece
+  tier. Only 2x2 actually moves around a board.
+- ONE beast size = one frontend sprite rig + one roam animation instead of three
+  (the doc calls the frontend ~half the remaining work).
+- 2x2 is the readable market block-wild idiom; 2x3 is not a shape seen on Stake
+  Engine games.
+- TIER IDENTITY SURVIVES VIA STICKY CELLS, not beast footprint. At wake the board
+  is 8 / 11 / 15 of 20 cells wild (4/7/11 lit + a 2x2 beast). The constellation
+  covers the sky; the beast prowls over it -- arguably the better story.
+
+COST OF THE CHANGE (both are ladder work; measured, not estimated):
+- TIER SPREAD COLLAPSES to roughly 224 / ~230 / 363x (from 224/283/651). Flat tier
+  spread is the exact thing that makes buy_mystery undesignable (see below), so the
+  spread must be rebuilt in the per-tier ladders.
+- 2x2 draco's natural max is 9,968x against the 25,000x cap. Draco's ladder top
+  must go 165 -> ~400+ or EVERY forced-wincap slice (base/ante/buy_draco/
+  buy_mystery) hangs forever.
+1. WHY A MYSTERY CANNOT COST 500x AS A MIX OF 200/300/500 TIERS. A mystery's price
+   is the probability-weighted average of the outcomes it can roll, so it is ALWAYS
+   CHEAPER THAN ITS MOST EXPENSIVE TIER -- it reaches 500x only at 100% draco, which
+   is buy_draco with a worse name. Arithmetic, not tuning. Rage Bait solves this by
+   making its top tier NOT PURCHASABLE (10% of rolls, 52% of payback => ~2,500x per
+   hit => a ~2,600x standalone price, over the 1,000x Stake buy cap). We made every
+   tier a buy, so the buy cap became our mystery cap.
+   FIX = a FOURTH, MYSTERY-EXCLUSIVE outcome: "DRACO ASCENDANT", a Draco dealt with
+   some cells ALREADY LIT. Pre-lighting raises completion AND makes it EARLY (early
+   completion = long roam = top rungs = where all the value is), so it reuses every
+   asset and nearly all the code -- a different initial state, not a new feature.
+   Its required value is a RESIDUAL of the mix; frequency/value trade inversely:
+   5% <-> ~3,800x | 10% <-> ~2,150x | 15% <-> ~1,600x | 20% <-> ~1,200x.
+   CHOSE 10% / ~2,150x (matches both audited games; "1 in 10 mystery rolls wakes
+   something you cannot buy").
+   FEASIBILITY CONFIRMED WITHOUT A SIM: a COMPLETED draco already averages 5,114x
+   (measured off the shipped LUT), so ~2,150x needs only ~40% completion -- a PARTIAL
+   pre-light, not a full one. Re-priced to a 500x draco it scales to ~3,900x, so ~55%
+   completion. Comfortable either way; the RATIO is what survives the rebuild.
+
+2. 15 SPINS (10 -> 15) -- fixes the metric no ladder can touch. buy_draco's >cost
+   rate EQUALS its completion rate exactly (you beat the ticket iff you complete --
+   the carpet tops out at 336x), and it is 7.7% against a ~22% market norm.
+   Completion is a function of how many spins you get to light cells, and more spins
+   helps DRACO enormously while barely touching CORVUS (already 95%). Expect draco
+   ~12% -> ~25-30%, which also populates the 400-3,000x cliff band with cheap
+   completions. SECOND EFFECT: the ladder gains rungs (9 -> 14), and more rungs =
+   gentler growth per rung for the SAME top, so a tall ceiling costs less in the
+   body (corvus to top 250 needs x2.0/rung over 9 rungs, only x1.53 over 14).
+   DIVISION OF LABOUR: spins fix the SHAPE, ladders fix the PRICE, cell maps fix
+   tier SEPARATION.
+   COSTS: books ~50% larger (KEEP batching_size 1000 -- see the memory gotcha); and
+   "fixed 10 spins, no retrigger" is written into the design doc -> doc revision.
+
+3. CORVUS/URSA HAVE CHEAP, UNBOUGHT CEILINGS; DRACO'S IS ALREADY SPENT. Share of
+   each tier's mean held in its top 0.1% of outcomes (measured, shipped LUTs):
+     corvus 0.6%  -> x10 on that slice: price 224->235x, ceiling 1,500->~15,000x
+     ursa   1.0%  -> x10: price 283->308x, ceiling 4,750->~23,000x
+     draco  5.2%  -> ALREADY AT the 25,000x cap; it cannot buy more ceiling
+   CAVEAT: that model multiplies only the extreme tail. A REAL ladder is geometric,
+   so raising the top drags the MIDDLE rungs up too, and the middle is where the
+   common (late) completion lives -- the true price cost is higher than +5%. 15
+   spins is what makes it affordable (see 2).
+
+4. PER-TIER FEEL, MEASURED (ticket multiples, shipped pools):
+              median  >ticket  2-5x   5-10x  10x+   99th   best
+     corvus    0.68x   30.2%   15.7%  0.09%  0.00%  4.15x   6.7x
+     ursa      0.41x   29.5%   14.7%  1.39%  0.03%  5.38x  16.8x
+     draco     0.41x    7.7%    0.1%  7.16%  0.49%  9.08x  38.5x
+   CORVUS HAS THE BEST BODY AND THE WORST DREAM -- the most generous buy to play
+   (highest median, most likely to beat its ticket) but NOTHING has ever exceeded
+   10x and only 0.09% reach 5x, so a hundred corvus buys show a best of ~4x. That is
+   the flat feel, and it is market watch-item (b) seen from the player side.
+   URSA READS CORRECTLY (genuinely bimodal, real tail) -- leave its shape alone.
+   FIX CORVUS'S TAIL ONLY, and do NOT spike the last rung: that builds a CORVUS
+   CLIFF (dense body to 5x, then a jump), the identical gate we are fixing on draco.
+   Stretch the ladder GEOMETRICALLY so the range stays continuous.
+
+5. CORVUS MAY NOT REACH 25,000x CLEANLY -- treat its ceiling as a SWEEP OUTPUT, not
+   an assumption. Its max/mean is 6.9x (ursa 17.4x, draco 39.8x): the tightest of the
+   three, so there is no natural long tail to stretch. Fork: a cheap ceiling = a
+   disconnected spike (win-range gap); a continuous ceiling = fill the middle = price
+   above 200x. It may only get two of {cap, no gaps, 200x}.
+   SEPARATE THE GOAL FROM THE NUMBER: the aim is "a corvus buy can dream", and
+   10,000x on a 200x ticket is 50x return-on-stake -- inside the market band and
+   enough. Publishing 10,000x would be the HONEST answer, not a compromise.
+   ALSO: to publish 25,000x a mode needs a FORCED WINCAP SLICE, which needs the cap
+   reachable at roughly >=1e-6..1e-7 or the sim hangs hunting a book that
+   effectively never occurs.
+
+NEXT CONCRETE STEPS, IN ORDER (order matters -- 15 spins moves draco's completion
+rate, which moves prices/ceilings/the cliff at once; sweeping first wastes runs):
+  (1) config: num_feature_spins 15, all beast shapes (2,2), min_roam_spins 2, and
+      ladders re-parameterised to 14 rungs (geometric from (start, top)) -- a 9-rung
+      ladder would CLAMP EARLY at 15 spins and silently cap every ceiling.
+  (2) back up library/ (13G; 930G free), then BASELINE all three tiers at the new
+      structure: new completion rates, prices, ceilings, did the cliff close.
+  (3) ladder sweep against the per-tier targets above.
+  (4) Draco Ascendant tier + buy_mystery per-tier fences (see BUY_MYSTERY #1).
+  (5) full Phase B re-converge at 1e6 x 6 modes.
+
+### BASELINE MEASURED (Jul 27 2026) -- steps (1) and (2) DONE
+Config now 15 spins / ALL beasts 2x2 / roam floor 2 / 14-rung ladders holding the
+OLD (start, top) endpoints. Harness: `reels/measure_tiers.py` (n=40k/tier, forced
+wincap slice stripped, and it LIFTS BetMode._wincap to the design cap first --
+otherwise the published per-mode ceilings clamp the draw and hand back last
+session's decision as if it were a natural limit; corvus read exactly 1500x until
+that was fixed, its true natural max is 1,776x). Pool backed up to
+games/starwake/library_phaseB_backup/ (13G).
+                  corvus      ursa     draco   | target
+  completion      94.36%    63.06%    32.26%   | draco ~25-30% ACHIEVED
+  price             406x      278x      600x   | 200 / 300 / 500
+  median            353x      141x      284x
+  natural max     1,776x    5,404x   20,028x   | 25,000x
+  at cap          0.000%    0.000%    0.000%   | NOTHING REACHES IT
+  max/cost            4x       19x       33x   | 50-100x
+  >cost           43.96%    28.46%    19.74%   | ~22% market norm
+  widest hole      1.05x     1.28x     1.19x   | was 7.73x on draco
+  mean roam        8.81      5.02      4.05    | of 14 possible
+  zero pay         0.00%     0.00%     0.00%   | buys still never bust
+
+THE 15-SPIN CHANGE DID BOTH JOBS IT WAS CHOSEN FOR:
+- THE DRACO CLIFF IS CLOSED. 7.73x -> 1.19x, and the residual hole is up at
+  16,783->20,028x = tail sparsity at 40k, not structure. Cheapest completion is now
+  160x against a carpet topping at 476x, so the completion band OVERLAPS the carpet
+  instead of floating above it. Compliance gate cleared.
+- DRACO COMPLETION 12% -> 32.3%, >cost 7.7% -> 19.7% (market norm ~22%). >cost is
+  now BELOW completion instead of equal to it -- that decoupling IS what a closed
+  cliff looks like (cheap completions exist that do not beat the ticket).
+
+TWO NEW PROBLEMS IT CREATED:
+- NOTHING REACHES 25,000x ANY MORE (draco natural max 20,028x, at cap 0.000%).
+  Every forced-wincap slice (base/ante/buy_draco/buy_mystery) would HANG. Draco's
+  ladder top must rise from 165, far enough that the cap is FORCEABLE (~1e-6), not
+  merely touched.
+- THE TIER PRICE ORDER IS INVERTED: corvus 406x > ursa 278x. Corvus completes 94%
+  with a mean roam of 8.81 of a possible 14, so it rides the TOP of its own ladder
+  on nearly every buy; ursa completes 63% at mean roam 5.02. More spins do not add
+  completions to a tier that already completes -- they just lengthen every roam,
+  lifting the body while the ceiling stands still (corvus max/cost got WORSE,
+  6.7x -> 4x, and it still has NOTHING above 5x its ticket, p99 2.74x).
+=> CORVUS NEEDS THE OPPOSITE LADDER TREATMENT FROM THE OTHER TWO: a flat cheap
+   bottom to halve the price, an explosive top to finally give it a dream. A plain
+   geometric ladder cannot do that for corvus -- at mean roam 8.8/14 its body sits
+   two-thirds up the curve in log space, so body and ceiling are welded together.
+   Hence the sweep's CURVE parameter: ladder[i] = start*(top/start)^((i/(n-1))^curve),
+   curve>1 = convex = stays low then explodes. curve=1 reproduces today's geometric.
+SWEEP JOBS:  corvus 406->200x price, ceiling as high as continuity allows
+             ursa   hold ~300x (it landed there free), ceiling 5,404 -> ~25,000x
+             draco  600->500x, ceiling past 25,000x WITH measurable at-cap frequency
+
+### LADDER SWEEP -- CORVUS SETTLED (Jul 27 2026).  reels/sweep_ladder.py
+A ladder is THREE numbers, not fourteen:
+  ladder[i] = start * (top/start) ** ((i/(n-1)) ** curve)
+start prices the common (late-completion) case = the cliff floor; top prices the
+rare early completion = the ceiling; CURVE decouples them (curve=1 is the plain
+geometric ladder we shipped, curve>1 is convex = stays low then explodes).
+
+**DECIDED: corvus = 10 SPINS, ladder [1, 1, 1, 2, 3, 5, 13, 44, 200] (1:200:2.5).**
+  price 239x | median 94x (0.39x ticket) | ceiling 10,661x = 45x return-on-stake
+  >cost 25.1% (above the ~22% norm) | widest hole 1.29x | completion 83.7%
+  vs SHIPPED corvus: ceiling 6.7x -> 45x, >cost 30.3% -> 25.1%, median 0.68 -> 0.39x.
+
+FINDING 1 -- PER-TIER FEATURE LENGTH IS REQUIRED, and it is a PRICE lever, not the
+volatility lever the doc ruled out. At 15 spins NO ladder gets corvus under ~375x
+(the sweep tried curve up to 5.5): corvus completes 94% and mean-roams 8.81 of 14,
+so its typical buy sits high on the ladder no matter how convex the curve. At 10
+spins the same ladder family prices at 202-274x. 12 spins reads 327x -- too dear.
+So corvus 10 / ursa+draco 15 (ursa at 12 under test). This REVISES the documented
+"count scales the TIER, never the spin count" choice; "more scatters = more spins"
+is standard market design and the original rationale was about volatility, not price.
+
+FINDING 2 -- THE CEILING IS NEARLY FREE IN PRICE; IT COSTS BODY. Corvus frontier at
+10 spins (completion 83.7% throughout -- the ladder is payout-only, it cannot move
+completion):
+  ladder       price  median  med/price      max  max/cost   >cost   hole
+  1:1:1          76x     75x      0.99x     231x        3x   49.2%  1.03x  <- RAW feature
+  1:40:1.5      202x    112x      0.55x   2,444x       12x   34.1%  1.07x
+  1:100:2       219x     94x      0.43x   5,562x       25x   28.7%  1.21x
+  1:200:2.5     239x     94x      0.39x  10,661x       45x   25.1%  1.29x  <- CHOSEN
+  1:400:3.5     223x     80x      0.36x  20,666x       93x   19.5%  1.38x
+  1:800:4       274x     80x      0.29x  25,000x       91x   14.5%  1.12x
+A ten-fold ceiling swing (2,444 -> 25,000x) moves the price only 202->274x, while
+med/price falls 0.55->0.29 and >cost falls 34.1->14.5%. So the question is never
+"can we afford the dream" -- it is "how much grind do you trade for it".
+
+FINDING 3 -- THE RAW UNMULTIPLIED FEATURE IS ONLY 76x at 10 spins (the 1:1:1 row).
+The LADDER carries corvus's economy, not the wild carpet. (An earlier estimate of
+~360x for the raw feature was wrong -- at 15 spins the typical roam reaches rung
+8-9, so even an all-1s-at-the-bottom ladder was paying real multipliers.)
+
+FINDING 4 -- NO CORVUS CLIFF. Widest hole stays <= 1.38x across every variant up to
+curve 5.5, so the convex ladder does NOT gap the way the old min_roam floor did.
+The worry that a cheap ceiling must be a disconnected spike is DISPROVEN.
+
+FINDING 5 -- CORVUS CAN REACH 25,000x (top 800 -> at cap 0.030-0.040%, ~1 in 2,500 =
+easily forceable). Its ceiling is a free choice, not a structural limit.
+
+⚠ PRICE NOISE AT 20k SIMS: one 20,000x outcome moves the mean by 1x, so the price
+column carries ~+/-20x (that is why 1:200:2.5 reads dearer than 1:400:3.5). Trends
+are solid; exact prices need the 1e6 run.
+⚠ UX WATCH-ITEM: very convex ladders read as a flat multiplier for the first half of
+the feature ([1,1,1,1,2,3,9,43,400] barely climbs until rung 6) while the pitch is
+"the multiplier climbs each spin". 1:200:2.5 was chosen partly because it starts
+moving by rung 3.
+
+### LADDER SWEEP -- URSA + DRACO (Jul 27 2026).  n=20k/variant
+URSA @ 15 spins (completion 63.2%)      DRACO @ 15 spins (completion 32.1%)
+ ladder      price  median     max mx/cst >cost  hole | ladder     price median    max  at cap mx/cst >cost hole
+ 1:38:1 base  277x    140x  4,238x   15x 28.5% 1.23x | 2:165:1 base 602x  283x 20,028x 0.000%  33x 19.8% 1.34x
+ 1:180:1.5    281x    135x 10,339x   37x 23.6% 1.45x | 2:400:1.3    545x  282x 25,000x 0.005%  46x 18.8% 1.35x
+ 1:300:1.7    284x    135x 13,708x   48x 23.4% 1.47x | 2:400:1.5    502x  282x 22,851x 0.000%  46x 21.1% 1.46x
+ 1:500:2      266x    133x 17,220x   65x 22.5% 1.50x | 2:600:1.5    524x  282x 25,000x 0.005%  48x 20.0% 1.22x
+
+- URSA MUST STAY AT 15 SPINS. At 12 it prices 170-177x on EVERY ladder (completion
+  collapses 63.2% -> 46.1%) -- barely half its 300x target. So feature length is
+  CORVUS 10 / URSA 15 / DRACO 15, not the tidier 10/12/15.
+- PRICE ORDER IS FIXED: 239 < 284 < 524 (was corvus 406 > ursa 278).
+- "CEILING IS NEARLY FREE" REPLICATED ON URSA: price sits at 266-284x across
+  ceilings from 4,238x to 17,220x.
+- DRACO REACHES THE CAP AGAIN at 2:600:1.5 -- at cap 0.005% (~1 in 20,000, well
+  above the ~1e-6 forceable gate), price 524x, hole 1.22x, >cost 20.0%.
+- DRACO'S max/cost IS ARITHMETICALLY CAPPED AT 50x (25,000 / 500), so its 48x is
+  the maximum available, not a tuning miss. Do not chase the 50-100x band here.
+
+**RECOMMENDED (NOT YET APPLIED): ursa 1:300:1.7, draco 2:600:1.5.**
+PROPOSAL -- ASCENDING PUBLISHED CEILINGS 10,000 / 15,000 / 25,000 instead of pushing
+every tier to the cap. Corvus landed at 10,661x and ursa ~13,700x, so the published
+maxWin column becomes a visible tier ladder rather than three identical numbers.
+This REVERSES the earlier "make every tier reach 25,000x" argument -- that was made
+when corvus's ceiling was 1,500x and the cap was its only route to a dream; at
+10,661x it already has one.
+
+### ▶▶ STATE OF THE TREE AT END OF Jul 28 2026 SESSION
+APPLIED + committed-clean? NO -- still all UNCOMMITTED working tree:
+  M CLAUDE.md, docs/ideas/starwake.md, games/starwake/game_config.py,
+    tests/starwake/{test_constellation.py, test_run_freespin.py},
+    .gitignore (**/library_*_backup/** so the 13G pool copy is never staged),
+    optimization_program/src/setup.toml (game_name starwake, m2m band widened 3-10)
+  ?? games/starwake/reels/{measure_tiers.py, sweep_ladder.py, sweep_beast.py}
+  ?? games/starwake/library_phaseB_backup/  (13G copy of the converged Phase B pool)
+EVERYTHING DECIDED ON Jul 27 IS NOW WRITTEN INTO game_config.py:
+  num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15}   <- PER TIER
+  freespin_triggers is DERIVED from it, never hand-written, so a length change is a
+    one-line edit and the count-indexed ENGINE view cannot drift from the
+    tier-indexed DESIGN view.
+  all beasts (2,2) | min_roam_spins 2
+  corvus [1,1,1,2,3,5,13,44,200]                    ( 9 rungs, 1:200:2.5)
+  ursa   [1,1,1,1,2,3,4,6,11,20,40,86,199,500]      (14 rungs, 1:500:2)
+  draco  [2,2,3,4,5,8,12,19,31,53,94,169,315,600]   (14 rungs, 2:600:1.5)
+URSA TOOK 1:500:2, NOT the recommended 1:300:1.7. The taller ceiling (13,708 ->
+  17,220x at 20k) cost ~1% of >cost and almost nothing in price -- ursa's price sits
+  at 266-284x across EVERY ceiling from 4,238x up -- so the cheap dream was taken.
+TESTS: 23 passing. Rewritten to DERIVE from config instead of hard-coding 5/10/15,
+  because an economy re-tune must not break tests that assert a RULE. Plus a new
+  guard that each ladder has EXACTLY its tier's rung count: too short clamps early
+  and silently caps that tier's ceiling (the trap the 10->15 change set), too long
+  advertises rungs no player can ever be paid. Both failure modes are silent --
+  roam() clamps rather than raising.
+DOC: docs/ideas/starwake.md now records per-tier length, all-2x2, the ladder formula
+  and roam floor 2 as RESOLVED (struck through), not open questions.
+
+### CONFIRMATION RUN @ 100k/TIER (Jul 28 2026) -- THE 20k SWEEP HELD
+n=99,960/tier, forced wincap slice stripped, BetMode._wincap lifted to the design cap.
+                  corvus      ursa     draco  | sweep predicted at 20k
+  completion      83.76%    62.60%    32.01%  | 83.7 / 63.2 / 32.1
+  price             240x      268x      520x  | 239 / 266 / 524
+  median             94x      132x      281x  |  94 / 133 / 282
+  natural max    11,438x   25,000x   25,000x  | 10,661 / 17,220 / 25,000
+  at cap          0.000%    0.001%    0.004%  | -- / -- / 0.005%
+  max/cost           48x       93x       48x
+  >cost           25.05%    22.08%    19.84%  | 25.1 / 22.5 / 20.0
+  zero pay         0.00%     0.00%     0.00%  | the sweep does not print it
+  widest hole      1.07x     1.24x     1.09x  | 1.29 / 1.50 / 1.22
+  mean roam         4.89      5.00      4.04
+  max roam             9        14        12  | ladder length 9 / 14 / 14
+
+PRICES LANDED WITHIN 4x OF THE 20k SWEEP -- the +/-20x noise warning was
+conservative. The three-number ladder model (start:top:curve) predicts price, median,
+completion and >cost well enough to SWEEP AT 20k AND TRUST IT; only the ceiling needs
+depth, because a natural max is a sampling floor until the tail is actually reached.
+
+THE CLIFF IS DEAD ON ALL THREE TIERS. Cheapest completion now lands BELOW carpet max
+everywhere (0.5x / 0.1x / 0.3x -- it was 9.0x on draco), so the completion band
+OVERLAPS the carpet instead of floating above it. Every surviving hole sits ABOVE
+9,000x (corvus 9,001->9,655, ursa 17,220->21,285, draco 18,749->20,437) = tail
+sparsity at 100k, not structure. The compliance gate is cleared.
+
+ZERO-PAY 0.00% ON ALL THREE BUYS -- the explicit check this run was for. BUT the FEEL
+table's "zero" bucket is <0.001x TICKET, not zero: corvus 1.07% / ursa 0.15% / draco
+0.24% of buys pay under a thousandth of their cost. Not a bust by the market gate,
+but corvus's 1-in-93 READS like one, and it is NEW -- an artifact of dropping corvus
+to 10 spins. Watch it at 1e6.
+
+FOUR THINGS THE DEEPER SAMPLE CHANGED:
+1. URSA REACHES 25,000x (at cap 0.001%, ~1 in 100k). The sweep's 17,220x was a
+   sampling floor, not a structural limit. So ursa CAN carry a forced wincap slice
+   (1e-5 clears the ~1e-6 gate by 10x) and its max/cost 93x is the BEST IN THE GAME.
+   The ascending-ceiling proposal is now a CHOICE for ursa, not a constraint -- see
+   OPEN DECISION 1.
+2. CORVUS CANNOT. 11,438x natural max and ZERO cap hits in 100k, so no forced wincap
+   slice is possible for it (an unsatisfiable forced slice hangs forever, it does not
+   error). Its published ceiling must be its natural max rounded down: ~10,000x.
+3. DRACO'S TOP TWO RUNGS NEVER FIRED. Max roam 12 of a possible 14 -- draco never
+   completed before spin 3 in 100k books, so rungs 315 and 600 sit in the compliance
+   "all obtainable values" table doing nothing. They ARE obtainable, just <1-in-100k,
+   and shortening the ladder would lower the ceiling (a 25,000x book rides the top
+   rung). A note, not a defect -- and DRACO ASCENDANT is what finally puts them to
+   work, since pre-lit cells are exactly what makes an EARLY completion possible.
+4. THE PRICE LADDER IS COMPRESSED: 240 / 268 / 520 against the 200/300/500 target.
+   Corvus and ursa are 28x APART -- near-identical on a buy menu while being very
+   different products (corvus 84% completion, best body, 48x dream; ursa 63%,
+   genuinely bimodal, 93x dream). See OPEN DECISION 2.
+
+### ▶▶ NEXT SESSION STARTS HERE
+OPEN DECISIONS -- both are cheap to settle and both gate the 1e6 run:
+ 1. PUBLISHED CEILINGS. corvus ~10,000x is FORCED (it cannot reach the cap). ursa is
+    a free choice between its measured 25,000x and the lower ascending-ladder number
+    (15,000x). BetMode.max_win is BOTH the published maxWin AND the engine clamp, so
+    either is honest by construction -- the only question is which to advertise. A
+    25,000x ursa makes the maxWin column read 10,000 / 25,000 / 25,000 (corvus
+    visibly the odd one out); 15,000x makes it a clean visible tier ladder but clamps
+    genuine hits.
+ 2. THE 240/268 CORVUS-URSA GAP. Either leave it (the products differ even where the
+    prices do not) or pull corvus toward 200x via its ladder START -- its price lives
+    in its body, at 84% completion and mean roam 4.89 of 9.
+
+THEN, IN ORDER:
+ 3. DRACO ASCENDANT (the mystery-exclusive 4th outcome, 10% of mystery rolls).
+    RE-CHECKED AGAINST THE NEW TIER MEANS (232 / 259 / 502x): at a 35/30/25/10 mix
+    the Ascendant must average ~1,990x, so the ~2,000x estimate SURVIVED the whole
+    rebuild. Build it as a draco dealt with N cells pre-lit -- pre-lighting raises
+    completion AND makes it EARLY, and early = long roam = top rungs = where all the
+    value is -- then sweep N until it prices there.
+ 4. buy_mystery per-tier fences (kind=3/4/5 + ascendant) -- see BUY_MYSTERY #1.
+ 5. Full Phase B re-converge at 1e6 x 6 modes, then set costs = avg win / rtp.
+
+POOL STATE -- READ THIS BEFORE TOUCHING library/:
+  IT IS A MIX. buy_corvus / buy_ursa / buy_draco are today's 100k confirmation books
+  on the CURRENT config. base / ante_starfall / buy_mystery are the Jul 24-25 Phase B
+  books on the OLD config (10 spins, 3x3 draco, old ladders) -- do not read a number
+  off them and believe it. config.json (Jul 25) still publishes the OLD costs and
+  ceilings. publish_files/lookUpTable_buy_*_0.csv are STALE: sims do not rewrite the
+  optimized LUT, so its book ids no longer exist.
+  library_phaseB_backup/ holds the whole converged Phase B set if anything needs the
+  old shipped numbers.
+
+### THE DRACO CLIFF -- ✅ CLOSED Jul 28 2026 (kept for the diagnosis + the levers)
+FIXED. Widest hole is now 1.09x on draco (1.07 / 1.24 / 1.09 across the three tiers)
+and every surviving hole sits above 9,000x = tail sparsity at 100k, not structure.
+Three changes did it, in order of contribution: min_roam_spins 5 -> 2 (the floor was
+the cause, see below), 10 -> 15 feature spins (cheap completions became common), and
+the convex ladders (a late completion no longer jumps straight to a big multiplier).
+The diagnosis below is kept because the FAILURE MODE is general -- any feature where
+several step-changes fire on one trigger will gap the same way -- and because the
+sweep table is the evidence for which lever actually mattered.
+--- as originally found: ---
+buy_draco has a structural win-range gap: **no book pays between 400x and 3,000x**
+(raw pool: 0 distinct payouts in 400-2,000, 3 in 2,000-3,000, then 44,298 in
+3,000-6,000). Doc L300-301 lists "no win-range gaps between small pays and the max"
+as a hard gate, and the hole sits right across buy_draco's own 651x cost. Corvus
+and Ursa are smooth across that range -- Draco alone has it.
+
+CAUSE = three step-changes fire together at completion: the board goes near-fully
+wild, the multiplier switches on for the FIRST time (non-completions have NO
+multiplier -- sticky stars are x1 under Option A), and min_roam_spins=5 guarantees
+five spins of it. Cheapest possible completion ~3,016x; carpet can never exceed 336x.
+
+MEASURED (`reels/sweep_beast.py`, 40k sims/variant, wincap slice stripped):
+- BEAST SIZE ALONE NARROWS BUT NEVER CLOSES IT. Cliff (cheapest completion /
+  carpet max): 3x3 9.0x -> 2x4 6.9x -> 2x3 4.1x -> 2x2 3.0x. The carpet always
+  tops out at 336x because it happens BEFORE the wake -- beast size cannot touch it.
+- min_roam_spins IS THE REAL LEVER:
+    3x3 roam>=5  cost 651x  cheapest completion 3,016x  cliff 9.0x  >cost 11.9%  max/cost 30x
+    3x3 roam>=3  cost 285x  833x  cliff 2.5x  >cost 11.9%  max/cost 69x
+    3x3 roam>=2  cost 229x  371x  cliff 1.1x  >cost 13.6%  max/cost 86x  <- GAP CLOSED
+    2x3 roam>=2  cost 185x  209x  cliff 0.6x  >cost 20.9%  max/cost 67x
+- Closing it fixes THREE documented problems at once: the gate, buy_draco's
+  return>cost (11.9% -> 20.9%, market norm ~22%), and max/cost (30x -> 67-86x,
+  watch-item (b)'s 50-100x target band).
+- LOWERING THE FLOOR SERVES THE DOC'S OWN GOAL. "Finish early = longer roam" spans
+  5->9 spins at floor 5 (1.8x) but 2->9 at floor 2 (4.5x): the floor was flattening
+  the very tail the design is built on. "Even a last-spin completion pays" survives
+  -- 2 roam spins at rungs 2,3 pays ~371x, above anything the carpet can produce.
+- Cost collapses because min_roam=5 was carrying ~70% of buy_draco's value.
+  Restore the price in the LADDER TOPS, not by putting the floor back.
+
+### BUY_MYSTERY -- measured state (do AFTER the beast/ladder rebuild)
+NOTE Jul 27 2026: #1 (the fence defect) is STILL LIVE and must be fixed. #3's mix
+table and #4's "Rage Bait's shape is not available" are SUPERSEDED by the DRACO
+ASCENDANT decision in PICK UP HERE -- a fourth, non-purchasable outcome is exactly
+what makes that shape available. #5 (no 2-scatter dud) and #6 (publish true odds,
+do not overlap ursa's price) still stand.
+1. THE PUBLISHED TIER LADDER IS INVERTED. In today's buy_mystery, rolling Draco
+   pays 213x on average -- LESS than rolling Corvus (331x) -- against 628x when
+   Draco is bought directly (median 49x vs buy_draco's 269x). CAUSE: buy_mystery has
+   a single undifferentiated "mystery" fence (game_optimization.py:155), so the
+   optimizer reshaped each tier freely to hit RTP at 285x. FIX = kind=3/4/5 fences
+   like base/ante. A real defect, independent of any mix decision.
+2. NATURAL per-tier avg wins (the coherent targets): corvus 216.5 / ursa 273.5 /
+   draco 628.4x. Mystery's RAW draco reads 1,793x only because 5,001 of its 104,166
+   draco books are the forced wincap slice; strip them and it is 622.9x, matching
+   buy_draco's 628.4x.
+3. A MYSTERY'S PRICE IS THE PROBABILITY-WEIGHTED AVERAGE OF ITS TIER PRICES. So it
+   is structurally bounded to (224x, 651x), and picking a price IS picking a Draco
+   frequency -- at 500x, Draco is >=59% of rolls however corvus/ursa split.
+   mix -> cost / draco RTP share / return>cost:
+     45/45/10 293x 22.2% 26.3% | 40/40/20 333x 39.1% 20.6% | 38/38/25 353x 46.1% 18.8%
+     35/35/30 372x 52.4% 17.4% | 25/25/50 452x 71.9% 12.8% | 20/20/60 491x 79.4% 11.1%
+   Concentration and fun move in OPPOSITE directions here, because our dragon is a
+   tail-carried feature (see the cliff). Fixing the cliff should change this table.
+4. RAGE BAIT'S SHAPE IS NOT AVAILABLE TODAY. Back out doc L352: its top tier is 10%
+   of rolls carrying 52% of payback at 500x -> ~2,500x per hit, 5x its own ticket.
+   Ours pays 1.4x its ticket. ~2,500x implies a ~2,600x standalone price, over the
+   1,000x Stake buy cap -- so Rage Bait's top mystery tier is almost certainly NOT
+   purchasable. We made every tier a buy, so the buy cap also caps our top tier.
+   Faking it from our pool needs either 7.7% of the draco slice on wincap books (a
+   25,000x hit 1 in 130 buys) or an ~8x up-weight of the extreme tail (44% at
+   ~5,000x / 56% at ~350x -- gappy). Neither ships.
+5. THE 2-SCATTER DUD IDEA IS DROPPED. Captain Death's 60.9% 2-scatter tier (doc
+   L353) PAYS -- the same audit says its buys bust 0.00%, so its feature triggers at
+   2. Ours triggers at 3, so a 2-scatter roll is a plain base spin (1.0x avg,
+   literally 0 about 71% of the time), and no cheap scatter prize fixes it (2
+   scatters land often enough in base that even 0.5x eats ~4% of the RTP budget).
+   Measured, a dud slice buys TAIL not FUN: at matched price it trades return>cost
+   20.6% -> 15.5% for more concentration plus a 10-14% bust.
+6. STILL TRUE: the UI must display the ACTUAL post-opt mix (both audited games show
+   true odds), and mystery must not overlap a tier buy's price. That constraint got
+   TIGHTER after the rebuild, not looser -- the tier prices compressed to 240 / 268 /
+   520x, so a mystery has to clear 520x to sit above the ladder and only the DRACO
+   ASCENDANT slice can lift it there (see NEXT SESSION #3).
+
+### RESOLVED PLAYTEST WATCH-ITEM (was: FEEL call; CLOSED by the ladder rebuild)
+   (b) CORVUS/URSA CEILINGS TOO CONSERVATIVE -- FIXED Jul 28 2026. Return-on-stake
+       (maxWin/cost) WAS corvus 1500/224 = 6.7x, ursa 4750/283 = 16.8x, draco
+       25000/651 = 38x, against a market band of 50-100x (Rage Bait's buys 50-100x,
+       Waylanders' capped bonus3 = 80x) -- corvus at 6.7x was the MOST-capped buy in
+       the survey. The predicted lever (raise the per-tier multiplier ladders, which
+       lifts ceilings with RTP untouched) WORKED AS PREDICTED: now corvus 48x, ursa
+       93x, draco 48x. All three are in or at the band, and ursa is the best in the
+       game. Draco's 48x is its ARITHMETIC MAXIMUM (25,000 cap / 520x cost), not a
+       tuning miss -- at a 500x ticket the cap alone forbids more, so do not chase
+       50-100x there. (Reading note: stakestats "Max Multiplier" for a buy is
+       COST-NORMALIZED = maxWin/cost; our published maxWin column is base-bet, so
+       divide by cost to compare.)
 - base wincap slice sits at P=8.0e-07: clears the doc's ">= ~1e-7 / better than 1 in
   10M" gate, marginally under the stricter 1e-6 written elsewhere in this file.
 - ⚠ ANY forced-wincap slice LOOPS FOREVER if the cap drifts out of structural reach
@@ -229,6 +702,8 @@ ceilings 25000 / 25000 / 1500 / 4750 / 25000 / 25000. Remaining:
 - Measure loop (~15s/mode): `cd games/starwake && ../../env/bin/python run.py buy_corvus 20000`
 - FR0 density sweep: `./env/bin/python games/starwake/reels/sweep_fr0.py 4 3 0 40000`
 - Draco shape sweep: `./env/bin/python games/starwake/reels/sweep_draco_cells.py 40000`
+- Beast size / roam floor sweep: `./env/bin/python games/starwake/reels/sweep_beast.py 40000`
+  (⚠ back up the buy_draco pool first -- see the sweep gotcha above)
 - Full detached pool: `cd games/starwake && ./run_modes.sh`   (log in library/logs/)
 - Inspect a book: decompress `library/publish_files/books_buy_draco.jsonl.zst`, walk `events`.
 
@@ -248,10 +723,44 @@ ceilings 25000 / 25000 / 1500 / 4750 / 25000 / 25000. Remaining:
   exact-count indexing KeyErrors).
 - Buy-mode books should never pay zero (market norm: buys bust 0.00%) — ours is
   structural (any lit star pays), verify it stays true.
-- Replays are public + shareable: the wincap book must be watchable (~10 fixed
-  spins guarantees this; Keybearer's 60-spin cap book took ~10min — never again).
+- Replays are public + shareable: the wincap book must be watchable. Bounded feature
+  length guarantees it — now 10 (corvus) / 15 (ursa, draco), worst case 17: a
+  last-spin completion sets tot_fs = max(tot_fs, fs + min_roam_spins) = 15 + 2. Keybearer's 60-spin cap book took
+  ~10min — never again. Any future length increase is a REPLAY decision too.
 
 ## Gotchas
+- ETL IS NOT WHAT THE DOC'S TAKEAWAY SAYS. The gate is **ETL(>=40x COST) <= 0.8**
+  (doc L302) -- a win-SIZE measure, not top-tier share. Measured: base 0.341, ante
+  0.387, buy_corvus/ursa/draco 0.000, buy_mystery 0.041. At a 500x mystery, 40x cost
+  = 20,000x, so only the sliver under the cap counts -- ETL CANNOT BIND for our buys
+  at any tier mix. Doc L356 conflates it with Captain Death's 80% top-tier share;
+  those coincide only on a 100,000x-cap game. Do not use top-tier share as an ETL
+  proxy. (CVaR <= 700 normalized, the other tail gate, is still UNVERIFIED.)
+- COMPLETION RATES, CURRENT (100k/tier, Jul 28): corvus 83.8 / ursa 62.6 / draco
+  32.0%. Earlier figures scattered through this file are all SUPERSEDED -- the Phase A
+  note's 95/54/28 predates the economy re-tune's FR0 drying, and the ~11.9% draco it
+  corrected predates the 10->15 spin change that nearly tripled it back. Draco is
+  finally AT the "~30% dragon lottery" target it was designed for. Corvus FELL 95 ->
+  83.8% because it went the other way, to 10 spins.
+- `>cost` NO LONGER EQUALS COMPLETION. It used to on draco (7.7% both) -- you beat the
+  ticket iff you complete, because the carpet topped out below the cost. That equality
+  WAS the cliff. Now: corvus 25.1 / ursa 22.1 / draco 19.8% >cost against 83.8 / 62.6 /
+  32.0% completion, i.e. cheap completions that do not beat the ticket now exist on
+  every tier. Watching those two numbers decouple is how you see a cliff close.
+- ⚠ THE SWEEP HARNESSES OVERWRITE THE PRODUCTION POOL. `create_books` writes to the
+  standard library/ paths, so any sweep destroys that mode's converged books, LUTs,
+  segmented LUT, force record and verification file. Move them aside first and move
+  them back after (instant on the same filesystem; a buy_draco set is ~2.4 GB).
+  The optimized `lookUpTable_<mode>_0.csv` is not rewritten by sims but goes STALE
+  (its book ids stop existing), so protect it too.
+- MEASURE/SWEEP HARNESSES ONLY PRINT AFTER THE LAST TIER FINISHES, so a session that
+  dies during a multi-tier run loses the WHOLE report even though every tier
+  succeeded. IT IS RECOVERABLE WITHOUT RE-SIMULATING: `read_books` / `summarise` /
+  `report` in measure_tiers.py are pure readers over
+  `library/publish_files/books_<mode>.jsonl.zst`, so import them, chdir to the game
+  dir, and re-run just the analysis (~1 min for 300k books vs ~8 min to re-sim).
+  This is how the Jul 28 confirmation table above was recovered. The catch: it only
+  works until the next sweep overwrites those tapes -- WRITE THE NUMBERS DOWN.
 - MEMORY: `batching_size` is a memory knob, not a speed knob. The SDK derives batch
   count as round(sims/threads/batching_size), so at 1e5/14/5000 it rounds to ONE batch
   and every thread holds 7,142 books at once -- MORE than at 1e6. A buy book is ~34 KB

@@ -111,19 +111,42 @@ class GameConfig(Config):
         # in base, and the constellation-cell filler inside the feature
         self.special_symbols = {"wild": ["W"], "scatter": ["S"], "multiplier": ["W"]}
 
-        # Fixed-length feature: EVERY tier awards the same 10 spins. Scatter
-        # count scales the TIER (which constellation is dealt), never the spin
-        # count — vol must come from completion-time x tier, not feature length.
-        # No retriggers for any tier (run_freespin omits the retrigger check);
-        # bounded length is load-bearing for volatility AND replay watchability.
-        # 6+ scatters clamp to the 5-scatter tier (star-rich strips WILL show
-        # them — exact-count indexing was a keybearer KeyError).
-        self.num_feature_spins = 10
+        # Fixed-length feature, length PER TIER: corvus 10, ursa 15, draco 15.
+        # This REVISES the original "scatter count scales the TIER, never the spin
+        # count" rule. That rationale was about VOLATILITY (vol must come from
+        # completion-time x tier, not from a longer feature) and it still holds --
+        # but length turned out to be a PRICE lever, which is a different job.
+        # Feature length fixes the SHAPE, ladders fix the PRICE, cell maps fix tier
+        # SEPARATION. Measured (reels/sweep_ladder.py, Jul 2026):
+        #   DRACO + URSA NEED 15. buy_draco's >cost rate EQUALS its completion rate
+        #     exactly (the carpet tops out below cost, so you beat the ticket iff you
+        #     complete), and completion is a function of how many spins you get to
+        #     light cells. 10 -> 15 took draco 12% -> 32.3% completion, >cost 7.7% ->
+        #     19.7% (market norm ~22%), and CLOSED the win-range gap -- the "Draco
+        #     cliff", a hard compliance gate: widest hole 7.73x -> 1.19x. Ursa at 12
+        #     spins collapses 63.2% -> 46.1% completion and prices at ~175x against a
+        #     ~300x target, so it stays at 15 too (the tidier 10/12/15 does not work).
+        #   CORVUS NEEDS 10. It already completes ~94% at 15 spins and mean-roams 8.81
+        #     of a possible 14, so extra spins add no completions -- they just lengthen
+        #     every roam, lifting the BODY while the ceiling stands still (its max/cost
+        #     got WORSE at 15 spins, 6.7x -> 4x). No ladder gets corvus under ~375x at
+        #     15 spins (swept curve up to 5.5); 12 spins reads 327x; 10 spins prices the
+        #     same ladder family at 202-274x. That is the whole reason for the split.
+        # No retriggers for any tier (run_freespin omits the retrigger check); bounded
+        # length is load-bearing for volatility AND replay watchability.
+        # 6+ scatters clamp to the 5-scatter tier (star-rich strips WILL show them --
+        # exact-count indexing was a keybearer KeyError).
+        self.num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15}
         self.scatter_tiers = {3: "corvus", 4: "ursa", 5: "draco"}
+        # DERIVED, never hand-written: the engine awards spins by scatter COUNT
+        # (game_override.update_freespin_amount reads freespin_triggers[gametype][count])
+        # while the design thinks in TIERS. Deriving it means a length change is a
+        # one-line edit above and the two views can never drift apart.
+        _tier_spins = {c: self.num_feature_spins[t] for c, t in self.scatter_tiers.items()}
         self.freespin_triggers = {
-            self.basegame_type: {c: self.num_feature_spins for c in (3, 4, 5)},
+            self.basegame_type: dict(_tier_spins),
             # structural only — retriggers are disabled in gamestate.run_freespin
-            self.freegame_type: {c: self.num_feature_spins for c in (3, 4, 5)},
+            self.freegame_type: dict(_tier_spins),
         }
         self.anticipation_triggers = {
             self.basegame_type: min(self.freespin_triggers[self.basegame_type].keys())
@@ -182,13 +205,22 @@ class GameConfig(Config):
             ],
         }
 
-        # Beast block sizes as (reel_span, row_span). The block "spans 2-3 reels"
-        # so it can't self-pay a short wild line over a longer real-symbol line
-        # (doc line 62). Corvus/Ursa span 2 reels, Draco 3 -> matches "2-3 reels".
+        # Beast block sizes as (reel_span, row_span). ALL 2x2 as of Jul 2026 (was
+        # 2x2 / 2x3 / 3x3). THE ROAM BARELY WORKS ABOVE 2x2: roam positions on a 5x4
+        # are 2x2=12, 2x3=8, 3x3=6, 2x4=4, so the 3x3 dragon shuffled between six
+        # spots covering 45% of the board -- the signature "beast roams each spin"
+        # mechanic was undermined on the showpiece tier. One size is also one
+        # frontend sprite rig and one roam animation instead of three, and 2x2 is
+        # the readable market block-wild idiom.
+        # TIER IDENTITY SURVIVES VIA STICKY CELLS, not beast footprint: at wake the
+        # board is 8 / 11 / 15 of 20 cells wild (4/7/11 lit + the 2x2). The
+        # constellation covers the sky; the beast prowls over it.
+        # Still spans 2 reels, so it cannot self-pay a short wild line over a longer
+        # real-symbol line (doc line 62).
         self.constellation_beast_shapes = {
             "corvus": (2, 2),
-            "ursa": (2, 3),
-            "draco": (3, 3),
+            "ursa": (2, 2),
+            "draco": (2, 2),
         }
         # Option A (see the sticky-star analysis): the BEAST is the only multiplier
         # source. Sticky lit stars are plain wilds (x1); the beast carries an
@@ -202,8 +234,13 @@ class GameConfig(Config):
         # Accelerating rungs fix that without touching the median: the early rungs
         # stay near the old values, so a LATE completion (common -> short roam)
         # plays as before, while a rare EARLY completion rides all nine rungs.
-        # Nine rungs = the longest possible roam (num_feature_spins - 1); roam()
-        # clamps at the top so a length change can never run off the end.
+        # RUNG COUNT = that tier's longest possible roam = num_feature_spins[tier] - 1,
+        # so it is 9 for corvus (10 spins) and 14 for ursa/draco (15). roam() clamps at
+        # the top so a length change can never run off the end -- which is exactly why
+        # a mismatch is silent and dangerous: a 9-rung ladder under a 15-spin feature
+        # clamps from the 9th roam on and caps that tier's ceiling with no error.
+        # tests/starwake/test_run_freespin.py::test_every_ladder_covers_the_longest_
+        # possible_roam is the guard; keep it passing on any length edit.
         #
         # Tier spread is the other half of the identity (CLAUDE.md): corvus stays
         # the tame "reliable beast hunt", draco becomes the lottery.
@@ -215,10 +252,58 @@ class GameConfig(Config):
         # paytable change can. Corvus accelerates too -- it completes 96% of the
         # time and used to pay nearly the same every run (max/cost 4x), so even
         # the "reliable" tier needs a reason to want a FAST completion.
+        # Every ladder here is GEOMETRIC, so it is really two numbers -- a start and
+        # a top -- and they do separate jobs. START prices the COMMON case (most
+        # completions are late and only ever see rungs 0-1), so it sets where the
+        # cheapest completion lands = the bottom of the Draco cliff. TOP prices the
+        # RARE case (only an early completion reaches it), so it sets the ceiling.
+        # That asymmetry is why the ladder is the one knob that can lower the mean
+        # and raise the max at once; a paytable cut scales body and tail together.
+        # SWEPT VALUES (Jul 2026, reels/sweep_ladder.py). A ladder is THREE numbers,
+        # not fourteen -- these lists are GENERATED, then pasted here so the
+        # compliance "all obtainable values" table stays literal and auditable:
+        #     ladder[i] = start * (top/start) ** ((i / (n-1)) ** curve)
+        # curve=1 is a plain geometric ladder; curve>1 is CONVEX -- it holds the early
+        # rungs down and lets the top explode, which is what decouples a tier's body
+        # from its ceiling. Chosen: corvus 1:200:2.5 / ursa 1:500:2 / draco 2:600:1.5.
+        #
+        # WHY THESE. The sweep's central finding is that THE CEILING IS NEARLY FREE IN
+        # PRICE AND EXPENSIVE IN BODY. Corvus at 10 spins moved from a 2,444x ceiling to
+        # 25,000x for only 202x -> 274x of price, while its >cost rate fell 34.1% ->
+        # 14.5% and median/price 0.55 -> 0.29. So the question is never "can we afford
+        # the dream", it is "how much grind do we trade for it". Each tier stops at the
+        # point where its own identity survives (docs/ideas/starwake.md: corvus =
+        # reliable beast hunt, ursa = coin flip, draco = wild carpet + dragon lottery):
+        #   CORVUS 1:200:2.5 -> price 239x, ceiling 10,661x = 45x return-on-stake (was
+        #     6.7x), >cost 25.1%, widest hole 1.29x, median 0.39x ticket. Corvus CAN
+        #     reach 25,000x (top 800 caps at ~1 in 2,500, easily forceable) and that was
+        #     REJECTED: it drops >cost to 14.5%, below the ~22% norm and below where
+        #     draco sat before the cliff fix, and the ladder goes flat -- [1,1,1,1,2,3,8,
+        #     50,800] does not move for the first FIVE of nine rungs, against a pitch
+        #     that says the multiplier climbs every spin. Corvus's best-in-game body is
+        #     its differentiation; it is not for sale. 1:200:2.5 was also picked over
+        #     more convex variants because it starts climbing by rung 3.
+        #   URSA 1:500:2 -> price 266x, ceiling 17,220x, >cost 22.5%, hole 1.50x. The
+        #     "ceiling is nearly free" result replicates here even harder: ursa's price
+        #     sits in 266-284x across ceilings from 4,238x all the way to 17,220x,
+        #     because it completes 63% at a mean roam of ~5 of 14, so the typical buy
+        #     sits LOW on the ladder where the curve is still flat. Its ceiling is the
+        #     cheapest in the game; taking the tall one costs ~1% of >cost.
+        #   DRACO 2:600:1.5 -> price 524x, ceiling 25,000x at 0.005% (~1 in 20,000),
+        #     >cost 20.0%, hole 1.22x. The at-cap frequency matters structurally, not
+        #     just cosmetically: a forced-wincap slice HANGS FOREVER if the cap is out
+        #     of reach, and 1 in 20,000 clears the ~1e-6 gate by ~50x. Note draco's
+        #     max/cost is arithmetically capped at 50x (25,000 / 500) so its 48x is the
+        #     maximum available, not a tuning miss -- do not chase the 50-100x band here.
+        # PRICE FIGURES ARE n=20k AND CARRY ~+/-20x (one 20,000x outcome moves the mean
+        # by 1x). Trends are solid; exact prices come from the 1e6 convergence run.
         self.constellation_mult_ladders = {
-            "corvus": [1, 1, 2, 3, 4, 6, 8, 11, 15],
-            "ursa": [1, 2, 3, 5, 8, 12, 18, 26, 38],
-            "draco": [2, 3, 6, 11, 20, 35, 60, 100, 165],
+            # 9 rungs (10 spins). 1:200:2.5
+            "corvus": [1, 1, 1, 2, 3, 5, 13, 44, 200],
+            # 14 rungs (15 spins). 1:500:2
+            "ursa": [1, 1, 1, 1, 2, 3, 4, 6, 11, 20, 40, 86, 199, 500],
+            # 14 rungs (15 spins). 2:600:1.5
+            "draco": [2, 2, 3, 4, 5, 8, 12, 19, 31, 53, 94, 169, 315, 600],
         }
 
         # Guaranteed minimum roam window. The beast must get at least this many
@@ -230,7 +315,19 @@ class GameConfig(Config):
         # late to fit it. Tuning knob (design doc L255); set to 5 (up from the
         # initial 3) so a late completion still gets a satisfying roam, while an
         # early completion is unaffected and keeps its longer roam (the tail).
-        self.min_roam_spins = 5
+        # 5 -> 2 (Jul 2026): the floor was CARRYING ~70% of buy_draco's value and
+        # creating the win-range gap. Three step-changes fire together at completion
+        # (board goes near-fully wild, the multiplier switches on for the FIRST time,
+        # and the floor guarantees N spins of it), so a floor of 5 put the cheapest
+        # possible completion at 3,016x against a carpet that tops out at 336x --
+        # a 9x hole across buy_draco's own cost, and a hard compliance gate.
+        # Measured (reels/sweep_beast.py): cliff 9.0x at roam>=5, 2.5x at >=3, 1.1x
+        # at >=2 = CLOSED. It also serves the doc's own "finish early = longer roam"
+        # goal: that span is 5->9 spins at floor 5 (1.8x) but 2->14 at floor 2.
+        # "Even a last-spin completion pays" survives -- 2 roam spins still pay well
+        # above anything the carpet can produce. Restore the price in the LADDER
+        # TOPS, never by putting the floor back.
+        self.min_roam_spins = 2
 
         # Reels
         reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv"}

@@ -42,7 +42,8 @@ class ScriptedGameState(GameState):
         (reel,row) -- the winning-line cells for spin 1, spin 2, ... (unpadded
         engine coords, matching Lines.get_lines and constellation target cells)."""
         self.constellation_tier = tier
-        self.tot_fs = self.config.num_feature_spins  # normally set at trigger
+        # normally set at trigger from the scatter count; feature length is PER TIER
+        self.tot_fs = self.config.num_feature_spins[tier]
         self._wins_by_spin = [list(w) for w in wins_by_spin]
         self._spin_ix = 0
 
@@ -71,12 +72,18 @@ class ScriptedGameState(GameState):
         self.win_manager.update_spinwin(0)
 
 
-def run_feature(tier, complete_on_spin, min_roam=5):
+def run_feature(tier, complete_on_spin, min_roam=None):
     """Drive a full feature that completes exactly on `complete_on_spin`
     (1-indexed): dark until that spin, then every target cell lights at once.
-    Returns the finished gamestate (walk gs.book.events for the tape)."""
+    Returns the finished gamestate (walk gs.book.events for the tape).
+
+    min_roam defaults to the PRODUCTION floor. These tests assert the roam-window
+    RULE, not the tuned constants -- feature length and the floor are both economy
+    knobs (10->15 spins, floor 5->2 in Jul 2026), so everything below derives from
+    config rather than hard-coding a number that a re-tune invalidates."""
     config = GameConfig()
-    config.min_roam_spins = min_roam  # singleton: set explicitly so tests don't leak
+    if min_roam is not None:
+        config.min_roam_spins = min_roam  # singleton: set explicitly so tests don't leak
     cells = config.constellation_cells[tier]
     script = [[] for _ in range(complete_on_spin - 1)] + [list(cells)]
 
@@ -102,47 +109,74 @@ def _on_grid(cell_dicts):
 
 
 # --------------------------------------------------------------- the config knob
-def test_min_roam_spins_default_is_five():
-    # The guaranteed roam floor (docs/ideas/starwake.md L47-48; raised 3 -> 5 so a
-    # late completion still gets a satisfying roam without capping the early tail).
-    assert GameConfig().min_roam_spins == 5
+def test_roam_floor_leaves_room_for_the_tail():
+    """The floor must stay well under the feature length, or it stops being a floor
+    and becomes the whole roam -- which is what created the Draco win-range gap at
+    floor 5 (it was carrying ~70% of buy_draco's value). Lowered to 2 in Jul 2026."""
+    config = GameConfig()
+    # the SHORTEST tier binds -- corvus's 10 spins, not draco's 15
+    assert 0 < config.min_roam_spins < min(config.num_feature_spins.values()) // 2
+
+
+def test_every_ladder_exactly_covers_its_own_longest_roam():
+    """An immediate completion roams num_feature_spins[tier] - 1 times, so each
+    ladder must have exactly that many rungs -- and feature length is now PER TIER
+    (corvus 10, ursa/draco 15), which makes the two failure modes asymmetric:
+    TOO SHORT clamps early and silently caps that tier's ceiling (the trap the
+    10->15 change set), TOO LONG leaves unreachable rungs advertising a multiplier
+    the player can never be paid. Both are silent; roam() clamps rather than raising.
+    """
+    config = GameConfig()
+    for tier, ladder in config.constellation_mult_ladders.items():
+        longest_roam = config.num_feature_spins[tier] - 1
+        assert len(ladder) == longest_roam, (
+            f"{tier}: {len(ladder)} rungs for a {config.num_feature_spins[tier]}-spin "
+            f"feature (longest roam {longest_roam})"
+        )
+        assert ladder == sorted(ladder), f"{tier} ladder must be non-decreasing"
 
 
 # ----------------------------------------------------- guaranteed roam window ***
 def test_last_spin_completion_still_gets_full_roam_window():
     """The bug this fix closes: completing on the LAST charge spin used to wake
     the beast with zero spins left to roam. It must now extend to min_roam_spins."""
-    gs = run_feature("draco", complete_on_spin=10)  # production floor (5)
+    config = GameConfig()
+    spins, floor = config.num_feature_spins["draco"], config.min_roam_spins
+    gs = run_feature("draco", complete_on_spin=spins)  # nothing left to roam into
 
     assert len(events_of(gs, "beastWake")) == 1, "the completed set must wake the beast"
     roams = events_of(gs, "beastRoam")
-    assert len(roams) == 5, "a last-spin completion must still get min_roam_spins on-board spins"
-    # feature extended past the fixed 10: 10 (completion) + 5 (floor) = 15
-    assert gs.tot_fs == 15
+    assert len(roams) == floor, "a last-spin completion must still get min_roam_spins on-board spins"
+    # feature extended past the fixed length by exactly the floor
+    assert gs.tot_fs == spins + floor
     # the beast pays on every one of those spins and never leaves the grid
     assert all(_on_grid(r["cells"]) for r in roams)
     # the beast walks the DRACO ladder from rung 0, one rung per roam spin. A
-    # last-spin completion only ever reaches rung 4 -- the accelerating top of
-    # the ladder is reserved for the rare early completion, which is the tail.
-    draco = GameConfig().constellation_mult_ladders["draco"]
-    assert [r["multiplier"] for r in roams] == draco[:5]
-    assert [e["multiplier"] for e in events_of(gs, "multiplierClimb")] == draco[1:5]
+    # last-spin completion only ever reaches the bottom rungs -- the accelerating
+    # top is reserved for the rare early completion, which is the tail.
+    draco = config.constellation_mult_ladders["draco"]
+    assert [r["multiplier"] for r in roams] == draco[:floor]
+    assert [e["multiplier"] for e in events_of(gs, "multiplierClimb")] == draco[1:floor]
 
 
 def test_late_completion_extends_by_the_minimum_only():
-    """Completing at spin 6 (floor 5) leaves only spins 7..10 = 4 inside the fixed
-    length -> extend by exactly one spin to 11 so five roam spins fit."""
-    gs = run_feature("ursa", complete_on_spin=6)
-    assert gs.tot_fs == 11
-    assert len(events_of(gs, "beastRoam")) == 5
+    """Complete one spin too late to fit the floor -> extend by exactly one spin,
+    never more. (At 15 spins / floor 2 that is completing on spin 14.)"""
+    config = GameConfig()
+    spins, floor = config.num_feature_spins["ursa"], config.min_roam_spins
+    gs = run_feature("ursa", complete_on_spin=spins - floor + 1)
+    assert gs.tot_fs == spins + 1
+    assert len(events_of(gs, "beastRoam")) == floor
 
 
 def test_completion_that_exactly_fills_the_window_does_not_extend():
-    """Complete at spin 5: spins 6..10 already give five roam spins -> the fixed
-    length is untouched (the floor is a floor, not an add-on)."""
-    gs = run_feature("ursa", complete_on_spin=5)
-    assert gs.tot_fs == 10
-    assert len(events_of(gs, "beastRoam")) == 5
+    """Complete with exactly floor spins left -> the fixed length is untouched
+    (the floor is a floor, not an add-on)."""
+    config = GameConfig()
+    spins, floor = config.num_feature_spins["ursa"], config.min_roam_spins
+    gs = run_feature("ursa", complete_on_spin=spins - floor)
+    assert gs.tot_fs == spins
+    assert len(events_of(gs, "beastRoam")) == floor
 
 
 # ------------------------------------------------- "finish early = longer roam"
@@ -150,13 +184,16 @@ def test_early_completion_roams_to_the_fixed_end_no_extension():
     """The fat tail the floor must NOT cap: an early completion is not extended --
     it roams for all the remaining fixed spins (more than the floor), and the
     multiplier climbs the whole way."""
+    config = GameConfig()
+    spins, floor = config.num_feature_spins["corvus"], config.min_roam_spins
     gs = run_feature("corvus", complete_on_spin=3)
-    assert gs.tot_fs == 10, "early completion must not extend the feature"
+    assert gs.tot_fs == spins, "early completion must not extend the feature"
     roams = events_of(gs, "beastRoam")
-    assert len(roams) == 7, "completing at spin 3 roams spins 4..10 -- more than the floor of 5"
-    # seven roam spins = the first seven rungs of the CORVUS ladder, in order
-    corvus = GameConfig().constellation_mult_ladders["corvus"]
-    assert [r["multiplier"] for r in roams] == corvus[:7]
+    assert len(roams) == spins - 3, "completing at spin 3 roams every remaining fixed spin"
+    assert len(roams) > floor, "the early tail must beat the floor -- that IS the tail"
+    # the roam walks the CORVUS ladder from rung 0, in order, one rung per spin
+    corvus = config.constellation_mult_ladders["corvus"]
+    assert [r["multiplier"] for r in roams] == corvus[: len(roams)]
     assert all(_on_grid(r["cells"]) for r in roams)
 
 
@@ -165,17 +202,18 @@ def test_never_completing_runs_the_fixed_length_with_no_beast():
     """No completion -> no beast, no extension, exactly the fixed feature length."""
     config = GameConfig()
     config.min_roam_spins = 5
+    spins = config.num_feature_spins["draco"]
     gs = ScriptedGameState(config)
     gs.reset_book()
-    gs.configure("draco", [[] for _ in range(config.num_feature_spins)])  # never any win
+    gs.configure("draco", [[] for _ in range(spins)])  # never any win
     random.seed(1)
     gs.run_freespin()
 
     assert events_of(gs, "beastWake") == []
     assert events_of(gs, "beastRoam") == []
-    assert gs.tot_fs == config.num_feature_spins
+    assert gs.tot_fs == spins
     # the loop still ran the full fixed length (one update_fs per spin)
-    assert len(events_of(gs, "updateFreeSpin")) == config.num_feature_spins
+    assert len(events_of(gs, "updateFreeSpin")) == spins
 
 
 # ---------------------------------------------------------- event-ordering lock

@@ -110,7 +110,7 @@ the thing DOA2's three bonus modes get right — here it falls out structurally.
 | `buy_corvus` | ~cheap | Pay to guarantee the safe tier. Lower-ceiling product (a 2×2 over ~10 spins may be structurally unable to reach 25,000× — that's fine and honest). |
 | `buy_ursa` | ~mid | Pay to guarantee the balanced tier — the coin-flip bonus. |
 | `buy_draco` | ~high | Pay to guarantee the greedy tier. **This is where the 25,000× lives.** |
-| `buy_mystery` | ~mid, discounted vs pick | **"Let the Sky Decide"** — weighted random constellation (probabilities MUST be displayed accurately per the compliance checklist, e.g. "60% Corvus / 30% Ursa / 10% Draco"). Math-cheap: a weighted mix over the three tier books, no new feature code. |
+| `buy_mystery` | **~500× (target)** | **"Let the Sky Decide"** — weighted random constellation. TARGET COST 500× (market-standard mystery price — Rage Bait/C&C/Captain Death all 500×; fixes the ladder so mystery is the "premium random shot" between guaranteed-Ursa 283× and guaranteed-Draco 651×). Reach 500× by weighting the mix toward Draco (cost = avg_win/rtp, an output). Probabilities MUST be displayed as the ACTUAL post-opt mix per compliance. Math-cheap: weighted mix over the three tier books, no new feature code. |
 
 *Buy prices are **outputs, not inputs**: cost = avg win ÷ RTP. Design the tier, measure
 its average, the price falls out (Keybearer's buy moved 520 → 390 purely because the
@@ -195,6 +195,16 @@ the roam** working first.
   (tractable, smoothly tunable) with a natural ladder.
 - **No variable feature length as the volatility lever** — fixed spins + guaranteed
   roam. Volatility comes from the beast tail, not from length (learned on Keybearer).
+  *Refined Jul 2026: length is now fixed PER TIER (Corvus 10, Ursa 15, Draco 15)
+  rather than one global number. This does not reopen the rule — every tier is still
+  a fixed length and no retrigger can extend it, so length is never a source of
+  volatility. It turned out to be a **price** lever instead: spins move a tier's
+  COMPLETION RATE, and completion is what a buy's economy rides on. 10→15 took Draco
+  12%→32% completion and closed its win-range gap (a compliance gate); the same 15
+  spins made Corvus, which already completes ~94%, unpriceable below ~375x against a
+  200x target, because extra spins add no completions to a tier that already
+  completes — they just lengthen every roam and lift the body. Division of labour:
+  **length fixes the shape, ladders fix the price, cell maps fix tier separation.***
 - **No global multiplier** — the multiplier rides the beast (attached, climbing). One
   multiplier system only.
 - **No walking-wild that exits the board** — it *wraps*. An exiting walk would kill the
@@ -233,6 +243,24 @@ the roam** working first.
   sighting* (rare one-spin oversized wild cameo — the feature's hero moment in
   miniature, colossal-in-base precedent exists). Decide after first playtest, not
   before.
+- **Beast sizes / all-2×2 pivot — PLAYTEST WATCH-ITEM.** Current 2×2 / 2×3 / 3×3 may
+  implement awkwardly (the 3×3 barely fits a 5×4 — ~6 roam positions, 45% of the board).
+  Option: make ALL beasts 2×2 and differentiate tiers purely by completion difficulty
+  (4/7/11 cells) + the multiplier ladder. Cost: code trivial (size is config), MATH =
+  a full Phase B re-converge (beast size is a primary payout lever). Middle path: keep
+  Corvus 2×2 / Ursa 2×3, make Draco a 2×4 **serpent** (fits the board, still big). Decide
+  after a real playtest of the roam feel — you can't judge "awkward" without the frontend.
+  Same lever family as the ceiling item below. (CLAUDE.md "PICK UP HERE" #2a.)
+- **Corvus/Ursa ceilings maybe too conservative — PLAYTEST WATCH-ITEM.** Market check
+  (stakestats, Jul 2026): return-on-stake (maxWin ÷ cost) is Corvus 1,500/224 = **6.7×**,
+  Ursa 4,750/283 = 16.8×, Draco 25,000/651 = 38×. Comparable low-vol *buys* elsewhere sit
+  far higher — Rage Bait's buys 50–100× (all reach the 25k cap), Waylanders' capped
+  bonus3 = 80×. So Corvus at 6.7× is the most-capped buy in the survey. Defensible (a true
+  non-lottery "grind" buy is real differentiation) but may feel flat to the buy crowd.
+  Lever = raise the per-tier multiplier ladders → lifts ceilings toward 50–100× with RTP
+  untouched — the *same* lever as the beast-size item. (Reading note: stakestats
+  "Max Multiplier" for a buy is COST-normalized = maxWin/cost; our published maxWin is
+  base-bet.) (CLAUDE.md "PICK UP HERE" #2b.)
 - **In-feature retrigger (+1 spin per star) — PARKED LEVER, currently OFF.** Market
   split: C&C retriggers, MIKO doesn't (MIKO is the higher-vol design — not a
   coincidence). In OUR game this is NOT a C&C-style retrigger: stars are the charge
@@ -252,11 +280,32 @@ the roam** working first.
   its 2×2 beast can't reach 25,000×).
 - **Naming:** Starwake / Firmament / Empyrean / Starborn — check vs Stake catalogue +
   basic trademark search before committing.
-- **Feature length** (baseline 10 spins?) and **guaranteed roam window** size — tuning.
-- **Beast multiplier scale** (start value + per-spin climb increment) — tuning; primary
-  high-vol dial alongside tier spread.
-- **Draco 3×3 = 45% board coverage** — real RTP pressure; may need a smaller Draco beast
-  or a shorter feature. Watch in the first sim.
+- ~~**Feature length** (baseline 10 spins?) and **guaranteed roam window** size~~ —
+  RESOLVED Jul 2026. Length is PER TIER: Corvus 10, Ursa 15, Draco 15 (see the
+  "no variable feature length" note above for why it split). Roam window floor is
+  **2**, down from 5: at 5 the floor was carrying ~70% of buy_draco's value and it
+  *created* the Draco win-range gap, since a guaranteed 5 spins of a just-switched-on
+  multiplier put the cheapest possible completion at 3,016x against a carpet topping
+  out at 336x. Lowering it also serves the doc's own "finish early = longer roam"
+  goal: that span was 5→9 spins at floor 5 (1.8x) but is 2→14 at floor 2.
+- ~~**Beast multiplier scale** (start value + per-spin climb increment)~~ — RESOLVED.
+  Not a start+increment: each tier gets an explicit **geometric ladder**, generated
+  from three numbers and pasted literally into `game_config.constellation_mult_ladders`
+  so the compliance "all obtainable values" table stays auditable:
+  `ladder[i] = start * (top/start) ** ((i/(n-1)) ** curve)`. START prices the common
+  late completion (= the cliff floor), TOP prices the rare early one (= the ceiling),
+  and CURVE > 1 holds the early rungs down so the two decouple. This is the only knob
+  that lowers the mean and raises the ceiling at once — a paytable cut scales body and
+  tail together. Chosen: Corvus 1:200:2.5, Ursa 1:500:2, Draco 2:600:1.5.
+- ~~**Draco 3×3 = 45% board coverage**~~ — RESOLVED: **all three beasts are 2×2.**
+  The deciding argument was not RTP pressure but that *the roam barely works at 3×3*.
+  Roam positions on a 5×4: 2×2 = 12, 2×3 = 8, 3×3 = 6. The dragon shuffling between
+  six spots undermines the signature "beast roams each spin" mechanic on the showpiece
+  tier. One size also means one frontend sprite rig and one roam animation instead of
+  three, and 2×2 is the readable market block-wild idiom. **Tier identity survives via
+  the sticky cells, not the beast footprint**: at wake the board is 8 / 11 / 15 of 20
+  cells wild (4/7/11 lit + the 2×2). The constellation covers the sky; the beast
+  prowls over it — arguably the better story.
 - **Buy-menu shape:** just the 3 tier buys, or also a Hex-Bloom-style single "enhanced
   spin" / "guaranteed progress" product? (Their menu is *different products*, not a
   price ladder — worth stealing the shape if 3 near-priced tier buys feel flat.)
@@ -327,6 +376,18 @@ Calibration points, not templates — we take different things from each.
 
 Convergence quality bar: both games land all modes within ~±0.02% of target —
 far tighter than the 0.5% compliance band. That's what the optimizer runs must hit.
+
+**Mystery-buy audit (stakestats TrueTransparency, Jul 2026)** — informs `buy_mystery`:
+| Game | Cap | Mystery cost | Tier split (displayed) | Top-tier freq → share of payback |
+|---|---|---|---|---|
+| Rage Bait (Meta) | 25,000× | **500×** | 4/5/6 scatter = 45/45/10% | 6-sc: 10% → **52%** |
+| Captain Death (Valkyrie) | 100,000× | **500×** | 2/3/4/5 sc = 60.9/5/25/9.1% | 5-sc: 9.1% → **80%** (at ETL cap) |
+
+Takeaways: (1) 500× is the standard mystery price even at our 25k cap (Rage Bait).
+(2) The rarest tier carries 50–80% of payback — but ETL caps concentration at 0.80
+(Captain Death sits exactly there), and the middle tiers still pay a spread (no
+win-gaps). (3) Odds are displayed truthfully. → Starwake mystery: target 500×,
+Draco-weighted, publish the real mix (see Bet modes table + CLAUDE.md pickup #1).
 
 ## Path to Cleared
 Grounded in the Stake Engine docs in this repo: `docs/rgs_docs/{RGS,data_format}.md`,

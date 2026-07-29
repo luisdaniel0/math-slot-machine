@@ -7,6 +7,8 @@ __pycache__
 */SOURCES.txt
 
 **/library/**
+library_*_backup/
+**/library_*_backup/**
 **/configs/*
 **/forces/*
 **/books/*

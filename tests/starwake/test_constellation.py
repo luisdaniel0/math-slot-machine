@@ -211,11 +211,13 @@ def test_accelerating_ladder_pays_a_long_roam_far_more_than_a_short_one():
 
 
 def test_every_tier_ladder_covers_the_longest_possible_roam():
-    """An immediate completion leaves num_feature_spins-1 roam spins. Short ladders
-    would silently clamp, capping the tail exactly where it is supposed to pay."""
+    """An immediate completion leaves num_feature_spins[tier]-1 roam spins. Short
+    ladders would silently clamp, capping the tail exactly where it is supposed to
+    pay. Feature length is PER TIER (corvus 10, ursa/draco 15), so the rung count is
+    checked against each tier's own length."""
     config = GameConfig()
-    longest_roam = config.num_feature_spins - 1
     for tier, ladder in config.constellation_mult_ladders.items():
+        longest_roam = config.num_feature_spins[tier] - 1
         assert len(ladder) >= longest_roam, f"{tier} ladder clamps before the roam ends"
 
 
