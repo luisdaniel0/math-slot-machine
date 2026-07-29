@@ -103,6 +103,41 @@ STRIP_WEIGHTS = {
         "L1": 6, "L2": 6, "L3": 6, "L4": 6, "L5": 6,
         "W": 16, "S": 0,
     },
+    # DRACO ASCENDANT trigger strip -- the ONLY strip that can show 6 stars.
+    #
+    # WHY IT EXISTS. _force_special_board (src/calculations/board.py) places at most
+    # ONE scatter per reel: it picks a reel, sets a stop on a scatter, then zeroes
+    # that reel's probability. On five reels it can therefore only ever place five.
+    # A 6-scatter board happens only when one reel's 4-row window happens to reveal
+    # a SECOND scatter -- and force_special_board is a bare `while True` with no
+    # retry cap, so if no reel can ever show two, forcing 6 HANGS FOREVER.
+    # BR0 can currently do it by accident (one pair 3 apart on reel 2, ~20% of
+    # forced attempts, ~5 retries). Relying on that would be a silent time bomb:
+    # BR0 is the base-game tuning surface, and any weight edit reshuffles it and
+    # could delete that pair, turning buy_mystery's ascendant slice into a hang
+    # with no error and no obvious cause. So Ascendant gets its own strip.
+    #
+    # HOW IT FORCES 6 DETERMINISTICALLY. Reel 2's scatters are laid down as one
+    # evenly-STEP-3 run: a stop on any of them puts the next one at stop+3, still
+    # inside the 4-row window, so reel 2 shows exactly TWO. Every other reel uses
+    # gap>=4, so each shows exactly ONE. 1+1+2+1+1 = 6 on the first attempt. Only
+    # the last scatter of the run has no partner ahead of it, so the success rate
+    # is (k-1)/k -- k=12 gives ~92%, i.e. ~1.1 attempts instead of ~5.
+    # NOTE this is the one place the SDK docstring's "ensure the reels do not have
+    # stacked scatter symbols" is deliberately violated, because a controlled
+    # double is the only way to reach 6 on a 5-reel board.
+    #
+    # Weights are otherwise BR0's, so the trigger board reads as a normal base
+    # spin -- the tell is the sixth star, not a different-looking board.
+    "ASC.csv": {
+        "base": {
+            "H1": 8, "H2": 10, "H3": 12, "H4": 14,
+            "L1": 18, "L2": 20, "L3": 22, "L4": 24, "L5": 26,
+            "W": 2, "S": 5,
+        },
+        "per_reel": {2: {"S": 12}},
+        "scatter_layout": {"gap": 4, "run": {2: 3}},
+    },
 }
 
 
@@ -119,14 +154,65 @@ def reel_tables(spec):
     return [dict(spec) for _ in range(NUM_REELS)]  # flat: same table every reel
 
 
-def build_reel(weights, target_len, rng):
-    """One shuffled reel from a weight table, padded to target_len with FILLER."""
-    strip = []
+def _positions_min_gap(n, k, gap, rng):
+    """k positions on a circle of length n, every circular gap >= `gap`.
+
+    Uniform over valid configurations: the k gaps must sum to n and each is at
+    least `gap`, so distribute the slack (n - k*gap) randomly across them.
+    """
+    slack = n - k * gap
+    if slack < 0:
+        raise ValueError(f"cannot place {k} scatters {gap} apart on a strip of {n}")
+    cuts = sorted(rng.randrange(slack + 1) for _ in range(k - 1))
+    parts = [b - a for a, b in zip([0] + cuts, cuts + [slack])]
+    pos, cur = [], rng.randrange(n)
+    for p in parts:
+        pos.append(cur % n)
+        cur += gap + p
+    return pos
+
+
+def _positions_run(n, k, step, rng):
+    """k positions in ONE evenly-stepped run from a random offset."""
+    if k * step > n:
+        raise ValueError(f"a {k}-scatter run at step {step} does not fit in {n}")
+    start = rng.randrange(n)
+    return [(start + i * step) % n for i in range(k)]
+
+
+def build_reel(weights, target_len, rng, scatter_layout=None, reel=None):
+    """One shuffled reel from a weight table, padded to target_len with FILLER.
+
+    With no `scatter_layout` the scatters are shuffled in with everything else
+    (the original behaviour -- BR0/FR0/FRWCAP must stay bit-identical, so this
+    path makes exactly the same rng calls it always did). A layout instead places
+    scatters at controlled positions and shuffles only the remaining symbols
+    around them; see STRIP_WEIGHTS["ASC.csv"] for why that control is needed.
+    """
+    if scatter_layout is None:
+        strip = []
+        for sym, count in weights.items():
+            strip.extend([sym] * count)
+        strip.extend([FILLER] * (target_len - len(strip)))
+        rng.shuffle(strip)
+        return strip
+
+    n_s = weights.get("S", 0)
+    body = []
     for sym, count in weights.items():
-        strip.extend([sym] * count)
-    strip.extend([FILLER] * (target_len - len(strip)))
-    rng.shuffle(strip)
-    return strip
+        if sym != "S":
+            body.extend([sym] * count)
+    body.extend([FILLER] * (target_len - len(body) - n_s))
+    rng.shuffle(body)
+
+    run_steps = scatter_layout.get("run", {})
+    if reel in run_steps:
+        pos = _positions_run(target_len, n_s, run_steps[reel], rng)
+    else:
+        pos = _positions_min_gap(target_len, n_s, scatter_layout["gap"], rng)
+    pos = set(pos)
+    filler = iter(body)
+    return ["S" if i in pos else next(filler) for i in range(target_len)]
 
 
 def write_strip(filename, spec):
@@ -140,8 +226,9 @@ def write_strip(filename, spec):
     # weights change.
     rng = random.Random(SEED + zlib.crc32(filename.encode()) % 10_000)
     tables = reel_tables(spec)
+    layout = spec.get("scatter_layout")
     target_len = max(sum(t.values()) for t in tables)
-    reels = [build_reel(tables[r], target_len, rng) for r in range(NUM_REELS)]
+    reels = [build_reel(tables[r], target_len, rng, layout, r) for r in range(NUM_REELS)]
     path = os.path.join(STARWAKE_REELS, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -153,7 +240,10 @@ def write_strip(filename, spec):
 if __name__ == "__main__":
     for filename, spec in STRIP_WEIGHTS.items():
         length, tables = write_strip(filename, spec)
-        wilds = [t.get("W", 0) for t in tables]
-        wstr = "/".join(map(str, wilds)) if len(set(wilds)) > 1 else str(wilds[0])
-        print(f"{filename:12s} len={length:3d}/reel  W={wstr:12s}  S={tables[0].get('S', 0)}")
+        def per_reel(sym):
+            v = [t.get(sym, 0) for t in tables]
+            return "/".join(map(str, v)) if len(set(v)) > 1 else str(v[0])
+
+        print(f"{filename:12s} len={length:3d}/reel  "
+              f"W={per_reel('W'):12s}  S={per_reel('S')}")
     print("done.")

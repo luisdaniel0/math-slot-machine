@@ -44,9 +44,10 @@ class Constellation:
         num_rows,
         beast_shape,
         mult_ladder=(2, 3, 4, 5, 6, 7, 8, 9, 10),
+        prelit_cells=(),
     ):
         """
-        tier:            "corvus" | "ursa" | "draco" (label only, for events).
+        tier:            "corvus" | "ursa" | "draco" | "ascendant" (label, for events).
         target_cells:    list of (reel, row) the constellation occupies.
         num_reels:       grid width.
         num_rows:        grid height (uniform; Starwake is 4 on every reel).
@@ -55,6 +56,15 @@ class Constellation:
                          shows the spin it appears, and each further roam takes the
                          next rung. This list IS the enumerable ladder published in
                          the rules, so keep it explicit rather than computed.
+        prelit_cells:    cells that start ALREADY LIT -- i.e. sticky wilds from spin
+                         one, before any win. Empty for every normal tier; this is
+                         what makes DRACO ASCENDANT a different initial state rather
+                         than a different feature. Pre-lighting does two things at
+                         once: it removes cells that would have to be traced, AND it
+                         puts wilds on the board immediately, so the snowball cannot
+                         cold-start. Both push completion EARLIER, which is where the
+                         ladder keeps its value (a late draco tops out near rung 3,
+                         an early one reaches the top rung).
         """
         self.tier = tier
         self.target_cells = [tuple(c) for c in target_cells]
@@ -65,7 +75,16 @@ class Constellation:
         assert self.mult_ladder, "the beast needs at least one multiplier rung"
 
         # --- persistent state (this is the stuff that must survive the loop) ---
-        self.lit = set()             # (reel,row) cells lit so far -- sticky, grows only
+        self.prelit = {tuple(c) for c in prelit_cells}
+        unknown = self.prelit - set(self.target_cells)
+        assert not unknown, f"pre-lit cells are not part of the {tier} shape: {sorted(unknown)}"
+        # A fully pre-lit deal would wake the beast before a single spin and hand
+        # out the top of the ladder for free -- loud here rather than silent in a
+        # 1e6 pool, since the payout would look plausible right up to the ceiling.
+        assert len(self.prelit) < len(self.target_cells), (
+            f"{tier} is pre-lit on every cell -- it would complete before spin 1"
+        )
+        self.lit = set(self.prelit)  # (reel,row) cells lit so far -- sticky, grows only
         self.phase = self.CHARGE
         self.multiplier = 1          # only meaningful once the beast is awake
         self._rung = None            # index into mult_ladder; None until wake

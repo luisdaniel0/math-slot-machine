@@ -49,6 +49,8 @@ class GameState(GameStateOverride):
             num_rows=self.config.num_rows[0],  # uniform (4 on every reel)
             beast_shape=self.config.constellation_beast_shapes[tier],
             mult_ladder=self.config.constellation_mult_ladders[tier],
+            # empty for every tier but "ascendant" -- the deal is dark by default
+            prelit_cells=self.config.constellation_prelit_cells.get(tier, ()),
         )
         constellation_dealt_event(self)
 

@@ -238,3 +238,59 @@ def test_beast_cells_are_wild_and_carry_the_climbing_multiplier(gs):
     c.apply_wilds(gs.board, lambda: gs.create_symbol("W"))
     for (reel, row) in c.beast_cells():
         assert gs.board[reel][row].multiplier == 4
+
+
+# ------------------------------------------------------- pre-lit (Draco Ascendant)
+# Ascendant is a Draco dealt with some cells ALREADY LIT -- a different initial
+# state, not a different feature. These lock the two things that buys: cells that
+# no longer need tracing, and wilds on the board from spin one (no cold start).
+def test_no_prelit_by_default():
+    """Every normal tier must be unaffected -- the default stays a dark deal."""
+    c = make_constellation([(0, 1), (2, 2)])
+    assert c.prelit == set()
+    assert c.lit == set()
+
+
+def test_prelit_cells_start_lit():
+    c = make_constellation([(0, 1), (2, 2), (4, 3)], prelit_cells=[(0, 1), (4, 3)])
+    assert c.lit == {(0, 1), (4, 3)}
+    assert c.remaining == [(2, 2)]
+    assert not c.is_complete
+
+
+def test_prelit_cells_are_wild_on_the_board_before_any_win(gs):
+    """The head start is not just bookkeeping: a pre-lit cell is a sticky wild on
+    spin one, which is what stops an Ascendant from ever cold-starting."""
+    c = make_constellation([(0, 1), (2, 2), (4, 3)], prelit_cells=[(0, 1)])
+    for reel in range(5):
+        for row in range(4):
+            gs.board[reel][row] = gs.create_symbol("H1")
+    c.apply_wilds(gs.board, lambda: gs.create_symbol("W"))
+    assert gs.board[0][1].check_attribute("wild") is True
+    assert gs.board[2][2].check_attribute("wild") is False  # still dark
+
+
+def test_prelit_reduces_the_wins_needed_to_complete():
+    """The whole economic point: fewer cells left to trace -> completes EARLIER,
+    and early completion is where the ladder keeps its value."""
+    cells = [(0, 1), (2, 2), (4, 3)]
+    dark = make_constellation(cells)
+    dark.light_from_wins([(0, 1), (2, 2)])
+    assert not dark.is_complete          # still needs (4,3)
+
+    lit = make_constellation(cells, prelit_cells=[(4, 3)])
+    lit.light_from_wins([(0, 1), (2, 2)])
+    assert lit.is_complete               # same spin's wins finish it
+
+
+def test_prelit_must_be_part_of_the_shape():
+    """A typo'd cell would silently never light and the tier could never complete."""
+    with pytest.raises(AssertionError, match="not part of"):
+        make_constellation([(0, 1), (2, 2)], prelit_cells=[(3, 3)])
+
+
+def test_fully_prelit_is_rejected():
+    """Would wake the beast before spin one and hand out the ladder for free --
+    a payout that looks plausible right up to the ceiling, so fail loudly here."""
+    with pytest.raises(AssertionError, match="every cell"):
+        make_constellation([(0, 1), (2, 2)], prelit_cells=[(0, 1), (2, 2)])

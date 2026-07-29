@@ -136,8 +136,15 @@ class GameConfig(Config):
         # length is load-bearing for volatility AND replay watchability.
         # 6+ scatters clamp to the 5-scatter tier (star-rich strips WILL show them --
         # exact-count indexing was a keybearer KeyError).
-        self.num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15}
-        self.scatter_tiers = {3: "corvus", 4: "ursa", 5: "draco"}
+        # 6 stars = DRACO ASCENDANT, the mystery-exclusive fourth outcome. It is a
+        # real scatter count rather than a flag, so tier selection stays uniform
+        # (count -> tier) and needs no special case anywhere in the engine.
+        # IT CANNOT LEAK OUT OF buy_mystery, structurally: draw_board redraws away
+        # every unforced board with >=3 scatters, and the forced branch enforces an
+        # EXACT count, so a 6-scatter board only exists where 6 was explicitly
+        # forced -- which only the ascendant distribution does.
+        self.num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15, "ascendant": 15}
+        self.scatter_tiers = {3: "corvus", 4: "ursa", 5: "draco", 6: "ascendant"}
         # DERIVED, never hand-written: the engine awards spins by scatter COUNT
         # (game_override.update_freespin_amount reads freespin_triggers[gametype][count])
         # while the design thinks in TIERS. Deriving it means a length change is a
@@ -306,6 +313,55 @@ class GameConfig(Config):
             "draco": [2, 2, 3, 4, 5, 8, 12, 19, 31, 53, 94, 169, 315, 600],
         }
 
+        # ---------------------------------------------------- DRACO ASCENDANT
+        # It IS a Draco: same 11 cells, same 2x2 beast, same 14-rung ladder, same
+        # 15 spins. Derived from draco rather than copied so the two can never
+        # drift -- a draco re-tune automatically re-tunes its ascendant form.
+        # The ONE difference is the starting state: some cells begin LIT.
+        for _d in ("constellation_cells", "constellation_beast_shapes",
+                   "constellation_mult_ladders"):
+            getattr(self, _d)["ascendant"] = getattr(self, _d)["draco"]
+
+        # WHICH cells are pre-lit matters far more than how many -- SWEPT, n=20k
+        # (reels/sweep_ascendant.py), judged on the mystery price each one implies:
+        #   pre-lit            mean  complete  at cap   -> mystery cost
+        #   (none)             510x     32.2%   0.00%       346x
+        #   (3,2) neck         589x     34.9%   0.01%       354x
+        #   (3,2)(4,0)         956x     45.2%   0.05%       392x
+        #   (4,0)(4,1)       2,249x     89.6%   0.09%       526x   <- CHOSEN
+        #   (3,2)(4,0)(4,1)  2,742x     90.7%   0.36%       577x
+        #   3 body cells     1,339x     49.3%   0.09%       431x
+        #
+        # KEY FINDING -- PRE-LIGHTING AND SHAPE ARE OPPOSITE PROBLEMS. The shape rule
+        # above says a reel-3 cell is a gate AND A KEY, so never harden a tier by
+        # adding one. That does NOT transfer to pre-lighting: the neck is nearly
+        # worthless pre-lit (510 -> 589x), while an adjacent reel-4 PAIR is
+        # transformative (510 -> 2,249x, completion 32% -> 90%). Same cell count,
+        # 2.4x the payout. Reel 3 already carries wilds (FR0 W=3) so it is not the
+        # binding constraint; reel 4 is BONE DRY (W=0), so two permanent wilds there
+        # are the only thing that makes the column reachable at all -- and every win
+        # that then crosses it lights the rest of the column.
+        #
+        # Pre-lighting pays through TWO channels and the second dominates:
+        #   1. fewer cells to trace -> completes earlier -> higher ladder rungs;
+        #   2. those cells are WILDS FROM SPIN ONE -> every win is richer all feature.
+        # Channel 2 is why a roam-length model underestimates badly: this set
+        # completes at mean roam 6.06 where the draco roam table predicts ~1,350x,
+        # and it pays 2,249x. It is also why the body-cell control still reached
+        # 1,339x despite barely improving completion.
+        self.constellation_prelit_cells = {
+            "ascendant": [(4, 0), (4, 1)],
+        }
+
+        # Which CREATURE a tier renders as. Identity and artwork are the same thing
+        # for the three normal tiers, but an Ascendant is a Draco -- the frontend
+        # must draw the dragon, not invent a fourth beast. Emitted on the deal and
+        # wake events so the client never has to special-case a tier name.
+        self.constellation_beast_names = {
+            "corvus": "corvus", "ursa": "ursa",
+            "draco": "draco", "ascendant": "draco",
+        }
+
         # Guaranteed minimum roam window. The beast must get at least this many
         # on-board (paying) spins after it wakes so "even a last-spin completion
         # still pays" (docs/ideas/starwake.md L47-48). This is a FLOOR, not the
@@ -330,7 +386,8 @@ class GameConfig(Config):
         self.min_roam_spins = 2
 
         # Reels
-        reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv"}
+        reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
+                 "ASC": "ASC.csv"}
         self.reels = {}
         for r, f in reels.items():
             self.reels[r] = self.read_reels_csv(os.path.join(self.reels_path, f))
@@ -372,17 +429,25 @@ class GameConfig(Config):
         ursa_condition = _tier_condition(4)
         draco_condition = _tier_condition(5)
 
-        # "Let the Sky Decide": weighted-random tier. These weights ARE the displayed
-        # odds target (60/30/10, doc L113) -- the shipped odds are the MEASURED post-
-        # optimization proportions (the wincap slice adds a little draco), verified to
-        # match the UI (compliance: probabilities display accurately).
-        mystery_condition = {
-            "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1}},
-            "scatter_triggers": {3: 60, 4: 30, 5: 10},
+        # DRACO ASCENDANT: 6 stars, dealt only from the ASC strip. That strip is the
+        # only one that can show six -- _force_special_board places at most ONE
+        # scatter per reel, so a sixth needs a reel whose window reveals two, which
+        # ASC guarantees by construction (reel 2 laid down as a step-3 run). Forcing
+        # 6 succeeds on ~92% of attempts there; on BR0 it would be ~20% and would
+        # break silently the next time BR0's weights are touched.
+        ascendant_condition = {
+            "reel_weights": {self.basegame_type: {"ASC": 1}, self.freegame_type: {"FR0": 1}},
+            "scatter_triggers": {6: 1},
             "mult_values": fg_mult,
             "force_wincap": False,
             "force_freegame": True,
         }
+
+        # NOTE: "Let the Sky Decide" no longer uses a single blended condition with
+        # weighted scatter_triggers. buy_mystery now draws ONE DISTRIBUTION PER TIER
+        # (reusing corvus/ursa/draco/ascendant conditions above) so the optimizer can
+        # fence each tier separately -- see the buy_mystery BetMode below for why the
+        # blended version inverted the published tier ladder.
 
         # Wincap: force the tier, then weight in the juiced WCAP strip. force_wincap
         # plus a slice win_criteria repeat the draw until the book reaches the cap.
@@ -542,14 +607,36 @@ class GameConfig(Config):
                     Distribution(criteria="draco", quota=0.99, conditions=draco_condition),
                 ],
             ),
-            # buy_mystery: "Let the Sky Decide" -- weighted mix, discounted vs picking.
-            # Wincap slice funds its draco share reaching the cap.
+            # buy_mystery: "Let the Sky Decide" -- 35 / 29.5 / 25 / 10 corvus / ursa /
+            # draco / ASCENDANT, plus the wincap slice.
+            #
+            # ONE DISTRIBUTION PER TIER, not a single blended one. The old single
+            # "mystery" fence let the optimizer reshape each tier freely to hit RTP,
+            # which INVERTED the published ladder -- rolling Draco paid less on
+            # average than rolling Corvus, while the UI advertised Draco as the prize.
+            # Per-tier distributions give each tier its own fence (kind=3/4/5/6) so
+            # its shape is pinned, exactly as base/ante already do it.
+            #
+            # ASCENDANT IS WHY THIS MODE CAN BE PRICED ABOVE THE TIER BUYS. A mystery
+            # is the probability-weighted average of what it can roll, so it is always
+            # cheaper than its most expensive tier -- it reaches 500x only at ~100%
+            # draco, which is buy_draco with a worse name. A fourth outcome that
+            # CANNOT BE BOUGHT lifts the average without that trap.
+            # COST IS THE MEASURED OUTPUT, not the round target: with Ascendant at
+            # 2,249x (swept, n=20k) the mix means 0.350*232.1 + 0.295*258.6 +
+            # 0.250*502.4 + 0.100*2249 = 508.0x, so cost = 508.0/0.9665 = 526x. That
+            # is 5% over the 500x market-standard price; trimming Ascendant to ~9% of
+            # rolls would land it on 500 exactly, which is a product call, not a math
+            # one. Re-derive from the 1e6 pool either way.
             BetMode(
-                name="buy_mystery", cost=276.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=526.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),
-                    Distribution(criteria="mystery", quota=0.995, conditions=mystery_condition),
+                    Distribution(criteria="ascendant", quota=0.100, conditions=ascendant_condition),
+                    Distribution(criteria="draco", quota=0.250, conditions=draco_condition),
+                    Distribution(criteria="ursa", quota=0.295, conditions=ursa_condition),
+                    Distribution(criteria="corvus", quota=0.350, conditions=corvus_condition),
                 ],
             ),
         ]

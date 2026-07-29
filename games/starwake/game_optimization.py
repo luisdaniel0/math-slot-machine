@@ -175,26 +175,44 @@ class OptimizationSetup:
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["draco"], [(50.0, 150.0)], [0.3]).return_dict(),
             },
-            # buy_mystery: weighted mix -> wincap slice (its ursa+draco share) + mixed
-            # vol. The cap slice is DERIVED FROM THE MIX, not chosen: a mystery roll
-            # should give the same cap odds as buying the tier it rolled, or the
-            # published tier odds mislead. At 60/30/10 and the tier rates above,
-            #   P(cap) = 0.3*(1/4339) + 0.1*(1/962) = 1.73e-04  = 1 in 5,782
-            #   slice_rtp = P * cap / cost = 1.73e-04 * 25000/276 = 0.0157
-            # Rarer than ursa despite containing draco, because 60% of rolls are corvus
-            # and corvus never caps. The previous 0.04 was a first-pass guess against the
-            # old 285x cost and made mystery a BETTER cap play than ursa at the same
-            # price. ⚠ PROVISIONAL: re-derive when Draco Ascendant changes the mix to
-            # 35/30/25/10 -- and note Ascendant is an early-completing draco, so it will
-            # carry cap weight of its own.
+            # buy_mystery: 35 / 29.5 / 25 / 10 corvus / ursa / draco / ASCENDANT.
+            # ONE FENCE PER TIER (kind = the scatter count recorded at trigger, 3/4/5
+            # and 6 for ascendant). The old single blended fence let the optimizer
+            # reshape each tier freely to hit RTP, which INVERTED the published ladder
+            # -- rolling Draco averaged less than rolling Corvus while the UI sold
+            # Draco as the prize. Fences are assigned in order and consume the books
+            # they match, so `kind` is mandatory here exactly as in base/ante.
+            #
+            # RTP SPLITS are each tier's share of the mode's mean, at the MEASURED
+            # Ascendant value (2,249x, swept at n=20k):
+            #   corvus 0.350*232.1 =  81.2 (16.0%)   ursa  0.295*258.6 =  76.3 (15.0%)
+            #   draco  0.250*502.4 = 125.6 (24.7%)   asc   0.100*2249  = 224.9 (44.3%)
+            #   mean 508.0 -> cost 526x. Splits are that share of (rtp - wincap).
+            # ASCENDANT CARRIES 44% OF THE MODE'S PAYBACK ON 10% OF ROLLS -- the shape
+            # the audited mystery games use (Rage Bait's top tier: 10% of rolls, 52% of
+            # payback), and the reason this mode can be priced above buy_draco at all.
+            #
+            # The cap share is derived from the tier rates like the tiers themselves:
+            #   P(cap) = 0.295*(1/4339) + 0.250*(1/962) + 0.100*(1/1111) = 4.18e-04
+            #   slice_rtp = 4.18e-04 * 25000/526 = 0.0199
+            # Ascendant's own 1-in-1,111 is the swept at-cap rate: it completes ~90% of
+            # the time and rides the top rungs, so it reaches 25,000x ~26x more readily
+            # than a plain draco (0.09% vs 0.00% unforced at 20k).
+            #
+            # ⚠ STILL PROVISIONAL at n=20k -- re-derive every split and the mode cost
+            # from the 1e6 pool. A tail rate read off 20k books is the least stable
+            # number here.
             "buy_mystery": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_mystery", 0.0157),
-                    "mystery": feature_cond(round(rtp - 0.0157, 5), hr=1),
+                    "wincap": wincap_cond("buy_mystery", 0.0199),
+                    "ascendant": feature_cond(0.4191, hr=1, kind=6),
+                    "draco": feature_cond(0.2340, hr=1, kind=5),
+                    "ursa": feature_cond(0.1422, hr=1, kind=4),
+                    "corvus": feature_cond(0.1513, hr=1, kind=3),
                 },
-                "scaling": ConstructScaling(tail_scaling("mystery")).return_dict(),
+                "scaling": ConstructScaling(tail_scaling("ascendant") + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),
-                "distribution_bias": ConstructFenceBias(["mystery"], [(20.0, 60.0)], [0.3]).return_dict(),
+                "distribution_bias": ConstructFenceBias(["ascendant"], [(20.0, 60.0)], [0.3]).return_dict(),
             },
         }
 

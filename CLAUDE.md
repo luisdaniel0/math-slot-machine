@@ -481,13 +481,19 @@ when corvus's ceiling was 1,500x and the cap was its only route to a dream; at
 10,661x it already has one.
 
 ### ▶▶ STATE OF THE TREE AT END OF Jul 28 2026 SESSION
-APPLIED + committed-clean? NO -- still all UNCOMMITTED working tree:
-  M CLAUDE.md, docs/ideas/starwake.md, games/starwake/game_config.py,
-    tests/starwake/{test_constellation.py, test_run_freespin.py},
-    .gitignore (**/library_*_backup/** so the 13G pool copy is never staged),
-    optimization_program/src/setup.toml (game_name starwake, m2m band widened 3-10)
-  ?? games/starwake/reels/{measure_tiers.py, sweep_ladder.py, sweep_beast.py}
-  ?? games/starwake/library_phaseB_backup/  (13G copy of the converged Phase B pool)
+COMMITTED AND CLEAN. Three commits on claude/starwake-feature-engine, in order:
+  1. per-tier feature length + swept multiplier ladders   (pushed to `mine`)
+  2. ursa joins draco at the 25,000x cap                  (local)
+  3. Draco Ascendant + buy_mystery restructure            (local)
+Only unrelated paths remain untracked (.claude/, four other game design docs,
+games/knockout_mayhem/) plus games/starwake/library_phaseB_backup/ (13G, gitignored).
+⚠ REMOTES: `origin` is StakeEngine/math-sdk, the PUBLIC upstream SDK. `mine` is the
+fork. The branch tracks `mine`, so a bare `git push` is correct -- never push starwake
+to origin.
+⚠ POOL: library/ holds 20k sweep leftovers for buy_mystery, the 100k confirmation run
+for the three tier buys, and the stale Jul 24-25 Phase B books for base/ante. Nothing
+in it is a converged production pool. library_phaseB_backup/ has the old shipped set.
+
 EVERYTHING DECIDED ON Jul 27 IS NOW WRITTEN INTO game_config.py:
   num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15}   <- PER TIER
   freespin_triggers is DERIVED from it, never hand-written, so a length change is a
@@ -500,7 +506,8 @@ EVERYTHING DECIDED ON Jul 27 IS NOW WRITTEN INTO game_config.py:
 URSA TOOK 1:500:2, NOT the recommended 1:300:1.7. The taller ceiling (13,708 ->
   17,220x at 20k) cost ~1% of >cost and almost nothing in price -- ursa's price sits
   at 266-284x across EVERY ceiling from 4,238x up -- so the cheap dream was taken.
-TESTS: 23 passing. Rewritten to DERIVE from config instead of hard-coding 5/10/15,
+TESTS: 29 passing (23 after the ladder work, +6 for pre-lit deals). Rewritten to
+  DERIVE from config instead of hard-coding 5/10/15,
   because an economy re-tune must not break tests that assert a RULE. Plus a new
   guard that each ladder has EXACTLY its tier's rung count: too short clamps early
   and silently caps that tier's ceiling (the trap the 10->15 change set), too long
@@ -605,19 +612,91 @@ one. A forced slice LOOPS FOREVER if its cap is out of structural reach. Ursa re
 25,000x naturally (once in 99,960) and the slice draws on the juiced WCAP strips, so
 this should be safe -- but it is the single most likely thing to hang the next run.
 
+### DRACO ASCENDANT -- BUILT Jul 28 2026 (29 tests green, end-to-end verified)
+The mystery-exclusive 4th outcome ships as a fourth TIER, not a special case: it is
+a Draco (same 11 cells, 2x2 beast, 14-rung ladder, 15 spins, all DERIVED from draco
+in config so they cannot drift) dealt with some cells ALREADY LIT.
+
+TRIGGER = 6 STARS, a real scatter count, so tier selection stays uniform (count ->
+tier) with no engine special case. Measured on buy_mystery at n=20k: shares land
+35.0 / 29.5 / 25.5 / 10.0, zero-pay 0.00% on every tier, 25,000x reachable.
+              corvus     ursa    draco  ascendant
+  mean          234x     273x     956x*    2,286x     *incl. forced wincap slice
+  completion   83.6%    63.0%    32.4%      89.2%
+  mean roam     4.91     5.10     4.46       6.13
+
+WHY 6 CANNOT LEAK, and why it needs its own strip -- BOTH sides of this were got
+wrong first and are worth not re-deriving:
+- THERE WAS NEVER A LEAK. draw_board redraws away EVERY unforced board with >=3
+  scatters, and the forced branch enforces an exact count, so a 6-scatter board only
+  exists where 6 was explicitly forced. The "6+ clamp to draco" line in game_config
+  is dead defensive code. No strip constraint was needed.
+- THE TIGHT SCATTER PAIR ON BR0 IS NOT A HAZARD, IT IS THE ENABLER.
+  _force_special_board places at most ONE scatter per reel (it zeroes each reel's
+  probability after picking it), so on 5 reels a 6th can only come from a reel whose
+  4-row window happens to show two -- and force_special_board is a bare `while True`
+  with NO retry cap. Removing BR0's pair (the "fix" that was nearly applied) would
+  have turned the ascendant force into a silent infinite hang.
+- HENCE ASC.csv: reel 2's scatters are laid down as one step-3 run so a stop there
+  always reveals two -> 1+1+2+1+1 = 6 on 91.6% of attempts (BR0 manages 20%, ~5
+  retries). It also ISOLATES ascendant from BR0, which is the base-game tuning
+  surface -- any future BR0 weight edit reshuffles it and could delete the pair.
+  This is the one place the SDK's "ensure the reels do not have stacked scatter
+  symbols" is deliberately violated, because it is the only route to 6 on 5 reels.
+
+PRE-LIT CELL SWEEP (reels/sweep_ascendant.py, n=20k, judged on implied mystery cost)
+  pre-lit            mean  complete  at cap   -> cost
+  (none)             510x     32.2%   0.00%     346x
+  (3,2) neck         589x     34.9%   0.01%     354x
+  (3,2)(4,0)         956x     45.2%   0.05%     392x
+  (4,0)(4,1)       2,249x     89.6%   0.09%     526x   <- CHOSEN
+  (3,2)(4,0)(4,1)  2,742x     90.7%   0.36%     577x
+  3 body cells     1,339x     49.3%   0.09%     431x
+
+FINDING 1 -- PRE-LIGHTING AND SHAPE ARE OPPOSITE PROBLEMS. The documented shape rule
+("a reel-3 cell is a gate AND A KEY, never harden a tier by adding reel-3 cells")
+does NOT transfer. Pre-lit, the neck is nearly worthless (510 -> 589x) while an
+adjacent REEL-4 PAIR is transformative (510 -> 2,249x, completion 32% -> 90%) -- same
+cell count, 2.4x the payout. Reel 3 already carries wilds (FR0 W=3) so it is not the
+binding constraint; reel 4 is BONE DRY (W=0), so two permanent wilds there are the
+only thing that makes the column reachable, and any win crossing it lights the rest.
+FINDING 2 -- PRE-LIGHTING PAYS THROUGH TWO CHANNELS AND THE SECOND DOMINATES: fewer
+cells to trace (earlier completion -> higher rungs), and wilds on the board from spin
+one (every win richer, no cold start). A roam-length model sees only the first and
+underestimates badly -- the chosen set completes at mean roam 6.06 where the draco
+roam table predicts ~1,350x, and it pays 2,249x. It is also why the body-cell control
+still reached 1,339x on barely-improved completion.
+
+BUY_MYSTERY RESTRUCTURED at the same time, since it needed the same change: the single
+blended "mystery" distribution became ONE PER TIER (corvus/ursa/draco/ascendant +
+wincap) with kind=3/4/5/6 fences. That also fixes the long-standing INVERTED TIER
+LADDER (BUY_MYSTERY #1) -- one undifferentiated fence let the optimizer reshape each
+tier freely, so rolling Draco averaged LESS than rolling Corvus while the UI sold
+Draco as the prize. Cost 285 -> 526x (mean/rtp on natural tier means); ascendant
+carries 44% of the mode's payback on 10% of rolls, the Rage Bait shape (10% -> 52%).
+
+⚠ READING THE MODE MEAN: a straight mean over the shipped pool reads ~657x because
+the wincap slice is a SAMPLING QUOTA, not a probability -- 0.5% of books forced to
+25,000x adds ~125x. Strip it and it is 510x -> 528x, matching the 526x derived from
+natural tier means. Never price a mode off the raw pool mean.
+
 ### ▶▶ NEXT SESSION STARTS HERE
- 1. DRACO ASCENDANT (the mystery-exclusive 4th outcome, 10% of mystery rolls).
+ 1. ~~DRACO ASCENDANT~~ DONE (above). Remaining on it: all its numbers are n=20k and
+    the at-cap rate especially is a tail read off 20k books. Re-derive the mystery
+    cost, the four RTP splits and the wincap slice from the 1e6 pool. Optional
+    product call: trimming ascendant 10% -> ~9% lands the cost on exactly 500x.
     RE-CHECKED AGAINST THE NEW TIER MEANS (232 / 259 / 502x): at a 35/30/25/10 mix
     the Ascendant must average ~1,990x, so the ~2,000x estimate SURVIVED the whole
     rebuild. Build it as a draco dealt with N cells pre-lit -- pre-lighting raises
     completion AND makes it EARLY, and early = long roam = top rungs = where all the
     value is -- then sweep N until it prices there.
- 2. buy_mystery per-tier fences (kind=3/4/5 + ascendant) -- see BUY_MYSTERY #1. Its
-    wincap slice_rtp (0.0157) is DERIVED from the 60/30/10 mix and must be re-derived
-    when Ascendant changes it to 35/30/25/10 -- and Ascendant, being an EARLY-completing
-    draco, will carry cap weight of its own.
+ 2. ~~buy_mystery per-tier fences~~ DONE (above) -- BUY_MYSTERY #1 is closed.
  3. Full Phase B re-converge at 1e6 x 6 modes, then set costs = avg win / rtp. Costs
-    are currently the 100k measurements (240 / 268 / 520 / 276x), good to ~+/-4x.
+    are currently 240 / 268 / 520 / 526x (the three buys from the 100k run, mystery
+    derived from the ascendant sweep). ⚠ FIRST RUN AFTER THIS CHANGE: buy_ursa's new
+    forced wincap slice and buy_mystery's new ascendant slice are both new forced
+    draws -- an unsatisfiable one hangs with no error. Both were smoke-verified at
+    20k, so watch rather than fear, but watch.
  4. base + ante have NOT been measured since the rebuild at all. Both contain draco
     features, so the new ladders and lengths moved them, and base is the 1x product
     AND the global RTP dial. Re-verify bust rate, win frequency and std dev against

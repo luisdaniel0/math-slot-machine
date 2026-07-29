@@ -20,14 +20,25 @@ def _client_cells(gamestate, cells):
 
 
 def constellation_dealt_event(gamestate):
-    """Feature start: which tier was dealt and the dim outline cells to draw."""
+    """Feature start: which tier was dealt and the dim outline cells to draw.
+
+    `prelit` is empty for every normal tier. For DRACO ASCENDANT it carries the
+    cells that are already burning at the deal -- they are sticky wilds from spin
+    one, so the frontend must draw them lit (and the board wild) before the first
+    spin resolves, not fade them in on a starLit beat. `beast` is the creature to
+    render, which is NOT the tier for ascendant: it is a Draco, dealt hot.
+    """
     c = gamestate.constellation
+    prelit = sorted(c.prelit)
     event = {
         "index": len(gamestate.book.events),
         "type": "constellationDealt",
         "tier": c.tier,
+        "beast": gamestate.config.constellation_beast_names.get(c.tier, c.tier),
         "cells": _client_cells(gamestate, c.target_cells),
         "totalCells": len(c.target_cells),
+        "prelit": _client_cells(gamestate, prelit),
+        "litCount": len(prelit),
     }
     gamestate.book.add_event(event)
 
@@ -53,6 +64,7 @@ def beast_wake_event(gamestate):
         "index": len(gamestate.book.events),
         "type": "beastWake",
         "tier": c.tier,
+        "beast": gamestate.config.constellation_beast_names.get(c.tier, c.tier),
         "beastShape": {"reels": c.beast_w, "rows": c.beast_h},
     }
     gamestate.book.add_event(event)
