@@ -14,10 +14,28 @@ its none_count guard), so every slice carries a hint even though rtp is authorit
 
 Criteria per mode MUST match game_config's distribution criteria:
   base / ante_starfall : wincap, draco, ursa, corvus, basegame, 0
-  buy_corvus           : corvus          buy_ursa   : ursa
+  buy_corvus           : corvus          buy_ursa   : wincap, ursa
   buy_draco            : wincap, draco    buy_mystery: wincap, mystery
-Only Draco reaches the cap, so only draco/mystery modes carry a wincap slice;
-buy_corvus/buy_ursa have none (their 2x2/2x3 beasts stop at honest lower ceilings).
+Every mode except buy_corvus carries a wincap slice. Corvus publishes an honest
+10,000x instead -- it CAN be made to reach the cap, but only by trading away the
+best body in the game (see game_config's ceilings note).
+
+A WINCAP SLICE'S rtp SHARE IS ITS FREQUENCY, which is the only dial that sets how
+often a mode pays its max win:
+
+    rate = slice_rtp * cost / cap        (equivalently slice_rtp = rate * cap / cost)
+
+so slice_rtp is literally the share of that mode's RTP delivered by cap books.
+Verified against the shipped pool: base at slice_rtp 0.02 and cost 1.0 measured
+P = 8.0e-07, exactly 0.02 * 1.0 / 25000.
+
+THAT IS WHAT MAKES DRACO WORTH ITS PRICE. Ursa and Draco publish the same 25,000x
+ceiling, so the ceiling cannot differentiate them -- cap-value-per-stake is
+rate * cap / cost, which means they break even when draco's rate is exactly its
+price ratio (520/268 = 1.94x ursa's). Below that, buying draco is strictly worse
+AND more expensive. The slices below target ~4.5x, giving draco ~2.3x the cap value
+per stake, with room to move: this ratio is the tier story and should be re-checked
+against the 1e6 pool, not assumed to have survived re-convergence.
 """
 
 from optimization_program.optimization_config import (
@@ -131,14 +149,23 @@ class OptimizationSetup:
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
             },
-            # buy_ursa: the coin-flip tier. Mid-high vol.
+            # buy_ursa: the coin-flip tier, now also a 25,000x product. Mid-high vol.
+            # slice_rtp 0.0215 at cost 268 -> cap rate 0.0215*268/25000 = 1 in 4,342,
+            # against draco's 1 in 962: a 4.5x gap, comfortably past the 1.94x
+            # break-even where draco would stop being worth its price.
             "buy_ursa": {
-                "conditions": {"ursa": feature_cond(rtp, hr=1)},
+                "conditions": {
+                    "wincap": wincap_cond("buy_ursa", 0.0215),
+                    "ursa": feature_cond(round(rtp - 0.0215, 5), hr=1),
+                },
                 "scaling": ConstructScaling(tail_scaling("ursa")).return_dict(),
                 "parameters": run_params(3, 10, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ursa"], [(5.0, 20.0)], [0.3]).return_dict(),
             },
-            # buy_draco: the dragon lottery -- wincap slice + very high vol.
+            # buy_draco: the dragon lottery -- very high vol, and the mode that reaches
+            # the shared 25,000x ceiling most often. slice_rtp 0.05 at cost 520 ->
+            # 1 in 962; 5.2% of draco's whole RTP is delivered at the cap, vs ursa's
+            # 2.2%. That gap IS draco's justification now that the ceiling is shared.
             "buy_draco": {
                 "conditions": {
                     "wincap": wincap_cond("buy_draco", 0.05),
@@ -148,11 +175,22 @@ class OptimizationSetup:
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["draco"], [(50.0, 150.0)], [0.3]).return_dict(),
             },
-            # buy_mystery: weighted mix -> wincap slice (its draco share) + mixed vol.
+            # buy_mystery: weighted mix -> wincap slice (its ursa+draco share) + mixed
+            # vol. The cap slice is DERIVED FROM THE MIX, not chosen: a mystery roll
+            # should give the same cap odds as buying the tier it rolled, or the
+            # published tier odds mislead. At 60/30/10 and the tier rates above,
+            #   P(cap) = 0.3*(1/4339) + 0.1*(1/962) = 1.73e-04  = 1 in 5,782
+            #   slice_rtp = P * cap / cost = 1.73e-04 * 25000/276 = 0.0157
+            # Rarer than ursa despite containing draco, because 60% of rolls are corvus
+            # and corvus never caps. The previous 0.04 was a first-pass guess against the
+            # old 285x cost and made mystery a BETTER cap play than ursa at the same
+            # price. ⚠ PROVISIONAL: re-derive when Draco Ascendant changes the mix to
+            # 35/30/25/10 -- and note Ascendant is an early-completing draco, so it will
+            # carry cap weight of its own.
             "buy_mystery": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_mystery", 0.04),
-                    "mystery": feature_cond(round(rtp - 0.04, 5), hr=1),
+                    "wincap": wincap_cond("buy_mystery", 0.0157),
+                    "mystery": feature_cond(round(rtp - 0.0157, 5), hr=1),
                 },
                 "scaling": ConstructScaling(tail_scaling("mystery")).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),

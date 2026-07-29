@@ -350,10 +350,10 @@ class GameConfig(Config):
         #
         # COSTS and per-mode DISPLAYED max wins are OUTPUTS measured in the measure
         # loop (cost = avg win / rtp; displayed max = observed max); ante's 1.5x is a
-        # design input (the premium). Only Draco (3x3) can structurally reach 25,000x,
-        # so buy_corvus/buy_ursa carry NO forced-wincap slice (forcing an unreachable
-        # cap would loop) and publish measured lower ceilings instead -- see the
-        # BetMode.max_win note below. Wild-mult ladder is DORMANT under Option A
+        # design input (the premium). Ursa and Draco both reach 25,000x and both carry a
+        # forced-wincap slice; only buy_corvus has none, and it publishes an honest lower
+        # ceiling instead -- see the BetMode.max_win note below for why that is a product
+        # decision rather than a structural limit. Wild-mult ladder is DORMANT under Option A
         # (game_override pins every wild to x1; the beast is the only multiplier), so
         # freegame mult_values are {1:1}.
         fg_mult = {self.basegame_type: {1: 1}, self.freegame_type: {1: 1}}
@@ -384,15 +384,35 @@ class GameConfig(Config):
             "force_freegame": True,
         }
 
-        # Wincap: only Draco reaches the cap, so force 5 stars + weight in the juiced
-        # WCAP strip. force_wincap + a slice win_criteria repeat the draw until it caps.
-        draco_wincap_condition = {
-            "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1, "WCAP": 5}},
-            "scatter_triggers": {5: 1},
-            "mult_values": fg_mult,
-            "force_wincap": True,
-            "force_freegame": True,
-        }
+        # Wincap: force the tier, then weight in the juiced WCAP strip. force_wincap
+        # plus a slice win_criteria repeat the draw until the book reaches the cap.
+        #
+        # URSA JOINED DRACO AT THE CAP (Jul 2026). It was excluded back when each tier
+        # had its own beast and only the 3x3 was believed to reach 25,000x -- but every
+        # beast is 2x2 now, and the 100k confirmation run measured ursa reaching the cap
+        # NATURALLY (once in 99,960, before any forcing). The exclusion was a measurement
+        # gap, not a structural fact.
+        # CORVUS STAYS OUT, and that is a choice rather than a limit: the sweep showed it
+        # can reach the cap with ladder top 800 (~1 in 2,500, easily forceable), but only
+        # by trading away the best body in the game (>cost 25.1% -> 14.5%, under the ~22%
+        # market norm) and flattening its ladder for five of nine rungs against a pitch
+        # that says the multiplier climbs every spin. It publishes an honest 10,000x.
+        # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
+        # ursa's is the one thing to watch on the first run after this change.
+        def _wincap_condition(star_count):
+            return {
+                "reel_weights": {
+                    self.basegame_type: {"BR0": 1},
+                    self.freegame_type: {"FR0": 1, "WCAP": 5},
+                },
+                "scatter_triggers": {star_count: 1},
+                "mult_values": fg_mult,
+                "force_wincap": True,
+                "force_freegame": True,
+            }
+
+        ursa_wincap_condition = _wincap_condition(4)
+        draco_wincap_condition = _wincap_condition(5)
 
         # Non-triggering base spins (draw_board redraws these to <3 stars). "0" is the
         # forced-loss slice; "basegame" is the paying base slice (funds the hit floor).
@@ -409,7 +429,7 @@ class GameConfig(Config):
             "force_freegame": False,
         }
 
-        cap = self.wincap  # 25,000x -- reachable by Draco only
+        cap = self.wincap  # 25,000x -- reachable by Draco AND Ursa (see below)
 
         # PER-MODE DISPLAYED CEILINGS. BetMode.max_win is BOTH the published "max win"
         # (write_configs.py:356 -> config.json "maxWin") AND the engine clamp: run_sims
@@ -420,29 +440,47 @@ class GameConfig(Config):
         # win_criteria and force_wincap=False, and check_repeat only repeats on a
         # win_criteria mismatch, so capped books are KEPT (clamped), not redrawn.
         #
-        # Measured on the converged 1e6 pool (post-optimization lookup tables):
-        #   corvus natural max 1,515.35x -> publish 1,500x  (1 in 136,561, RTP -0.00000)
-        #   ursa   natural max 4,773.80x -> publish 4,750x  (1 in 671,949, RTP -0.00000)
-        # Rounded DOWN to the nearest clean number under the natural max: the sliver
-        # above it is all that clamps, so RTP is untouched to 5dp and the Phase B
-        # convergence survives, while corvus keeps the 6.7x max/cost ratio the
-        # accelerating ladder was re-tuned to buy (it was 4x before). Cutting deeper
-        # would make the ceiling far more frequent (corvus 1,250x is 1 in 2,262) at the
-        # cost of that ratio -- a volatility change, not a display fix, so it waits for
-        # the structural/playtest pass. Both are DECISIONS the clamp enforces, not
-        # sample statistics: a deeper future sample cannot push the true max past them.
-        corvus_cap = 1500.0
-        ursa_cap = 4750.0
+        # SETTLED Jul 28 2026 -- published ceilings are 10,000 / 25,000 / 25,000.
+        # Measured on the 100k confirmation pool (wincap slice stripped, clamp lifted):
+        #   corvus natural max 11,438x -> publish 10,000x   (4 books above it in 100k)
+        #   ursa   natural max 25,000x -> publish 25,000x   (reached the cap unforced)
+        #   draco  natural max 25,000x -> publish 25,000x
+        #
+        # URSA AND DRACO SHARE THE CAP, and that is deliberate. The market precedent is
+        # explicit (Rage Bait's buys cost 250-500x and ALL of them reach the 25,000x
+        # cap), so multiple buys at one ceiling is the norm rather than a defect. It also
+        # costs nothing: publishing 15,000x instead would have clipped 5 books in 100,000
+        # and moved ursa's mean by 0.077%.
+        # WHAT MAKES DRACO WORTH 1.94x URSA'S PRICE IS THEN CAP FREQUENCY, NOT CEILING.
+        # Cap-value-per-stake is rate * cap / cost, so the two are equal when draco's
+        # rate is exactly its price ratio, 520/268 = 1.94x ursa's -- below that, draco is
+        # a strictly worse cap play AND costs more, which is the failure this whole
+        # arrangement has to avoid. The rates are set in game_optimization.py, where a
+        # wincap slice's rtp share IS its frequency (rate = slice_rtp * cost / cap), and
+        # they are targeted at ~4.5x so draco delivers ~2.3x the cap value per stake.
+        #
+        # BetMode.max_win is BOTH the published "max win" (write_configs.py:356 ->
+        # config.json "maxWin") AND the engine clamp: run_sims assigns it to
+        # config.wincap for that mode, state.py rebuilds WinManager from it per thread,
+        # and executables.evaluate_wincap stops the book the moment running_bet_win
+        # reaches it. So a ceiling is honest BY CONSTRUCTION once set -- the only
+        # question is which number to advertise, and no deeper future sample can exceed
+        # it. Corvus has no win_criteria and force_wincap=False, and check_repeat only
+        # repeats on a win_criteria mismatch, so its clamped books are KEPT, not redrawn.
+        # Corvus is rounded DOWN from its natural max so only the sliver above clamps and
+        # RTP survives to 5dp.
+        corvus_cap = 10000.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
-        # sweep_fr0.py at n=40k with the forced-wincap slice REMOVED -- that slice is a
-        # sampling quota, not a probability, so leaving it in inflates the average and
-        # would price the mode off a pool the optimizer is about to re-weight anyway.
-        # corvus/ursa are single-distribution modes, so their pools ARE natural.
-        # mystery is the 60/30/10 blend of the three tier means (0.6*217 + 0.3*274 +
-        # 0.1*630 = 275x). These are INPUTS to optimization even though they are
-        # OUTPUTS of design -- refine them from the 1e6 pool, then re-run `run.py
-        # optimize` alone (the optimizer step does not need the sims regenerated).
+        # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that
+        # slice is a sampling quota, not a probability, so leaving it in inflates the
+        # average and would price the mode off a pool the optimizer is about to
+        # re-weight anyway. Measured means 232.1 / 258.6 / 502.4x -> 240 / 268 / 520x.
+        # mystery is the 60/30/10 blend of those means (0.6*232.1 + 0.3*258.6 +
+        # 0.1*502.4 = 267.1 -> 276x) and is PROVISIONAL: the Draco Ascendant tier will
+        # change both the mix and the price. These are INPUTS to optimization even
+        # though they are OUTPUTS of design -- refine them from the 1e6 pool, then
+        # re-run `run.py optimize` alone (that step does not need the sims regenerated).
         # base stays 1.0 by definition; ante is a bet multiplier chosen by design.
         self.bet_modes = [
             # base (1x): natural 3/4/5-star mix (quotas ~ the 67/25/8 identity) + a
@@ -473,26 +511,31 @@ class GameConfig(Config):
                     Distribution(criteria="0", quota=0.3, win_criteria=0.0, conditions=zerowin_condition),
                 ],
             ),
-            # buy_corvus: pin the safe tier. No forced-wincap slice (2x2 can't reach the
-            # global cap); publishes -- and clamps at -- its own measured ceiling.
+            # buy_corvus: pin the safe tier. NO forced-wincap slice -- not because the
+            # cap is unreachable (it can be bought with a taller ladder) but because
+            # buying it costs corvus the best body in the game. The deliberate grind
+            # tier: highest >cost, lowest ceiling.
             BetMode(
-                name="buy_corvus", cost=224.0, rtp=self.rtp, max_win=corvus_cap,
+                name="buy_corvus", cost=240.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
                 ],
             ),
-            # buy_ursa: pin the coin-flip tier. Same story as corvus, higher ceiling.
+            # buy_ursa: pin the coin-flip tier -- now ALSO a 25,000x product, at a
+            # deliberately rarer cap than draco (see the ceilings note above).
             BetMode(
-                name="buy_ursa", cost=283.0, rtp=self.rtp, max_win=ursa_cap,
+                name="buy_ursa", cost=268.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
-                    Distribution(criteria="ursa", quota=1.0, conditions=ursa_condition),
+                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ursa_wincap_condition),
+                    Distribution(criteria="ursa", quota=0.995, conditions=ursa_condition),
                 ],
             ),
-            # buy_draco: pin the greedy tier -- THE 25,000x product. Wincap slice.
+            # buy_draco: pin the greedy tier -- the 25,000x product players pay for,
+            # earning its price with ~4.5x ursa's cap rate rather than a taller ceiling.
             BetMode(
-                name="buy_draco", cost=651.0, rtp=self.rtp, max_win=cap,
+                name="buy_draco", cost=520.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
@@ -502,7 +545,7 @@ class GameConfig(Config):
             # buy_mystery: "Let the Sky Decide" -- weighted mix, discounted vs picking.
             # Wincap slice funds its draco share reaching the cap.
             BetMode(
-                name="buy_mystery", cost=285.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=276.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),

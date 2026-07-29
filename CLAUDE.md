@@ -561,28 +561,67 @@ FOUR THINGS THE DEEPER SAMPLE CHANGED:
    different products (corvus 84% completion, best body, 48x dream; ursa 63%,
    genuinely bimodal, 93x dream). See OPEN DECISION 2.
 
-### ▶▶ NEXT SESSION STARTS HERE
-OPEN DECISIONS -- both are cheap to settle and both gate the 1e6 run:
- 1. PUBLISHED CEILINGS. corvus ~10,000x is FORCED (it cannot reach the cap). ursa is
-    a free choice between its measured 25,000x and the lower ascending-ladder number
-    (15,000x). BetMode.max_win is BOTH the published maxWin AND the engine clamp, so
-    either is honest by construction -- the only question is which to advertise. A
-    25,000x ursa makes the maxWin column read 10,000 / 25,000 / 25,000 (corvus
-    visibly the odd one out); 15,000x makes it a clean visible tier ladder but clamps
-    genuine hits.
- 2. THE 240/268 CORVUS-URSA GAP. Either leave it (the products differ even where the
-    prices do not) or pull corvus toward 200x via its ladder START -- its price lives
-    in its body, at 84% completion and mean roam 4.89 of 9.
+### CEILINGS + CAP FREQUENCIES -- SETTLED Jul 28 2026 (applied, tests green)
+DECISION: ursa and draco SHARE the 25,000x cap; corvus publishes an honest 10,000x;
+the tier story is carried by CAP FREQUENCY instead of by ceiling.
 
-THEN, IN ORDER:
- 3. DRACO ASCENDANT (the mystery-exclusive 4th outcome, 10% of mystery rolls).
+  mode           cost    maxWin  capRTP        cap rate   maxWin/cost
+  base            1.0    25,000  0.0200  1 in 1,250,000            --
+  ante_starfall   1.5    25,000  0.0250  1 in   666,667            --
+  buy_corvus      240    10,000      --            never           42x
+  buy_ursa        268    25,000  0.0215  1 in     4,339           93x
+  buy_draco       520    25,000  0.0500  1 in       962           48x
+  buy_mystery     276    25,000  0.0157  1 in     5,769           91x
+
+WHY SHARED CEILINGS ARE FINE. Market precedent is explicit: Rage Bait's buys cost
+250-500x and ALL of them reach the 25,000x cap. Multiple buys at one ceiling is the
+norm, not a defect. It is also free -- publishing ursa at 15,000x instead would have
+clipped 5 books in 100,000 and moved its mean 0.077%. The earlier "ascending
+ceilings" proposal is therefore RETIRED.
+
+WHY DRACO IS STILL WORTH 1.94x URSA'S PRICE. Cap-value-per-stake is rate*cap/cost,
+so the two break even when draco's cap rate is exactly its price ratio (520/268 =
+1.94x ursa's). BELOW THAT, DRACO IS A STRICTLY WORSE CAP PLAY AND COSTS MORE -- the
+one failure mode this arrangement has to avoid. Set to ~4.5x, giving draco ~2.3x the
+cap value per stake. THAT RATIO IS THE TIER STORY: re-check it on the 1e6 pool, do
+not assume it survived re-convergence.
+
+WHY CORVUS STAYS AT 10,000x -- it is a CHOICE, not a limit. The sweep showed corvus
+can reach the cap (ladder top 800, ~1 in 2,500, easily forceable). Buying it costs
+>cost 25.1% -> 14.5% (under the ~22% norm, and the best body in the game) and
+flattens the ladder for five of nine rungs against a pitch that says the multiplier
+climbs every spin. Corvus is the deliberate non-lottery grind tier; a menu where
+every tier is a lottery has no entry point.
+
+WHY THE 240/268 CORVUS-URSA PRICE GAP STAYS. It is structural, not a tuning miss:
+the sweep priced corvus at 202-274x across EVERY ladder at 10 spins and ursa at
+266-284x at 15, so neither can move far. Reaching 200x means the 1:40:1.5 ladder,
+which drops corvus's ceiling to 2,444x and max/cost to 12x -- undoing the rebuild.
+The menu differentiates on the CEILING column (10,000 vs 25,000) instead. The only
+untried lever is a corvus feature shorter than 10 spins; not worth it for cosmetics.
+
+⚠ FIRST-RUN WATCH-ITEM: buy_ursa now carries a FORCED wincap slice where it never had
+one. A forced slice LOOPS FOREVER if its cap is out of structural reach. Ursa reached
+25,000x naturally (once in 99,960) and the slice draws on the juiced WCAP strips, so
+this should be safe -- but it is the single most likely thing to hang the next run.
+
+### ▶▶ NEXT SESSION STARTS HERE
+ 1. DRACO ASCENDANT (the mystery-exclusive 4th outcome, 10% of mystery rolls).
     RE-CHECKED AGAINST THE NEW TIER MEANS (232 / 259 / 502x): at a 35/30/25/10 mix
     the Ascendant must average ~1,990x, so the ~2,000x estimate SURVIVED the whole
     rebuild. Build it as a draco dealt with N cells pre-lit -- pre-lighting raises
     completion AND makes it EARLY, and early = long roam = top rungs = where all the
     value is -- then sweep N until it prices there.
- 4. buy_mystery per-tier fences (kind=3/4/5 + ascendant) -- see BUY_MYSTERY #1.
- 5. Full Phase B re-converge at 1e6 x 6 modes, then set costs = avg win / rtp.
+ 2. buy_mystery per-tier fences (kind=3/4/5 + ascendant) -- see BUY_MYSTERY #1. Its
+    wincap slice_rtp (0.0157) is DERIVED from the 60/30/10 mix and must be re-derived
+    when Ascendant changes it to 35/30/25/10 -- and Ascendant, being an EARLY-completing
+    draco, will carry cap weight of its own.
+ 3. Full Phase B re-converge at 1e6 x 6 modes, then set costs = avg win / rtp. Costs
+    are currently the 100k measurements (240 / 268 / 520 / 276x), good to ~+/-4x.
+ 4. base + ante have NOT been measured since the rebuild at all. Both contain draco
+    features, so the new ladders and lengths moved them, and base is the 1x product
+    AND the global RTP dial. Re-verify bust rate, win frequency and std dev against
+    the benchmarks -- every rebuild measurement so far went into the three buys.
 
 POOL STATE -- READ THIS BEFORE TOUCHING library/:
   IT IS A MIX. buy_corvus / buy_ursa / buy_draco are today's 100k confirmation books
@@ -692,6 +731,15 @@ do not overlap ursa's price) still stand.
        50-100x there. (Reading note: stakestats "Max Multiplier" for a buy is
        COST-NORMALIZED = maxWin/cost; our published maxWin column is base-bet, so
        divide by cost to compare.)
+- A WINCAP SLICE'S rtp SHARE IS ITS FREQUENCY -- the only dial that sets how often a
+  mode pays its max win, and it is exact, not a tuning knob:
+      rate = slice_rtp * cost / cap        (slice_rtp = rate * cap / cost)
+  So slice_rtp is literally the share of that mode's RTP delivered by cap books, which
+  also makes it the cap-value-per-stake -- the right number to compare ACROSS modes at
+  different prices. Verified: base at slice_rtp 0.02, cost 1.0 measured P=8.0e-07,
+  exactly 0.02*1.0/25000. The slice QUOTA in game_config is a separate thing entirely
+  (a sampling quota: how many cap books get generated for the optimizer to weight), and
+  confusing the two is easy -- the quota does not set the frequency.
 - base wincap slice sits at P=8.0e-07: clears the doc's ">= ~1e-7 / better than 1 in
   10M" gate, marginally under the stricter 1e-6 written elsewhere in this file.
 - ⚠ ANY forced-wincap slice LOOPS FOREVER if the cap drifts out of structural reach
