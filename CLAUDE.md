@@ -247,7 +247,7 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       rolls -- the Rage Bait shape, now measured at 1e6 rather than swept at 20k.
       STILL TO DO: write these into the frontend copy. Display rounding to 35/29.6/25.2/
       10.0 is fine; the gate is that the displayed mix is the DELIVERED mix.
-- [ ] event-ID finder
+- [ ] Write those odds into the frontend copy; event-ID finder (see NEXT SESSION below)
 
 ### ▶ THE ECONOMY REBUILD -- RATIONALE (Jul 27 2026; EXECUTED Jul 28, see below)
 ⚠ READ ORDER: this section and the two ladder sweeps under it are the WHY. They are
@@ -867,12 +867,18 @@ MEASURED (`reels/sweep_beast.py`, 40k sims/variant, wincap slice stripped):
 - Cost collapses because min_roam=5 was carrying ~70% of buy_draco's value.
   Restore the price in the LADDER TOPS, not by putting the floor back.
 
-### BUY_MYSTERY -- measured state (do AFTER the beast/ladder rebuild)
-NOTE Jul 27 2026: #1 (the fence defect) is STILL LIVE and must be fixed. #3's mix
-table and #4's "Rage Bait's shape is not available" are SUPERSEDED by the DRACO
-ASCENDANT decision in PICK UP HERE -- a fourth, non-purchasable outcome is exactly
-what makes that shape available. #5 (no 2-scatter dud) and #6 (publish true odds,
-do not overlap ursa's price) still stand.
+### BUY_MYSTERY -- historical diagnosis (✅ ALL RESOLVED; kept for the reasoning)
+⚠ READ AS HISTORY, NOT STATE. Every number below is pre-rebuild. Current state is in
+"FULL 1e6 RE-CONVERGE" and "THE hr BUG". Status of each item:
+  #1 the inverted tier ladder -- ✅ CLOSED. Per-tier kind fences landed Jul 28, and the
+     hr fix on Jul 29 made the mix itself correct. Draco now averages 490x against
+     corvus's 226x, i.e. the ladder points the right way for the first time.
+  #3 mix table / #4 "Rage Bait's shape is not available" -- SUPERSEDED by DRACO
+     ASCENDANT: a fourth, non-purchasable outcome is exactly what makes that shape
+     available, and it now measures 43.4% of payback on 10.05% of rolls at 1e6.
+  #5 (no 2-scatter dud) and #6 (publish true odds, do not overlap ursa's price) STAND.
+     #6 is satisfied: mystery costs 526x against ursa's 268x, and the true odds are
+     recorded in the MYSTERY ODDS MEASURED item near the top.
 1. THE PUBLISHED TIER LADDER IS INVERTED. In today's buy_mystery, rolling Draco
    pays 213x on average -- LESS than rolling Corvus (331x) -- against 628x when
    Draco is bought directly (median 49x vs buy_draco's 269x). CAUSE: buy_mystery has
