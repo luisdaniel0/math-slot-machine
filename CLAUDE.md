@@ -163,7 +163,10 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       Sweep harness: scratchpad/sweep_draco.py (patches cells in-process, regens
       one mode, counts beastWake books). PHASE B (RTP convergence + costs/ceilings
       at 1e6) NOT started.
-- [ ] Optimize → verify at 1e6/mode; event-ID finder for reviewer scenarios
+- [x] Optimize → verify at 1e6/mode — DONE Jul 29 2026, ALL SIX MODES CONVERGED on the
+      post-rebuild config. See "▶▶ FULL 1e6 RE-CONVERGE (Jul 29 2026)" below for the
+      table, the two optimizer bugs it exposed, and the base-volatility investigation.
+- [ ] event-ID finder for reviewer scenarios
 
 - [x] ECONOMY RE-TUNE (the buy prices were ~10x too high; cost = avg win/rtp, and
       Stake caps buy cost at 1000x). Buy cost 2208/2907/7258x -> **224/283/651x**,
@@ -202,8 +205,21 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       BOTH the published maxWin (write_configs.py:356 -> config.json bookShelfConfig)
       AND the engine clamp (run_sims.py:48 -> config.wincap; state.py:256 rebuilds
       WinManager per thread from it; executables.evaluate_wincap ends the book at it).
-      So a ceiling is honest BY CONSTRUCTION once set -- the only question is which
-      number to advertise, and a deeper future sample can never exceed it. Capped books
+      So a ceiling is honest ALMOST by construction once set -- ⚠ CORRECTED Jul 29 2026,
+      "a deeper future sample can never exceed it" IS FALSE. win_manager.py:55-57 clamps
+      basegame and freegame wins SEPARATELY and then SUMS them, so a book's true maximum
+      is published maxWin + the trigger spin's own line win. Measured on the 1e6 pool:
+      base tops out at 25,005x and ante at 25,004x against a published 25,000x (205 and
+      307 books per 1e6; every one has freegame pinned to exactly 25000.00 with the base
+      win added on top). Pre-existing -- the shipped Phase B pool did the same at
+      25,005.5x -- and it is upstream SDK behaviour, not something Starwake introduced.
+      Magnitude 0.02%, RTP cost of fixing it ~4e-6. MATTERS BECAUSE 25,000x IS THE 2-STAR
+      TIER CAP WITH ZERO HEADROOM, so this pokes above the tier, not merely above our own
+      config. One-line fix if wanted: `total_cumulative_wins += min(max_allowed_win,
+      base + free)` -- but it is a shared SDK file and needs base/ante/buy_draco/
+      buy_mystery re-simmed. The buy modes with NO basegame win on the trigger spin land
+      exactly ON their cap (old corvus/ursa pools: 1 and 2 books at cap, zero above).
+      Capped books
       are KEPT, not redrawn: check_repeat repeats only on a win_criteria mismatch or a
       missing freegame, and corvus/ursa set neither (verified -- if they had, the
       published ceiling would have been silently redrawn away and unreachable).
@@ -223,7 +239,15 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       BELOW carpet max, widest hole <=1.24x and only in the >9,000x tail. Zero-pay
       still 0.00% on all three buys. Full table + the four things the deeper sample
       changed: "CONFIRMATION RUN @ 100k/TIER" below.
-- [ ] Set mystery odds (below); event-ID finder
+- [x] MYSTERY ODDS MEASURED on the converged 1e6 pool (Jul 29 2026): corvus 35.16% /
+      ursa 29.64% / draco 25.15% / ASCENDANT 10.05%, summing to exactly 100%. Draco's
+      figure INCLUDES the 0.04% forced-wincap slice, which uses draco_wincap_condition
+      (5 scatters), so those books are Draco rolls and must be attributed to Draco, not
+      shown as a fifth outcome. Ascendant carries 43.4% of the mode's payback on 10% of
+      rolls -- the Rage Bait shape, now measured at 1e6 rather than swept at 20k.
+      STILL TO DO: write these into the frontend copy. Display rounding to 35/29.6/25.2/
+      10.0 is fine; the gate is that the displayed mix is the DELIVERED mix.
+- [ ] event-ID finder
 
 ### ▶ THE ECONOMY REBUILD -- RATIONALE (Jul 27 2026; EXECUTED Jul 28, see below)
 ⚠ READ ORDER: this section and the two ladder sweeps under it are the WHY. They are
@@ -480,19 +504,38 @@ This REVERSES the earlier "make every tier reach 25,000x" argument -- that was m
 when corvus's ceiling was 1,500x and the cap was its only route to a dream; at
 10,661x it already has one.
 
-### ▶▶ STATE OF THE TREE AT END OF Jul 28 2026 SESSION
-COMMITTED AND CLEAN. Three commits on claude/starwake-feature-engine, in order:
+### ▶▶ STATE OF THE TREE AT END OF Jul 29 2026 SESSION
+COMMITTED AND CLEAN. Four commits on claude/starwake-feature-engine, in order:
   1. per-tier feature length + swept multiplier ladders   (pushed to `mine`)
   2. ursa joins draco at the 25,000x cap                  (local)
   3. Draco Ascendant + buy_mystery restructure            (local)
+  4. buy_mystery hr fix + 1e6 re-converge notes           (local)
 Only unrelated paths remain untracked (.claude/, four other game design docs,
-games/knockout_mayhem/) plus games/starwake/library_phaseB_backup/ (13G, gitignored).
+games/knockout_mayhem/) plus games/starwake/library_phaseB_backup/ (13G, gitignored)
+and optimization_program/src/setup.toml (generated optimizer state -- never commit it).
 ⚠ REMOTES: `origin` is StakeEngine/math-sdk, the PUBLIC upstream SDK. `mine` is the
 fork. The branch tracks `mine`, so a bare `git push` is correct -- never push starwake
 to origin.
-⚠ POOL: library/ holds 20k sweep leftovers for buy_mystery, the 100k confirmation run
-for the three tier buys, and the stale Jul 24-25 Phase B books for base/ante. Nothing
-in it is a converged production pool. library_phaseB_backup/ has the old shipped set.
+POOL: library/ is now a CONVERGED PRODUCTION POOL -- all six modes at 1e6 on the
+current config. See "POOL STATE" further down.
+
+### ▶▶ NEXT SESSION STARTS HERE (as of Jul 29 2026)
+The math is converged and shippable. What remains is publishing work plus two open
+product calls.
+ 1. WRITE MYSTERY'S ODDS INTO THE FRONTEND: corvus 35.16 / ursa 29.64 / draco 25.15 /
+    ascendant 10.05%. Draco's number INCLUDES the 0.04% cap slice (it forces 5
+    scatters, so those are Draco rolls). Display rounding is fine; the gate is that the
+    displayed mix is the delivered mix.
+ 2. EVENT-ID FINDER for reviewer scenarios -- the last unstarted engineering item.
+ 3. PRODUCT CALL -- the maxWin overshoot (books pay up to 25,005x against a published
+    25,000x). Diagnosis and the one-line fix are in the PER-MODE DISPLAYED CEILINGS
+    section. Costs a re-sim of base/ante/buy_draco/buy_mystery.
+ 4. PRODUCT CALL -- base-boost, i.e. whether ordinary base spins should be able to pay
+    more than 21x. This is the ONLY remaining route to higher base volatility and to a
+    >100x share above 0.372 (see BASE VOLATILITY). The doc parks it until first
+    playtest and that is still the right call.
+ 5. NOT A TODO: base std dev 24.08 and >100x share 0.372. Both investigated at length
+    on Jul 29 and deliberately left. Read BASE VOLATILITY before reopening.
 
 EVERYTHING DECIDED ON Jul 27 IS NOW WRITTEN INTO game_config.py:
   num_feature_spins = {"corvus": 10, "ursa": 15, "draco": 15}   <- PER TIER
@@ -680,37 +723,109 @@ the wincap slice is a SAMPLING QUOTA, not a probability -- 0.5% of books forced 
 25,000x adds ~125x. Strip it and it is 510x -> 528x, matching the 526x derived from
 natural tier means. Never price a mode off the raw pool mean.
 
-### ▶▶ NEXT SESSION STARTS HERE
- 1. ~~DRACO ASCENDANT~~ DONE (above). Remaining on it: all its numbers are n=20k and
-    the at-cap rate especially is a tail read off 20k books. Re-derive the mystery
-    cost, the four RTP splits and the wincap slice from the 1e6 pool. Optional
-    product call: trimming ascendant 10% -> ~9% lands the cost on exactly 500x.
-    RE-CHECKED AGAINST THE NEW TIER MEANS (232 / 259 / 502x): at a 35/30/25/10 mix
-    the Ascendant must average ~1,990x, so the ~2,000x estimate SURVIVED the whole
-    rebuild. Build it as a draco dealt with N cells pre-lit -- pre-lighting raises
-    completion AND makes it EARLY, and early = long roam = top rungs = where all the
-    value is -- then sweep N until it prices there.
- 2. ~~buy_mystery per-tier fences~~ DONE (above) -- BUY_MYSTERY #1 is closed.
- 3. Full Phase B re-converge at 1e6 x 6 modes, then set costs = avg win / rtp. Costs
-    are currently 240 / 268 / 520 / 526x (the three buys from the 100k run, mystery
-    derived from the ascendant sweep). ⚠ FIRST RUN AFTER THIS CHANGE: buy_ursa's new
-    forced wincap slice and buy_mystery's new ascendant slice are both new forced
-    draws -- an unsatisfiable one hangs with no error. Both were smoke-verified at
-    20k, so watch rather than fear, but watch.
- 4. base + ante have NOT been measured since the rebuild at all. Both contain draco
-    features, so the new ladders and lengths moved them, and base is the 1x product
-    AND the global RTP dial. Re-verify bust rate, win frequency and std dev against
-    the benchmarks -- every rebuild measurement so far went into the three buys.
+### ▶▶ FULL 1e6 RE-CONVERGE (Jul 29 2026) -- ALL SIX MODES CONVERGED
+Sims 74 min (one process per mode via run_modes.sh, detached with setsid) + optimizer
+~32 min = 106 min total. 999,964 books per mode, no warnings, no repeat-limit trips.
+Both flagged hang risks CLEARED: buy_ursa's new forced wincap slice and buy_mystery's
+ascendant slice both resolved. ⚠ URSA'S SLICE IS EXPENSIVE -- 24:47 vs ~10-18 min for
+the other buys, because it hunts a ~1-in-100k book. That is the price of giving ursa a
+cap slice, not a symptom.
 
-POOL STATE -- READ THIS BEFORE TOUCHING library/:
-  IT IS A MIX. buy_corvus / buy_ursa / buy_draco are today's 100k confirmation books
-  on the CURRENT config. base / ante_starfall / buy_mystery are the Jul 24-25 Phase B
-  books on the OLD config (10 spins, 3x3 draco, old ladders) -- do not read a number
-  off them and believe it. config.json (Jul 25) still publishes the OLD costs and
-  ceilings. publish_files/lookUpTable_buy_*_0.csv are STALE: sims do not rewrite the
-  optimized LUT, so its book ids no longer exist.
-  library_phaseB_backup/ holds the whole converged Phase B set if anything needs the
-  old shipped numbers.
+  mode           cost  maxWin     RTP   std  zero%   hit%  >=1x  ETL40x  >100x  cap rate
+  base            1.0  25,000  0.9665 24.08  70.75  29.25  9.71   0.333  0.252  1 in 1.25M
+  ante_starfall   1.5  25,000  0.9665 21.81  65.67  34.33  8.79   0.381  0.327  1 in 667k
+  buy_corvus      240  10,000  0.9665  1.45   0.00 100.00 26.64   0.000  0.893  never
+  buy_ursa        268  25,000  0.9663  2.27   0.00 100.00 23.57   0.023  0.928  1 in 4,340
+  buy_draco       520  25,000  0.9655  2.10   0.00 100.00 26.85   0.052  0.955  1 in 963
+  buy_mystery     526  25,000  0.9665  1.74   0.00 100.00 21.67   0.022  0.983  1 in 2,388
+BAND SPREAD 0.1004% (limit 0.5%), every mode <= the 0.9670 ceiling. Zero-pay 0.00% on
+all four buys. PRICES CONFIRMED AS OUTPUTS to 0.1%: 240.0 / 267.9 / 519.5 / 526.0x
+implied vs 240 / 268 / 520 / 526 configured -- the 100k confirmation run held at 1e6.
+DRACO-VS-URSA CAP VALUE HELD at 2.32x (0.0499 vs 0.0215) against the ~2.3x design
+target and the 1.94x break-even -- the thing the ceilings section said not to assume.
+⚠ ante_starfall's cap-value-per-stake (0.0250) EXCEEDS buy_ursa's (0.0215) and
+buy_mystery's (0.0199), so grinding ante is a marginally better max-win bet per dollar
+than buying those two. Pre-existing, and buy_draco still dominates everything at
+0.0499, so the TOP of the menu holds -- but it is the same ordering failure mode that
+rules out raising base's cap share (see the volatility section below).
+
+### ▶▶ THE hr BUG -- THIRD MEMBER OF THE FENCE-CONFIG FAMILY (Jul 29 2026)
+buy_mystery came out of the first 1e6 optimizer run at RTP 0.2416 -- a UNIFORM factor
+of exactly 4.0004 under target, with all four tier fences at exactly 25.00% weight.
+`hr` IS A "1 IN N" FREQUENCY, verified against base, whose configured hr 220/600/1900/
+3.5 reproduce EXACTLY as its measured trigger rates. So hr=1 declares "this fence
+occurs on every book". That is harmless for buy_corvus/buy_ursa/buy_draco where one
+tier fence really does own ~100% of the mode -- and it was copied from them. With FOUR
+fences each claiming 100%, the optimizer split them evenly, and because each fence
+still hit its own rtp_k as a sub-pool mean, the mode landed on sum(rtp_k)/4.
+FIX: hr = 1 / intended share. Cross-check that the config is self-consistent:
+rtp_k * cost * hr_k is the fence mean the optimizer must produce, and it lands within
+3% of every measured natural tier mean, so the tiers keep their swept shape.
+⚠ SECOND BUG, FOUND WHILE FIXING THE FIRST: THE SHARES MUST BE EXHAUSTIVE --
+sum(1/hr) + wincap weight == 1. The clean design mix (35/29.5/25/10) sums to 0.995
+because 0.5% was left for the cap slice, but 0.5% is the cap's GENERATION QUOTA and
+its actual WEIGHT is rtp*cost/cap = 0.0199*526/25000 = 0.000419 (0.042%). The
+optimizer filled the 0.46% shortfall by scaling every tier up, scaling RTP with it:
+0.9665 * 1.004604 = 0.9709, over the ceiling. Same quota-vs-frequency trap already
+recorded in the gotchas, met from the other side. Shares renormalised to 1 - 0.000419.
+NEITHER BUG IS CAUGHT BY verify_optimization_input -- it only checks that the splits
+sum and that criteria match, and the splits were correct throughout both failures.
+THE FAMILY: (a) fence ORDER, three tier fences searching {"symbol":"scatter"} with no
+kind -> the first swallowed all feature books; (b) fence ORDER, the basegame catch-all
+before "0" -> skewed the weight denominator, uniform 1.019x overshoot; (c) fence
+PROPORTION, hr wrong -> uniform 4.0x undershoot. All three: identity right, bookkeeping
+wrong, silent, and visible only as a UNIFORM multiple on the measured RTP. A uniform
+factor on every slice means look at the fence bookkeeping, never at the game math.
+
+### ▶▶ BASE VOLATILITY -- INVESTIGATED AND DELIBERATELY LEFT ALONE (Jul 29 2026)
+base std dev is 24.08 against the doc's "expect ~35-48". THE GATE IS "< 50" AND WE PASS
+IT; 35-48 is an observation about comparable games, not a requirement. Investigated
+properly and every route costs more than it buys. DO NOT REOPEN without new information.
+WHERE std ACTUALLY COMES FROM -- decomposition of E[p^2] (std = sqrt(E[p^2] - mean^2)):
+  wincap 500.0 (86.1%) | draco 42.7 | ursa 17.9 | corvus 15.3 | basegame 4.9
+  closed form: std ~= sqrt(slice_rtp * cost * cap + 81). base std is 86% ONE NUMBER:
+  the wincap slice's rtp share. 0.02 -> 24.1 | 0.05 -> 36.5 | 0.06 -> 39.8 | 0.08 -> 45.6
+ROUTE 1 -- RAISE THE CAP SHARE. REJECTED: cap-value-per-stake IS slice_rtp, so base at
+  0.06 exceeds buy_draco's 0.05 and the CHEAPEST bet on the menu becomes the best
+  max-win play. Concretely: 520 base spins would beat one draco buy by 20% on cap odds.
+  Every buy button becomes worse value than ignoring it. Base is effectively ceilinged
+  at slice 0.05 / std ~36 by draco's share, and closer to 0.04 to keep real separation.
+ROUTE 2 -- RAISE THE FEATURE'S PAYOUT SPREAD (reweight feature books toward the tail,
+  cap rate untouched). REJECTED, and this one looked clean until measured: the feature's
+  RTP share is FIXED at 35.2%, so making each feature pay more makes it happen less.
+    tilt   std   feature rate      corvus / ursa / draco
+    none  24.08  1 in    148   1 in   220 /   600 / 1,900
+    1.2   35.70  1 in    803   1 in 2,326 / 2,166 / 2,823
+    1.4   39.92  1 in  1,165   1 in 3,701 / 3,501 / 3,307
+  std 36 costs the feature 5.4x in frequency -- and THE TIER LADDER COLLAPSES: the
+  three tiers converge to ~1 in 3,000 and the ORDER INVERTS (corvus becomes rarest).
+  Three constellations that are meant to feel different become one thing. Bust rate and
+  win frequency barely move, which is why a metrics table alone HIDES this -- the
+  damage is entirely in the trigger rate and the tier separation. Always print the
+  trigger rate when reshaping a fence.
+ROUTE 3 -- LET BASE SPINS THEMSELVES PAY BIG. The real fix, and still open: ordinary
+  non-feature spins max out at 21x, so 63% of base's payback is structurally incapable
+  of being a big win. That is also why "share of RTP above 100x" is stuck -- it plateaus
+  at 0.372 (= the feature's 35.2% + the cap's 2.1%), i.e. at the plateau literally 100%
+  of feature money arrives as a >100x win and there is nothing left to convert. Getting
+  past 0.40 needs base's own ceiling raised (base-boost / richer paytable), which is a
+  full re-sim and re-price -- and the doc already parks base-boost until first playtest.
+  Do it with a controller in hand, not from a spreadsheet.
+WHY THIS IS FINE: frequency, generosity and volatility trade against each other, and
+base is deliberately tuned to the first two -- win freq >=1x 9.71% vs the 7.4% norm,
+bust 70.75% at the friendly end of 70-83%, a feature every 148 spins. The volatility
+lives in the buys, where draco caps 1 in 963 and ursa's max/cost is 93x.
+
+POOL STATE -- CLEAN FOR THE FIRST TIME SINCE THE REBUILD:
+  ALL SIX MODES are 999,964 books on the CURRENT config, optimizer-converged, with
+  fresh optimized LUTs. config.json is internally consistent -- real costs, real
+  ceilings, real std, and bookLength finally matches the books (it reads std and
+  bookLength from the optimized LUT, so those two lag whenever a sim runs without the
+  optimizer; that is how it silently mixed vintages before).
+  library_phaseB_backup/ (13G) still holds the pre-rebuild shipped set.
+  ⚠ optimization_program/src/setup.toml is REWRITTEN BY EVERY OPTIMIZER RUN (it records
+  the last bet_type and m2m bounds). It is tracked in git but it is generated state --
+  do not commit it.
 
 ### THE DRACO CLIFF -- ✅ CLOSED Jul 28 2026 (kept for the diagnosis + the levers)
 FIXED. Widest hole is now 1.09x on draco (1.07 / 1.24 / 1.09 across the three tiers)
@@ -832,6 +947,21 @@ do not overlap ursa's price) still stand.
 - Beast size / roam floor sweep: `./env/bin/python games/starwake/reels/sweep_beast.py 40000`
   (⚠ back up the buy_draco pool first -- see the sweep gotcha above)
 - Full detached pool: `cd games/starwake && ./run_modes.sh`   (log in library/logs/)
+  ⚠ LAUNCH IT WITH `setsid nohup ./run_modes.sh >launch.out 2>&1 </dev/null &`, NOT as an
+  agent background job. A 106-min run must outlive the session; setsid gives it its own
+  session id so it is reparented to init instead of dying with the process tree. Verify
+  with `ps -o pid,ppid,sid` -- its sid must differ from the shell's. The sims and the
+  optimizer are 100% local compute, so a run costs no model tokens once launched.
+- Optimizer for ONE mode (~5 min, no re-sim): `../../env/bin/python run.py optimize buy_mystery`
+  This is the whole loop for any change that lives in game_optimization.py -- rtp
+  splits, hr, scaling, fence order. Re-simming for those is wasted time.
+- Read the player-facing distribution, NOT the raw pool: every benchmark (bust rate,
+  win frequency, std dev, ETL, >100x share) must be computed from the OPTIMIZED LUT as
+  sum(weight*payout)/sum(weight) over `publish_files/lookUpTable_<mode>_0.csv`, joined
+  to `lookup_tables/lookUpTableSegmented_<mode>.csv` for per-criteria splits. The raw
+  book pool is QUOTA-shaped: base has exactly 40% zero-win and 50% basegame books by
+  construction, so reading a bust rate off it is meaningless. LUT format is
+  `id,weight,payout*100`; segmented is `id,criteria,basegame_payout,freegame_payout`.
 - Inspect a book: decompress `library/publish_files/books_buy_draco.jsonl.zst`, walk `events`.
 
 ## Lessons inherited from Keybearer (do not relearn these)

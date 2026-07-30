@@ -202,13 +202,40 @@ class OptimizationSetup:
             # ⚠ STILL PROVISIONAL at n=20k -- re-derive every split and the mode cost
             # from the 1e6 pool. A tail rate read off 20k books is the least stable
             # number here.
+            # ⚠ hr IS THE TIER MIX, AND hr=1 SILENTLY DESTROYS IT (found Jul 29 2026 on
+            # the first 1e6 pool). hr is a "1 in N" frequency -- verified against base,
+            # whose hr 220/600/1900/3.5 reproduce EXACTLY as measured trigger rates. So
+            # hr=1 declares "this fence happens on every single book". That is harmless
+            # for buy_corvus/buy_ursa/buy_draco, where one tier fence really does own
+            # ~100% of the mode, and it was copied from them. Here FOUR fences each
+            # claimed 100%, so the optimizer split them evenly -- 25.00% weight apiece
+            # against the designed 35/29.5/25/10 -- and because each fence still hit its
+            # own rtp_k as a sub-pool mean, the MODE landed on sum(rtp_k)/4 = 0.2416,
+            # exactly a quarter of target. Nothing errored: verify_optimization_input
+            # only checks that the splits sum and that criteria match, and the splits
+            # were right the whole time. Third instance of the same family of bug as the
+            # two fence-ORDER ones above: fence identity correct, fence PROPORTION wrong.
+            # hr = 1 / intended share. Cross-check: rtp_k * cost * hr_k is the fence mean
+            # the optimizer must produce, and it lands within 3% of every measured
+            # natural tier mean (227 vs 234, 254 vs 257, 492 vs 503, 2205 vs 2251), so
+            # the tiers keep the shape the sweeps gave them instead of being reshaped.
             "buy_mystery": {
                 "conditions": {
                     "wincap": wincap_cond("buy_mystery", 0.0199),
-                    "ascendant": feature_cond(0.4191, hr=1, kind=6),
-                    "draco": feature_cond(0.2340, hr=1, kind=5),
-                    "ursa": feature_cond(0.1422, hr=1, kind=4),
-                    "corvus": feature_cond(0.1513, hr=1, kind=3),
+                    # ⚠ THE SHARES MUST BE EXHAUSTIVE: sum(1/hr) + wincap weight == 1.
+                    # First attempt used the clean design mix (hr 10/4/3.39/2.857), whose
+                    # shares sum to 0.995 because 0.5% was left for the cap slice -- but
+                    # 0.5% is the cap's GENERATION QUOTA in game_config, and its actual
+                    # WEIGHT is rtp*cost/cap = 0.0199*526/25000 = 0.000419, i.e. 0.042%.
+                    # The optimizer filled the 0.46% shortfall by scaling every tier up,
+                    # which scaled the mode's RTP by the same factor: 0.9665 * 1.004604 =
+                    # 0.9709, over the 0.9670 ceiling. Exactly the quota-vs-frequency
+                    # confusion the CLAUDE.md note warns about, met from the other side.
+                    # Shares below are the 35/29.5/25/10 mix renormalised to 1 - 0.000419.
+                    "ascendant": feature_cond(0.4191, hr=9.9542, kind=6),  # 10.046%
+                    "draco": feature_cond(0.2340, hr=3.9817, kind=5),      # 25.115%
+                    "ursa": feature_cond(0.1422, hr=3.3743, kind=4),       # 29.636%
+                    "corvus": feature_cond(0.1513, hr=2.8440, kind=3),     # 35.161%
                 },
                 "scaling": ConstructScaling(tail_scaling("ascendant") + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),
