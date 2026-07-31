@@ -166,7 +166,8 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
 - [x] Optimize → verify at 1e6/mode — DONE Jul 29 2026, ALL SIX MODES CONVERGED on the
       post-rebuild config. See "▶▶ FULL 1e6 RE-CONVERGE (Jul 29 2026)" below for the
       table, the two optimizer bugs it exposed, and the base-volatility investigation.
-- [ ] event-ID finder for reviewer scenarios
+- [x] event-ID finder for reviewer scenarios (games/starwake/find_books.py) + the stale
+      `bonus` publish purge -- both Jul 30 2026, see "REVIEWER SCENARIOS + PUBLISH PURGE"
 
 - [x] ECONOMY RE-TUNE (the buy prices were ~10x too high; cost = avg win/rtp, and
       Stake caps buy cost at 1000x). Buy cost 2208/2907/7258x -> **224/283/651x**,
@@ -205,19 +206,25 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       BOTH the published maxWin (write_configs.py:356 -> config.json bookShelfConfig)
       AND the engine clamp (run_sims.py:48 -> config.wincap; state.py:256 rebuilds
       WinManager per thread from it; executables.evaluate_wincap ends the book at it).
-      So a ceiling is honest ALMOST by construction once set -- ⚠ CORRECTED Jul 29 2026,
-      "a deeper future sample can never exceed it" IS FALSE. win_manager.py:55-57 clamps
-      basegame and freegame wins SEPARATELY and then SUMS them, so a book's true maximum
-      is published maxWin + the trigger spin's own line win. Measured on the 1e6 pool:
-      base tops out at 25,005x and ante at 25,004x against a published 25,000x (205 and
-      307 books per 1e6; every one has freegame pinned to exactly 25000.00 with the base
-      win added on top). Pre-existing -- the shipped Phase B pool did the same at
-      25,005.5x -- and it is upstream SDK behaviour, not something Starwake introduced.
-      Magnitude 0.02%, RTP cost of fixing it ~4e-6. MATTERS BECAUSE 25,000x IS THE 2-STAR
-      TIER CAP WITH ZERO HEADROOM, so this pokes above the tier, not merely above our own
-      config. One-line fix if wanted: `total_cumulative_wins += min(max_allowed_win,
-      base + free)` -- but it is a shared SDK file and needs base/ante/buy_draco/
-      buy_mystery re-simmed. The buy modes with NO basegame win on the trigger spin land
+      So a ceiling is honest ALMOST by construction once set.
+      ⚠⚠ THE "OVERSHOOT" WAS A MISREADING -- RETRACTED Jul 30 2026. It was recorded here
+      as "base tops out at 25,005x against a published 25,000x", and as a product call
+      needing four modes re-simmed. NO BOOK PAYS ABOVE ITS CEILING. state.py:192 sets
+      book.payout_multiplier = round(min(running_bet_win, wincap), 2) off the TOTAL, so
+      the payout is clamped correctly; state.py:193-194 then clamp basegame and freegame
+      SEPARATELY for the book's own split fields, and it is only those two that can sum
+      past the cap. Verified over all 999,964 base books: max payoutMultiplier is exactly
+      25,000.00, while max(baseGameWins + freeGameWins) is 25,005.00 (id 255217, base 5.00
+      + free 25,000.00). The optimized LUT -- the authority on what is actually paid --
+      reads 2500000 for that id. Every mode's max equals its published maxWin exactly.
+      WHAT IS REAL, and it is much smaller: on capped books the two split fields do not
+      reconcile with the payout (up to +5x, ~1,000 books per 1e6 in base). They ship
+      inside books_<mode>.jsonl.zst, so a validator that cross-checks base+free against
+      payout would flag them. The SDK's own assert at state.py:200 deliberately permits
+      it (it compares min(base+free, wincap) to min(total, wincap)). Not worth a re-sim.
+      win_manager.py:55-57 has the same separate-clamp-then-sum shape, but it feeds only
+      total_cumulative_wins, i.e. the sim's PRINTED RTP summary -- never a book payout.
+      The buy modes with NO basegame win on the trigger spin land
       exactly ON their cap (old corvus/ursa pools: 1 and 2 books at cap, zero above).
       Capped books
       are KEPT, not redrawn: check_repeat repeats only on a win_criteria mismatch or a
@@ -247,7 +254,147 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
       rolls -- the Rage Bait shape, now measured at 1e6 rather than swept at 20k.
       STILL TO DO: write these into the frontend copy. Display rounding to 35/29.6/25.2/
       10.0 is fine; the gate is that the displayed mix is the DELIVERED mix.
-- [ ] Write those odds into the frontend copy; event-ID finder (see NEXT SESSION below)
+- [ ] Write those odds into the frontend copy (the LAST publishing item; lives outside
+      this repo -- the math SDK owns no lang/copy files)
+
+### ▶▶ REVIEWER SCENARIOS + PUBLISH PURGE (Jul 30 2026)
+TWO SHIPPED. Neither touches the math: the pool, the LUTs and every RTP are byte-identical
+(library/ is gitignored, so the purge is a publish-artifact fix, not a code change).
+
+1. STALE `bonus` PURGED FROM THE PUBLISHED SET. The Jul 20-22 scaffold left seven
+   `*bonus*` files in library/, and one of them leaked into a REVIEWER-FACING artifact:
+   force.json advertised SEVEN modes while index.json/config.json had six.
+   ROOT CAUSE, worth not re-deriving: force.json is APPEND-ONLY. write_data.py:219-227
+   reads the existing file, sets `data[<current mode>]`, writes it back -- it never drops
+   a mode. So a stale entry survives every future run, and deleting only the force record
+   does NOT clear it; force.json itself must go too. Both were deleted and force.json was
+   rebuilt from the six surviving records, then generate_configs refreshed the hashes.
+   VERIFIED: force.json / index.json / config.json now name the same six modes, and every
+   sha256 in config.json matches its file on disk (books, LUTs, force records, fe config).
+   ⚠ `make_force_json` (write_data.py:31) LOOKS like the rebuild helper and is NOT -- it
+   is dead code, called from nowhere, and doubly broken: it reads gamestate.config.
+   force_path (force_path lives on OutputFiles, not GameConfig) and treats item["search"]
+   as a dict when the record stores a list of {"name","value"} pairs. Do not reach for it.
+   ⚠ config_fe_<game>.json IS NOT BYTE-REPRODUCIBLE: symbols come out of an unordered
+   collection, so every generate_configs call reshuffles them and changes the published
+   frontendConfig sha256 with ZERO math change. Confirmed semantically identical here
+   (same 11 symbols, same paytables, everything else equal). Do not read a changed fe
+   hash as a math change.
+
+2. EVENT-ID FINDER -- `games/starwake/find_books.py`. Turns a scenario description into
+   book ids. `--scenarios [mode]` emits the curated reviewer pack; ad-hoc queries combine
+   --criteria / --min-payout / --key / --tier / --woke / --no-woke / --top-rung /
+   --min-roam / --prelit. Full pack for all six modes: `find_books.py --scenarios --json
+   reviewer_scenarios.json` (~5 min, 68 of 72 scenarios resolved; output committed as
+   games/starwake/reviewer_scenarios.json).
+   WHY NOT utils/search_tool/forcetool_ids.py alone -- it covers force-record key matching
+   but (a) the force record only indexes LINE-WIN keys, so our constellation events are
+   invisible to it, (b) its find_payout_range_ids MIN branch filters `line_val <
+   min_payout`, returning payouts BELOW the minimum -- an SDK bug, left unfixed and worked
+   around, (c) it defaults to the UNWEIGHTED pre-optimizer LUT, and (d) it json.loads a
+   603 MB force record. find_books.py streams records entry-by-entry and rejects
+   non-candidate book lines on a regex over the id prefix before parsing.
+   ⚠ TWO DIFFERENT QUESTIONS, do not conflate: "the beast REACHED rung N" is an EVENT
+   question (beastRoam carries the multiplier every spin); "a win was PAID at rung N" is
+   `--key mult=N` against the force record, which only logs a mult on a WINNING line. Ursa
+   reaches 500x outside the wincap fence but only ever PAYS at 500x inside it.
+
+3. FINDING -- TOP LADDER RUNGS ARE NOT REACHED IN EVERY MODE THAT LISTS THEM. Measured
+   across all six modes on the shipped pool:
+     corvus 200x  reached NATURALLY (criteria=corvus, roam 9/9) in every mode with corvus
+     ursa   500x  reached ONLY in buy_ursa, and only via the forced wincap slice --
+                  NEVER in base, ante_starfall or buy_mystery
+     draco  600x  reached in every mode with draco, but ONLY via the wincap slice
+     ascend 600x  NEVER REACHED ANYWHERE. Ascendant's deepest roam is 13 of 14 (rung 315
+                  fires, 600 does not), because it inherits draco's 14-rung ladder but has
+                  no forced-wincap slice of its own to manufacture a spin-1 completion.
+   MATTERS because compliance requires listing all obtainable multiplier values, and
+   ascendant's ladder currently advertises a rung the mode cannot deliver. Not proven
+   impossible -- only unobserved at 1e6 -- but ascendant is dealt 2 of 11 cells pre-lit,
+   so a spin-1 completion needs one spin to trace the other 9. Either verify it is truly
+   unreachable and trim/annotate ascendant's published ladder, or accept it as <1e-6.
+   Corvus is the only tier whose ceiling is a normal outcome rather than a forced one.
+
+### ▶▶ THE DEAD TOP RUNGS -- FOUND, FIXED, RE-CONVERGED (Jul 30 2026)
+⚠ THIS SUPERSEDES EVERY LADDER AND PRICE NUMBER BELOW. Ladders are now
+corvus 9 / ursa 13 / draco 12 rungs, and buy_mystery costs 563x.
+
+THE BUG. Rung count was set to num_feature_spins[tier]-1 -- the THEORETICALLY longest
+roam. That is not the achievable one: the top rung needs a completion on SPIN 1, i.e.
+the whole constellation lit in a single spin. 4 cells manage it; 7 and 11 do not. So
+the ladders advertised multipliers that could not be won. Measured organically on the
+old 1e6 pool (forced wincap books excluded -- a forced cap book manufactures the
+spin-1 completion and makes a dead rung look alive):
+    corvus 200x  organic 1 in 466            HEALTHY
+    ursa   500x  organic 1 in 3,978,063 in buy_ursa; NEVER in base/ante/mystery
+    draco  600x  FORCED CAP BOOKS ONLY, never organic in any mode
+    ascend 600x  NEVER REACHED ANYWHERE (no cap slice of its own to borrow from)
+Both guard tests were green throughout: one asserted len(ladder) >= longest_roam
+(catches only too-SHORT) and the other equality against the same wrong number.
+game_config's own comment already NAMED the failure mode -- "too long advertises rungs
+no player can ever be paid" -- and the invariant simply did not encode it.
+
+THE FIX. Re-sweep each ladder to the depth its tier actually reaches, holding the top
+VALUE and the shipped price. Rung count is now config.constellation_ladder_rungs, a
+MEASURED number, and both tests assert equality against it.
+    corvus  9 rungs 1:200:2.5  [1,1,1,2,3,5,13,44,200]              unchanged
+    ursa   13 rungs 1:500:2.4  [1,1,1,1,2,2,3,5,10,23,55,155,500]
+    draco  12 rungs 2:600:2.0  [2,2,2,3,4,6,11,20,41,91,223,600]    ascendant shares it
+Draco took 12 not 13 because ascendant shares the list: at 13 ascendant's top read
+1 in 29,658 but draco's 1 in 2.5M. 12 serves both.
+⚠ THE LADDER IS PAYOUT-ONLY AND CANNOT MOVE COMPLETION -- 63.2% ursa / 32.1% draco
+reproduced EXACTLY across every swept variant. That is what made this predictable:
+the roam-depth distribution is invariant, so shortening the ladder only re-labels
+which rung sits at which depth.
+
+RESULT AT 1e6 x 6 MODES -- EVERY TOP RUNG NOW ORGANIC IN EVERY MODE:
+  tier / mode      buy mode        mystery        base          ante
+  corvus 200x      1 in 366        1 in 442       1 in 12,414   1 in 14,255
+  ursa   500x      1 in 30,121     1 in 31,957    1 in 239,648  1 in 108,143
+  draco  600x      1 in 60,166     --             1 in 661,846  1 in 1,042,004
+  ascend 600x      --              1 in 1,846     --            --
+Ascendant went from NEVER to 1 in 1,846, and those books average 24,983x -- it can
+reach 25,000x for the first time. reviewer_scenarios.json now resolves 72/72 (was
+68/72), and the finder runs in 30s instead of 4m47s because the rungs are findable.
+
+  mode           cost  maxWin     RTP   std  zero%   hit%  >=1x  ETL40x  >100x  cap rate
+  base            1.0  25,000  0.9665 24.16  70.75  29.25 11.58   0.322  0.271  1 in 1.25M
+  ante_starfall   1.5  25,000  0.9665 21.93  65.67  34.33  8.97   0.385  0.245  1 in 671k
+  buy_corvus      240  10,000  0.9665  1.53   0.00 100.00 28.28   0.000  0.000  1 in 11.7M
+  buy_ursa        268  25,000  0.9663  2.16   0.00 100.00 25.25   0.024  0.000  1 in 4,340
+  buy_draco       520  25,000  0.9655  2.07   0.00 100.00 26.25   0.053  0.000  1 in 963
+  buy_mystery     563  25,000  0.9665  1.81   0.00 100.00 23.88   0.023  0.000  1 in 2,231
+BAND SPREAD 0.1011% (limit 0.5%), all <= the 0.9670 ceiling, every published maxWin
+exactly equal to that mode's true maximum, zero-pay 0.00% on all four buys.
+WIN-RANGE HOLES TIGHTENED: base 1.27 -> 1.11x, ante 1.40 -> 1.07x, ursa 1.13 -> 1.02x,
+draco 1.03 -> 1.00x. Shorter ladders fill the upper range more densely.
+
+TWO THINGS THAT CAME FREE:
+1. THE FORCED WINCAP SLICES GOT MUCH CHEAPER. Draco's NATURAL at-cap rate went 0.004%
+   -> 0.065% (1 in 1,818) because 600x now sits at roam 12 instead of 14. buy_ursa's
+   sim -- flagged here as "the single most likely thing to hang the next run" and
+   costing 24:47 last time -- came in at 13:52. Whole sim phase 74 -> 53 min.
+2. base >=1x rose 9.71 -> 11.58% and >100x share 0.252 -> 0.271, untouched by design.
+
+BUY_MYSTERY RE-PRICED 526 -> 563x, and it is a CONSEQUENCE, not a choice. Ascendant
+shares draco's ladder, and a shorter ladder rewards exactly what ascendant does best
+(complete early, ride the top), so its mean went 2,249 -> 2,598x with no change to its
+cells, pre-lit set or mix. Its only independent lever is the pre-lit cell set, and the
+neighbouring sets bracket the target badly (~956x vs ~2,249x), so 526 was not
+reachable. Holding it would have cost either the "ascendant IS a draco" shared-ladder
+invariant or the "1 in 10 rolls wakes something you cannot buy" story. Took the price:
+the menu stays ordered (240/268/520/563), stays under the 1,000x buy cap, and
+ascendant's payback share moved 43.4% -> 47.2%, TOWARD the Rage Bait shape this mode
+is modelled on (10% of rolls / 52% of payback). Delivered mix 35.161/29.635/25.115/
+10.055 + 0.034 wincap = 100.000%; tier means 226.1/253.9/493.6/2,554.5x, correctly
+ordered.
+⚠ THE RISK THAT DID NOT LAND. Ascendant now caps ORGANICALLY on ~1.5% of its features,
+which implied a mystery cap rate near 1 in 670 -- more often than buy_draco's 1 in 963,
+inverting "draco is the cap play". The wincap slice was deliberately HELD at 0.0199
+rather than re-derived to the 0.074 the new rates imply, on the theory that the
+optimizer could weight the organic cap books down. IT COULD: measured cap-value-per-
+stake is base 0.0200 / ante 0.0250 / ursa 0.0215 / DRACO 0.0499 / mystery 0.0199.
+Draco keeps the cap crown by 2.3x. Do not re-derive that slice from natural rates.
 
 ### ▶ THE ECONOMY REBUILD -- RATIONALE (Jul 27 2026; EXECUTED Jul 28, see below)
 ⚠ READ ORDER: this section and the two ladder sweeps under it are the WHY. They are
@@ -519,17 +666,28 @@ to origin.
 POOL: library/ is now a CONVERGED PRODUCTION POOL -- all six modes at 1e6 on the
 current config. See "POOL STATE" further down.
 
-### ▶▶ NEXT SESSION STARTS HERE (as of Jul 29 2026)
-The math is converged and shippable. What remains is publishing work plus two open
-product calls.
+### ▶▶ NEXT SESSION STARTS HERE (as of Jul 30 2026)
+The math is converged and shippable. ONE publishing item remains, plus product calls.
  1. WRITE MYSTERY'S ODDS INTO THE FRONTEND: corvus 35.16 / ursa 29.64 / draco 25.15 /
     ascendant 10.05%. Draco's number INCLUDES the 0.04% cap slice (it forces 5
     scatters, so those are Draco rolls). Display rounding is fine; the gate is that the
-    displayed mix is the delivered mix.
- 2. EVENT-ID FINDER for reviewer scenarios -- the last unstarted engineering item.
- 3. PRODUCT CALL -- the maxWin overshoot (books pay up to 25,005x against a published
-    25,000x). Diagnosis and the one-line fix are in the PER-MODE DISPLAYED CEILINGS
-    section. Costs a re-sim of base/ante/buy_draco/buy_mystery.
+    displayed mix is the delivered mix. ⚠ USE THE POST-LADDER-FIX FIGURES, measured on
+    the Jul 30 RE-CONVERGED pool: corvus 35.161 / ursa 29.635 / draco 25.115 + 0.034
+    wincap / ascendant 10.055, summing to 100.000%. The mode also costs 563x now, not
+    526x -- see "THE DEAD TOP RUNGS" for why the price moved.
+ 2. ✅ DONE Jul 30 -- event-ID finder + the stale `bonus` purge. See "REVIEWER SCENARIOS
+    + PUBLISH PURGE" near the top.
+ 3. ✅ RETRACTED Jul 30 -- there is NO maxWin overshoot. Books are clamped correctly at
+    state.py:192; only the basegame/freegame SPLIT FIELDS can sum past the cap. No
+    re-sim needed. Full retraction in PER-MODE DISPLAYED CEILINGS.
+ 3b. ✅ DONE Jul 30 -- the dead top rungs are fixed and re-converged at 1e6 x 6 modes.
+    Every tier's top rung is now reached ORGANICALLY in every mode it appears in.
+    See "THE DEAD TOP RUNGS" near the top for the ladders, the table and the two
+    things that came free.
+ 3c. ⚠ CARRY-OVER: buy_mystery is now 563x, so the frontend price and any copy quoting
+    526x must follow. Mystery's delivered mix barely moved (35.161/29.635/25.115/
+    10.055) but re-read it off the new pool before publishing rather than reusing the
+    Jul 29 figures.
  4. PRODUCT CALL -- base-boost, i.e. whether ordinary base spins should be able to pay
     more than 21x. This is the ONLY remaining route to higher base volatility and to a
     >100x share above 0.372 (see BASE VOLATILITY). The doc parks it until first
@@ -998,7 +1156,17 @@ MEASURED (`reels/sweep_beast.py`, 40k sims/variant, wincap slice stripped):
   = 20,000x, so only the sliver under the cap counts -- ETL CANNOT BIND for our buys
   at any tier mix. Doc L356 conflates it with Captain Death's 80% top-tier share;
   those coincide only on a 100,000x-cap game. Do not use top-tier share as an ETL
-  proxy. (CVaR <= 700 normalized, the other tail gate, is still UNVERIFIED.)
+  proxy. CVaR <= 700 normalized, the other tail gate, was MEASURED Jul 30 2026 off the
+  optimized LUTs (mean payout given you are in the top q, ticket-normalized):
+              CVaR 1%   CVaR 0.1%   CVaR 0.01%   CVaR 0.001%
+    base         45.5       228.9        673.1       3,070.9
+    ante         46.1       197.2        532.2       3,356.0
+    all buys    <12.3       <48.1        <93.3         <93.3
+  THE VERDICT DEPENDS ON THE PERCENTILE CONVENTION, which we do not have in writing: at
+  the 0.01% tail base reads 673.1 and PASSES with only 4% headroom; at 0.001% it is
+  3,071 and fails. Every buy passes at every percentile by a wide margin. CONFIRM WHICH
+  q STAKE MEANS before treating this gate as cleared -- it is the one compliance number
+  still resting on an assumption, and base is the mode sitting near the line.
 - COMPLETION RATES, CURRENT (100k/tier, Jul 28): corvus 83.8 / ursa 62.6 / draco
   32.0%. Earlier figures scattered through this file are all SUPERSEDED -- the Phase A
   note's 95/54/28 predates the economy re-tune's FR0 drying, and the ~11.9% draco it

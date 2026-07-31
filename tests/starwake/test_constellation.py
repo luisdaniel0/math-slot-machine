@@ -210,15 +210,43 @@ def test_accelerating_ladder_pays_a_long_roam_far_more_than_a_short_one():
     assert all(isinstance(v, int) and v > 0 for v in draco), "rungs must be publishable integers"
 
 
-def test_every_tier_ladder_covers_the_longest_possible_roam():
-    """An immediate completion leaves num_feature_spins[tier]-1 roam spins. Short
-    ladders would silently clamp, capping the tail exactly where it is supposed to
-    pay. Feature length is PER TIER (corvus 10, ursa/draco 15), so the rung count is
-    checked against each tier's own length."""
+def test_every_tier_ladder_matches_its_reachable_roam_depth():
+    """Every published rung must be winnable, and no winnable rung left unpublished.
+
+    THIS TEST USED TO ASSERT len(ladder) >= num_feature_spins[tier]-1 and that is what
+    let the bug through. num_feature_spins-1 is the THEORETICALLY longest roam (complete
+    on spin 1), not the achievable one -- reaching it means lighting a whole
+    constellation in a single spin, which 4 cells manage and 11 never do. So ursa's and
+    draco's top rungs were only ever paid inside FORCED wincap books, and ascendant's
+    was never paid at all. The old assertion could not see any of that: it only caught
+    ladders that were too SHORT.
+
+    The invariant now is equality against the MEASURED reachable depth
+    (config.constellation_ladder_rungs), which is the number the sweep is tuned to.
+    Too long advertises a multiplier no player can win; too short clamps away a ceiling
+    we could have paid. Both directions are silent at runtime -- roam() clamps rather
+    than raising -- so they have to be caught here."""
     config = GameConfig()
     for tier, ladder in config.constellation_mult_ladders.items():
-        longest_roam = config.num_feature_spins[tier] - 1
-        assert len(ladder) >= longest_roam, f"{tier} ladder clamps before the roam ends"
+        want = config.constellation_ladder_rungs[tier]
+        assert len(ladder) == want, (
+            f"{tier} ladder has {len(ladder)} rungs, expected {want} "
+            f"(reachable roam depth)")
+        # Structural backstop: the feature can never produce more roam spins than this,
+        # so a ladder beyond it is unwinnable no matter what the measurement says.
+        assert want <= config.num_feature_spins[tier] - 1, (
+            f"{tier} declares {want} rungs but its feature can only roam "
+            f"{config.num_feature_spins[tier] - 1} times")
+
+
+def test_ascendant_ladder_never_drifts_from_draco():
+    """Ascendant IS a Draco dealt hot -- it must share draco's ladder object, not a
+    copy, so a draco re-tune cannot leave the two quietly disagreeing."""
+    config = GameConfig()
+    assert config.constellation_mult_ladders["ascendant"] == \
+        config.constellation_mult_ladders["draco"]
+    assert config.constellation_ladder_rungs["ascendant"] == \
+        config.constellation_ladder_rungs["draco"]
 
 
 def test_beast_cells_are_wild_and_carry_the_climbing_multiplier(gs):

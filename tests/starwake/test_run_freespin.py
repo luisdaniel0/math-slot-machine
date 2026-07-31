@@ -118,20 +118,29 @@ def test_roam_floor_leaves_room_for_the_tail():
     assert 0 < config.min_roam_spins < min(config.num_feature_spins.values()) // 2
 
 
-def test_every_ladder_exactly_covers_its_own_longest_roam():
-    """An immediate completion roams num_feature_spins[tier] - 1 times, so each
-    ladder must have exactly that many rungs -- and feature length is now PER TIER
-    (corvus 10, ursa/draco 15), which makes the two failure modes asymmetric:
-    TOO SHORT clamps early and silently caps that tier's ceiling (the trap the
-    10->15 change set), TOO LONG leaves unreachable rungs advertising a multiplier
-    the player can never be paid. Both are silent; roam() clamps rather than raising.
+def test_every_ladder_exactly_covers_its_reachable_roam():
+    """Each ladder must have exactly as many rungs as its tier can actually ROAM.
+
+    ⚠ THIS ASSERTED num_feature_spins[tier] - 1 UNTIL Jul 30 2026, and that is the bug.
+    An immediate completion does roam N-1 times, but "immediate" means lighting the
+    entire constellation on spin ONE. Corvus (4 cells) does it 1 in 466 features; ursa
+    (7) and draco (11) essentially never do, so their top rungs only ever appeared
+    inside forced wincap books and ascendant's was never paid at all -- while this test
+    stayed green, because the ladders matched a depth the game could not deliver.
+    The bound is now the MEASURED reachable depth (config.constellation_ladder_rungs).
+    Failure modes stay asymmetric and both stay silent (roam() clamps, never raises):
+    TOO SHORT clamps early and caps that tier's ceiling; TOO LONG advertises a
+    multiplier no player can be paid.
     """
     config = GameConfig()
     for tier, ladder in config.constellation_mult_ladders.items():
-        longest_roam = config.num_feature_spins[tier] - 1
-        assert len(ladder) == longest_roam, (
-            f"{tier}: {len(ladder)} rungs for a {config.num_feature_spins[tier]}-spin "
-            f"feature (longest roam {longest_roam})"
+        reachable = config.constellation_ladder_rungs[tier]
+        assert len(ladder) == reachable, (
+            f"{tier}: {len(ladder)} rungs against a reachable roam depth of {reachable}"
+        )
+        assert reachable <= config.num_feature_spins[tier] - 1, (
+            f"{tier}: {reachable} rungs exceed the {config.num_feature_spins[tier]}-spin "
+            f"feature's longest possible roam"
         )
         assert ladder == sorted(ladder), f"{tier} ladder must be non-decreasing"
 

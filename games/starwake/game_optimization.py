@@ -183,21 +183,35 @@ class OptimizationSetup:
             # Draco as the prize. Fences are assigned in order and consume the books
             # they match, so `kind` is mandatory here exactly as in base/ante.
             #
-            # RTP SPLITS are each tier's share of the mode's mean, at the MEASURED
-            # Ascendant value (2,249x, swept at n=20k):
-            #   corvus 0.350*232.1 =  81.2 (16.0%)   ursa  0.295*258.6 =  76.3 (15.0%)
-            #   draco  0.250*502.4 = 125.6 (24.7%)   asc   0.100*2249  = 224.9 (44.3%)
-            #   mean 508.0 -> cost 526x. Splits are that share of (rtp - wincap).
-            # ASCENDANT CARRIES 44% OF THE MODE'S PAYBACK ON 10% OF ROLLS -- the shape
+            # RTP SPLITS are each tier's share of the mode's mean. RE-DERIVED Jul 30 2026
+            # for the shortened ladders (ursa 13 rungs, draco 12, ascendant shares
+            # draco's) at the MEASURED Ascendant value 2,598x (n=20k, 100% ascendant,
+            # wincap stripped):
+            #   corvus 0.350*232.0 =  81.2 (14.9%)   ursa  0.295*260.0 =  76.7 (14.1%)
+            #   draco  0.250*505.5 = 126.4 (23.2%)   asc   0.100*2598  = 259.8 (47.8%)
+            #   mean 544.1 -> cost 563x. Splits are that share of (rtp - wincap).
+            # ASCENDANT CARRIES 48% OF THE MODE'S PAYBACK ON 10% OF ROLLS -- the shape
             # the audited mystery games use (Rage Bait's top tier: 10% of rolls, 52% of
             # payback), and the reason this mode can be priced above buy_draco at all.
+            # The re-sweep moved it 44.3% -> 47.8%, i.e. TOWARD that reference, because
+            # a shorter ladder rewards ascendant's early completions most.
             #
-            # The cap share is derived from the tier rates like the tiers themselves:
-            #   P(cap) = 0.295*(1/4339) + 0.250*(1/962) + 0.100*(1/1111) = 4.18e-04
-            #   slice_rtp = 4.18e-04 * 25000/526 = 0.0199
-            # Ascendant's own 1-in-1,111 is the swept at-cap rate: it completes ~90% of
-            # the time and rides the top rungs, so it reaches 25,000x ~26x more readily
-            # than a plain draco (0.09% vs 0.00% unforced at 20k).
+            # THE ROLL MIX IS UNCHANGED at 35/29.5/25/10 -- only the PAYBACK split moved.
+            # hr encodes the roll share and the rtp split encodes the payback share; they
+            # are different numbers and only the second one responds to a ladder change.
+            #
+            # The cap share is derived from the tier rates like the tiers themselves.
+            # ⚠ HELD AT 0.0199 DELIBERATELY, NOT RE-DERIVED. The new unforced at-cap
+            # rates are ursa 1/20,000, draco 1/1,538 and ascendant 1/67 -- ascendant
+            # could not reach 25,000x AT ALL before, and now caps on 1.49% of its
+            # features. Rolling those forward gives P(cap) = 1.67e-03 and slice_rtp
+            # = 1.67e-03 * 25000/563 = 0.074, which would put mystery's cap-value-per-
+            # stake at 0.074 against buy_draco's 0.050 and make the mystery the best
+            # max-win bet on the menu outright. Keeping the slice at 0.0199 asks the
+            # optimizer for the same designed cap share as before; what it CANNOT do is
+            # suppress the organic cap books living inside the ascendant fence, so the
+            # delivered rate will land above the slice. MEASURE IT on the 1e6 pool --
+            # it is the one number this re-sweep could plausibly break.
             #
             # ⚠ STILL PROVISIONAL at n=20k -- re-derive every split and the mode cost
             # from the 1e6 pool. A tail rate read off 20k books is the least stable
@@ -226,16 +240,18 @@ class OptimizationSetup:
                     # First attempt used the clean design mix (hr 10/4/3.39/2.857), whose
                     # shares sum to 0.995 because 0.5% was left for the cap slice -- but
                     # 0.5% is the cap's GENERATION QUOTA in game_config, and its actual
-                    # WEIGHT is rtp*cost/cap = 0.0199*526/25000 = 0.000419, i.e. 0.042%.
+                    # WEIGHT is rtp*cost/cap = 0.0199*563/25000 = 0.000448, i.e. 0.045%.
                     # The optimizer filled the 0.46% shortfall by scaling every tier up,
                     # which scaled the mode's RTP by the same factor: 0.9665 * 1.004604 =
                     # 0.9709, over the 0.9670 ceiling. Exactly the quota-vs-frequency
                     # confusion the CLAUDE.md note warns about, met from the other side.
-                    # Shares below are the 35/29.5/25/10 mix renormalised to 1 - 0.000419.
-                    "ascendant": feature_cond(0.4191, hr=9.9542, kind=6),  # 10.046%
-                    "draco": feature_cond(0.2340, hr=3.9817, kind=5),      # 25.115%
-                    "ursa": feature_cond(0.1422, hr=3.3743, kind=4),       # 29.636%
-                    "corvus": feature_cond(0.1513, hr=2.8440, kind=3),     # 35.161%
+                    # Shares below are the 35/29.5/25/10 mix renormalised to 1 - 0.000448.
+                    # hr = 1/roll share (UNCHANGED by the re-sweep); the first number is
+                    # the PAYBACK split, which is what the new ladders moved.
+                    "ascendant": feature_cond(0.4520, hr=9.9545, kind=6),  # 10.046%
+                    "draco": feature_cond(0.2199, hr=3.9818, kind=5),      # 25.114%
+                    "ursa": feature_cond(0.1335, hr=3.3745, kind=4),       # 29.635%
+                    "corvus": feature_cond(0.1412, hr=2.8441, kind=3),     # 35.160%
                 },
                 "scaling": ConstructScaling(tail_scaling("ascendant") + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),

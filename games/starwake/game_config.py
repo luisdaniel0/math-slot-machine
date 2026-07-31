@@ -304,20 +304,67 @@ class GameConfig(Config):
         #     maximum available, not a tuning miss -- do not chase the 50-100x band here.
         # PRICE FIGURES ARE n=20k AND CARRY ~+/-20x (one 20,000x outcome moves the mean
         # by 1x). Trends are solid; exact prices come from the 1e6 convergence run.
+        # ⚠ RUNG COUNT IS THE *ACHIEVABLE* LONGEST ROAM, NOT THE THEORETICAL ONE.
+        # These were num_feature_spins[tier]-1 (9 / 14 / 14) until Jul 30 2026, on the
+        # reasoning that an immediate completion leaves N-1 roam spins. That is true and
+        # it is not the right number: the top rung then requires completing on SPIN 1,
+        # i.e. lighting the WHOLE constellation in a single spin. Measured organically on
+        # the 1e6 pool (wincap slice excluded -- a forced cap book manufactures a spin-1
+        # completion and makes a dead rung look alive):
+        #     corvus  4 cells  -> roam 9 of 9  reached, 1 in 466 features   HEALTHY
+        #     ursa    7 cells  -> roam 13, never 14 except 1 in 4M
+        #     draco  11 cells  -> roam 13 max; rungs 13-14 ONLY in forced cap books
+        #     ascend 11 cells  -> roam 13 max; its top rung was NEVER reached, anywhere
+        # So the old ladders advertised multipliers that could not be won -- exactly the
+        # "too long advertises rungs no player can ever be paid" failure named below,
+        # which the guard test missed because it only asserted len(ladder) >= longest.
+        # RE-SWEPT to the depth each tier actually reaches, holding the shipped price and
+        # the top VALUE (the lists shortened; 200/500/600x did not move):
+        #     corvus 9 rungs 1:200:2.5  unchanged -- already organic
+        #     ursa  13 rungs 1:500:2.4  price 269x vs 268x shipped, max/cost 93x
+        #     draco 12 rungs 2:600:2.0  price 523x vs 520x shipped, max/cost 48x
+        # BONUS, not a side effect to be surprised by later: draco's NATURAL at-cap rate
+        # went 0.004% -> 0.065% (1 in 1,818), because 600x now sits at roam 12 instead of
+        # roam 14. Every forced wincap slice therefore gets much easier to satisfy -- the
+        # thing that made buy_ursa's slice take 24:47 on the last full run.
+        # Completion rates are UNCHANGED by any of this (63.2% / 32.1% reproduced exactly
+        # across every variant): the ladder is payout-only and cannot move completion.
         self.constellation_mult_ladders = {
-            # 9 rungs (10 spins). 1:200:2.5
+            # 9 rungs (10 spins, longest roam 9). 1:200:2.5
             "corvus": [1, 1, 1, 2, 3, 5, 13, 44, 200],
-            # 14 rungs (15 spins). 1:500:2
-            "ursa": [1, 1, 1, 1, 2, 3, 4, 6, 11, 20, 40, 86, 199, 500],
-            # 14 rungs (15 spins). 2:600:1.5
-            "draco": [2, 2, 3, 4, 5, 8, 12, 19, 31, 53, 94, 169, 315, 600],
+            # 13 rungs (15 spins, longest roam 14 -- roam 14 clamps at the top). 1:500:2.4
+            "ursa": [1, 1, 1, 1, 2, 2, 3, 5, 10, 23, 55, 155, 500],
+            # 12 rungs (15 spins, longest roam 14 -- roam 13-14 clamp at the top). 2:600:2
+            "draco": [2, 2, 2, 3, 4, 6, 11, 20, 41, 91, 223, 600],
         }
 
+        # THE INVARIANT THE LADDERS MUST SATISFY, and the one the old guard got wrong.
+        # This is the deepest roam each tier reaches ORGANICALLY at a rate worth
+        # publishing -- so the ladder covers exactly that and no more. Longer and the top
+        # rung is unwinnable; shorter and we clamp away a ceiling we could have paid.
+        # MEASURED per tier feature on the 1e6 pool, forced wincap books EXCLUDED:
+        #     corvus roam 9  1 in    466 (buy) / 1 in  19,817 (base)   <- top is normal play
+        #     ursa   roam 13 1 in 17,995 (buy) / 1 in  95,152 (base)
+        #     draco  roam 12 1 in 75,112 (buy) / 1 in   1.03M (base)
+        #     ascend roam 12 1 in  1,289 (mystery)
+        # Draco DOES touch roam 13 organically, but at 1 in 2.5M -- technically obtainable,
+        # practically a rounding error, so 12 is where its ceiling is worth putting.
+        # A tier is capped by its CELL COUNT: the top rung needs the whole constellation
+        # lit in one spin, which 4 cells manage and 11 never do.
+        self.constellation_ladder_rungs = {"corvus": 9, "ursa": 13, "draco": 12}
+
         # ---------------------------------------------------- DRACO ASCENDANT
-        # It IS a Draco: same 11 cells, same 2x2 beast, same 14-rung ladder, same
+        # It IS a Draco: same 11 cells, same 2x2 beast, same 12-rung ladder, same
         # 15 spins. Derived from draco rather than copied so the two can never
         # drift -- a draco re-tune automatically re-tunes its ascendant form.
         # The ONE difference is the starting state: some cells begin LIT.
+        # ⚠ ASCENDANT IS WHY DRACO'S LADDER SHORTENED TO 12 RATHER THAN 13. Sharing the
+        # list means sharing the rung count, and at 13 rungs ascendant's top was reached
+        # 1 in 29,658 while draco's was 1 in 2.5M. 12 serves both (1 in 1,289 and
+        # 1 in 75,112). Ascendant benefits most from the change: its top rung had NEVER
+        # been reached at all, because it has no forced wincap slice of its own to
+        # manufacture the spin-1 completion the old 14th rung required.
+        self.constellation_ladder_rungs["ascendant"] = self.constellation_ladder_rungs["draco"]
         for _d in ("constellation_cells", "constellation_beast_shapes",
                    "constellation_mult_ladders"):
             getattr(self, _d)["ascendant"] = getattr(self, _d)["draco"]
@@ -622,14 +669,33 @@ class GameConfig(Config):
             # cheaper than its most expensive tier -- it reaches 500x only at ~100%
             # draco, which is buy_draco with a worse name. A fourth outcome that
             # CANNOT BE BOUGHT lifts the average without that trap.
-            # COST IS THE MEASURED OUTPUT, not the round target: with Ascendant at
-            # 2,249x (swept, n=20k) the mix means 0.350*232.1 + 0.295*258.6 +
-            # 0.250*502.4 + 0.100*2249 = 508.0x, so cost = 508.0/0.9665 = 526x. That
-            # is 5% over the 500x market-standard price; trimming Ascendant to ~9% of
-            # rolls would land it on 500 exactly, which is a product call, not a math
-            # one. Re-derive from the 1e6 pool either way.
+            # COST IS THE MEASURED OUTPUT, not the round target. RE-PRICED 526 -> 563x
+            # (Jul 30 2026) by the ladder re-sweep, and the cause is worth keeping:
+            # ascendant SHARES draco's ladder, and shortening draco 14 -> 12 rungs
+            # rewards exactly what ascendant does best -- completing early and riding
+            # the top of the ladder. Its mean went 2,249 -> 2,598x (n=20k, 100%
+            # ascendant, wincap stripped) with no change to its cells, its pre-lit set
+            # or the mix. New mix mean 0.350*232.0 + 0.295*260.0 + 0.250*505.5 +
+            # 0.100*2598 = 544.1x, so cost = 544.1/0.9665 = 563x.
+            # ASCENDANT'S PRICE LEVER IS TOO COARSE TO UNDO THIS: its only independent
+            # knob is the pre-lit cell set, and the neighbouring sets bracket the target
+            # badly (~956x vs ~2,249x on the original sweep), so there is no set that
+            # lands back on 526. Holding 526 would have meant either decoupling
+            # ascendant's ladder from draco's (losing the "it IS a draco" invariant and
+            # the no-drift guarantee) or cutting ascendant below 10% of rolls (losing
+            # the "1 in 10 wakes something you cannot buy" story). Taking the price
+            # instead: 563x keeps the menu ordered (240/268/520/563), stays well under
+            # the 1,000x buy cap, and moves ascendant's payback share 44.3% -> 47.8%,
+            # CLOSER to the Rage Bait shape this mode is modelled on (10% of rolls
+            # carrying 52% of payback).
+            # ⚠ WATCH ON THE 1e6 RUN: ascendant now caps ORGANICALLY at 1.49% of its
+            # features (it could not reach 25,000x at all before), which implies a
+            # mystery cap rate near 1 in 670 -- more often than buy_draco's 1 in 963.
+            # That is defensible (mystery is the dearest bet and carries a 35% chance of
+            # rolling the cheap tier) but it inverts "draco is the cap play", so
+            # re-measure cap-value-per-stake across the menu before shipping.
             BetMode(
-                name="buy_mystery", cost=526.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=563.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),

@@ -29,3 +29,6 @@ library_*_backup/
 
 **/site/*
 
+
+# Starwake: run_modes.sh launch transcript (the real log lives in library/logs/)
+games/starwake/launch.out

@@ -87,6 +87,26 @@ if __name__ == "__main__":
         i = args.index("--spins")
         spins = int(args[i + 1])
         del args[i:i + 2]
+    # --rungs N shortens the LADDER without touching feature length, which --spins
+    # cannot do (it moves both). Needed because the rung count was originally tied to
+    # num_feature_spins-1 = the THEORETICALLY longest roam, and that is not the
+    # ACHIEVABLE longest roam: the top rung needs a completion on spin 1, i.e. lighting
+    # a whole constellation in a single spin. Corvus (4 cells) does that 1 in 466
+    # features; draco (11 cells) never does it organically, so its top two rungs only
+    # ever appeared inside forced wincap books. Sizing the ladder to the depth a tier
+    # actually reaches is what makes every published rung obtainable.
+    rung_override = None
+    if "--rungs" in args:
+        i = args.index("--rungs")
+        rung_override = int(args[i + 1])
+        del args[i:i + 2]
+    # --target N prices the sweep against a chosen number rather than the module's
+    # original design targets, so a re-sweep can HOLD the shipped menu (240/268/520).
+    target_override = None
+    if "--target" in args:
+        i = args.index("--target")
+        target_override = float(args[i + 1])
+        del args[i:i + 2]
     nsims = int(args.pop(0)) if args and args[0].isdigit() else 20000
     combos = [tuple(float(x) for x in a.split(":")) for a in args] or GRIDS[tier]
 
@@ -113,11 +133,13 @@ if __name__ == "__main__":
         bm._wincap = config.wincap  # measure every variant under the one design cap
     gamestate = GameState(config)
 
-    rungs = config.num_feature_spins[tier] - 1
+    rungs = rung_override if rung_override is not None else config.num_feature_spins[tier] - 1
     mode = f"buy_{tier}"
-    target = TARGET_PRICE[tier]
-    print(f"{tier}: {len(combos)} ladders x n={nsims:,}   {rungs} rungs   "
-          f"target price {target}x, cap {CAP:,.0f}x")
+    target = target_override if target_override is not None else TARGET_PRICE[tier]
+    longest = config.num_feature_spins[tier] - 1
+    note = "" if rungs == longest else f"  (longest possible roam {longest}; top rung clamps)"
+    print(f"{tier}: {len(combos)} ladders x n={nsims:,}   {rungs} rungs{note}   "
+          f"target price {target:g}x, cap {CAP:,.0f}x")
 
     rows = []
     for start, top, curve in combos:
