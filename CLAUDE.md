@@ -666,8 +666,70 @@ to origin.
 POOL: library/ is now a CONVERGED PRODUCTION POOL -- all six modes at 1e6 on the
 current config. See "POOL STATE" further down.
 
+### ▶▶ CAP-SHARE LADDER + CORVUS MAX-WIN + CVaR CLOSED (Jul 31 2026)
+Optimizer-only pass on FOUR modes (no re-sim, ~20 min). Three things landed.
+
+1. CVaR IS RESOLVED AND WAS NEVER CLOSE. The percentile convention -- the one gate
+   this file said "rests on an assumption" -- is 0.1%, confirmed from the RGS team's
+   own platform code and from utils/analysis/distribution_functions.py: cutoff 0.999,
+   accumulate from the smallest payout up, then take the conditional mean of the tail.
+   So the 0.01% (673) and 0.001% (3,071) readings were never the ones being checked.
+   MEASURED: base 233.8 against the 700 limit = 3.0x headroom. Every mode passes.
+   ⚠ The frontend divides CVaR by bet cost before checking, which makes buy modes
+   pass trivially -- ETL and the tail-probability checks are what constrain buys.
+2. buy_corvus's PUBLISHED MAX WIN WAS NOT LEGALLY OBTAINABLE. 10,000x sat at
+   P = 8.52e-08 = 1 in 11.7M against the docs' "typically more frequent than 1 in
+   10,000,000". Not on any prior deficiency list, and it is a HARD gate (the RGS team
+   confirmed submission is BLOCKED while any analysis check is out of range; that
+   becomes a penalty rather than a block in a coming update). Fixed with a scaling
+   boost on the 9,000-10,000x band -- corvus has no wincap Distribution, so its
+   ceiling is organic and there is no slice to turn. NOW 1.50e-07 = 1 in 6.66M. PASSES.
+   Cost in RTP: 0.00036% of the mode. ⚠ Only 16 at-cap corvus books exist (vs
+   thousands in the forced-slice modes), so re-measure this after ANY corvus re-run.
+3. THE CAP-SHARE LADDER WAS INVERTED and is now fixed. slice_rtp IS
+   cap-value-per-stake, so it ranks "best max-win bet per dollar" -- and ante (0.025)
+   was beating buy_ursa (0.0215) and buy_mystery (0.0199). Backwards from every
+   audited game (Rage Bait: base 0.045, super 0.056, mystery 0.064 -- buys highest).
+   DELIVERED, exactly on target: corvus 0.0000 / base 0.0200 / ante 0.0250 /
+   ursa 0.0300 / mystery 0.0400 / draco 0.0749. Draco rose WITH the others so its
+   crown strengthened: draco/ursa 2.33x -> 2.50x, still far past the 1.94x price-ratio
+   break-even. Cap rates now ursa 1 in 3,110 / mystery 1 in 1,110 / draco 1 in 642.
+
+WHAT IT COST, measured before/after off the LUTs (backup in library/lut_backup_precapshare):
+  >=1x cost   corvus 28.28->28.57  ursa 25.25->23.59  draco 26.25->24.05  myst 23.88->21.30
+  >=10x cost  corvus 0.095->0.085  ursa 0.203->0.518  draco 0.180->0.245  myst 0.189->0.445
+  median/cost corvus 0.239->0.318  ursa 0.226->0.118  draco 0.322->0.329  myst 0.381->0.388
+  std         corvus 1.53->1.46    ursa 2.16->2.49    draco 2.07->2.31    myst 1.81->2.13
+THE TRADE IS THE ONE WE WANTED: ~2pp fewer break-even returns for 2.4-2.6x more
+>=10x outcomes on ursa/mystery, and buy std moved toward the market's 2.6-4.0 band.
+All four buys still bust 0.00%, every >=1x rate still at or above the market's 13-28%.
+⚠ URSA'S MEDIAN HALVED (0.226 -> 0.118x cost) -- the optimizer packed the consolation
+band lower to fund the tail. Still inside market range (Rage Bait 0.05-0.22x) and its
+>=1x barely moved, so it was accepted; revisit only if playtest says ursa feels mean.
+WIN-RANGE HOLES DID NOT MOVE: 1.00-1.02x on all four, and every surviving hole sits
+above 9,000x (tail sparsity, not structure). The worry that draco's body would hollow
+out did not materialise.
+RISK GATES AFTER: worst p5k 3.28e-03 vs 1e-02 (headroom 9x -> 3x, the one number this
+spent), p10k 8.97e-04 vs 8e-02, ETL40 0.385 vs 0.8, ETL10k 0.085 vs 0.6, CVaR 233.8
+vs 700. RTP band 0.9650-0.9665 = 0.15% spread (limit 0.5%).
+RE-MEASURE ANY TIME WITH: `env/bin/python games/starwake/check_risk_gates.py` (new;
+mirrors the platform's own checks including the cost-scaling on p5k/p10k).
+
+ALSO DONE Jul 31:
+- UPSTREAM MERGED (dfb9f39). origin/main had the CVaR-normalisation and prob-scaling
+  fixes; the upstream-only diff was ONE file (utils/analysis/distribution_functions.py,
+  +13/-1) touching nothing we modified. Zero conflicts.
+- SCAFFOLD PLACEHOLDERS FIXED. game_config never set provider_name/game_name, so both
+  silently inherited src/config/config.py's "sample_provider"/"sample_lines" all the
+  way into the published config_fe_starwake.json. Now **Uptown Games** / **Starwake**.
+  ⚠ Regenerating configs is a SEPARATE step from optimizing -- the optimizer process
+  holds the config it loaded at start, so a name change made mid-run does not reach
+  the published file until generate_configs runs again.
+
 ### ▶▶ NEXT SESSION STARTS HERE (as of Jul 30 2026)
 The math is converged and shippable. ONE publishing item remains, plus product calls.
+ 0. ⚠ THE TABLE BELOW AND IN "THE DEAD TOP RUNGS" PREDATE the Jul 31 cap-share pass --
+    ursa/draco/mystery std, ETL and cap rates all moved. See the Jul 31 section above.
  1. WRITE MYSTERY'S ODDS INTO THE FRONTEND: corvus 35.16 / ursa 29.64 / draco 25.15 /
     ascendant 10.05%. Draco's number INCLUDES the 0.04% cap slice (it forces 5
     scatters, so those are Draco rolls). Display rounding is fine; the gate is that the

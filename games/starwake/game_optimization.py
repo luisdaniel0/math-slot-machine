@@ -33,9 +33,27 @@ THAT IS WHAT MAKES DRACO WORTH ITS PRICE. Ursa and Draco publish the same 25,000
 ceiling, so the ceiling cannot differentiate them -- cap-value-per-stake is
 rate * cap / cost, which means they break even when draco's rate is exactly its
 price ratio (520/268 = 1.94x ursa's). Below that, buying draco is strictly worse
-AND more expensive. The slices below target ~4.5x, giving draco ~2.3x the cap value
-per stake, with room to move: this ratio is the tier story and should be re-checked
-against the 1e6 pool, not assumed to have survived re-convergence.
+AND more expensive.
+
+THE CAP-SHARE LADDER (revised Jul 2026 after a stakestats survey of Rage Bait,
+Coins & Cauldrons, MIKO, Waylanders Forge, Red Strike and Dojo Duel). slice_rtp IS
+cap-value-per-stake, so this list is literally "who is the best max-win bet per
+dollar", and it must read down the menu in the order the UI sells it:
+
+    buy_corvus  ~0      (10,000x ceiling, no cap slice -- a deliberate non-lottery)
+    base         0.020
+    ante         0.025
+    buy_ursa     0.030  (was 0.0215 -- BELOW ante, i.e. inverted)
+    buy_mystery  0.040  (was 0.0199 -- below ante AND below ursa)
+    buy_draco    0.075  (was 0.050 -- raised to keep the crown as the others rise)
+
+The old ladder had ante beating two of the four buys, which is backwards from every
+audited game: they all put the most cap value in the buys (Rage Bait: base 0.045,
+super 0.056, mystery 0.064). Draco rises with the rest so draco/ursa goes 2.33x ->
+2.5x -- the tier story gets stronger, not weaker. All six sit far inside the 2-star
+risk gates measured off the shipped LUTs (worst p5k 1.1e-03 vs 1e-02, worst p10k
+5.9e-04 vs 8e-02, worst ETL40 0.385 vs 0.8, worst CVaR 234 vs 700), which is what
+made this headroom safe to spend.
 """
 
 from optimization_program.optimization_config import (
@@ -53,6 +71,7 @@ class OptimizationSetup:
     def __init__(self, game_config):
         self.game_config = game_config
         wincaps = {bm.get_name(): bm.get_wincap() for bm in game_config.bet_modes}
+        costs = {bm.get_name(): bm.get_cost() for bm in game_config.bet_modes}
         rtp = game_config.rtp  # 0.9665 -- every mode converges here
 
         # -- small builders: keep the six entries DRY and the RTP split legible --
@@ -107,6 +126,58 @@ class OptimizationSetup:
             {"criteria": "basegame", "scale_factor": 1.5, "win_range": (10, 20), "probability": 1.0},
         ]
 
+        def maxwin_boost(criteria, ceiling, factor):
+            """Lift the weight of near-ceiling books so a published max win clears the
+            'realistically obtainable' gate (docs: typically better than 1 in 10,000,000).
+
+            ONLY needed where a mode has no forced wincap slice to set the rate directly.
+            buy_corvus is that mode: its 10,000x ceiling is reached ORGANICALLY, measured
+            at P = 8.52e-08 = 1 in 11.7M on the shipped pool -- ~17% the wrong side of the
+            gate. Its whole cap contribution is P*ceiling/cost = 0.00036% of the mode's
+            RTP, so lifting it is free in RTP terms; the constraint is book diversity, not
+            budget (the pool holds only 16 at-cap corvus books vs thousands in the forced-
+            slice modes). ⚠ SCALING IS A SEARCH HINT, NOT A CONSTRAINT -- the optimizer
+            biases toward it while solving for RTP, so the delivered rate MUST be measured
+            off the new LUT, not assumed. If it still lands under 1e-07, the deterministic
+            fallback is a real wincap Distribution for buy_corvus in game_config (that is
+            a re-sim, not an optimizer-only run, and it is safe from the classic
+            forced-slice hang precisely because those 16 books prove the cap is reachable).
+            """
+            return [
+                {
+                    "criteria": criteria,
+                    "scale_factor": factor,
+                    "win_range": (int(ceiling * 0.9), int(ceiling)),
+                    "probability": 1.0,
+                }
+            ]
+
+        # -- buy_mystery: DERIVE both invariants instead of hand-typing them --
+        # Two different numbers, and mixing them up has already cost one 1e6 run:
+        #   ROLL mix  -> hr (how often each tier is dealt)
+        #   PAYBACK   -> rtp split (how much of the mode's mean each tier carries)
+        # Invariant A: sum(1/hr) + wincap_weight == 1   (shares must be exhaustive)
+        # Invariant B: sum(rtp splits) + wincap_rtp == mode rtp, exact to 5dp
+        #              (verify_optimization_input asserts round(...,5) equality)
+        # Deriving them means a change to the cap share can no longer silently break
+        # either one -- the failure mode both times was arithmetic, not design.
+        mystery_cap_rtp = 0.040
+        mystery_roll_mix = {"corvus": 0.350, "ursa": 0.295, "draco": 0.250, "ascendant": 0.100}
+        mystery_payback = {"corvus": 0.149, "ursa": 0.141, "draco": 0.232, "ascendant": 0.478}
+
+        _cap_weight = mystery_cap_rtp * costs["buy_mystery"] / wincaps["buy_mystery"]
+        _roll_total = sum(mystery_roll_mix.values())  # 0.995 by design, NOT 1.0
+        mystery_hr = {
+            tier: _roll_total / (share * (1.0 - _cap_weight))
+            for tier, share in mystery_roll_mix.items()
+        }
+        _body = rtp - mystery_cap_rtp
+        mystery_rtp = {tier: round(share * _body, 6) for tier, share in mystery_payback.items()}
+        # absorb float drift in the largest split so invariant B holds exactly
+        mystery_rtp["ascendant"] = round(
+            _body - sum(v for k, v in mystery_rtp.items() if k != "ascendant"), 6
+        )
+
         self.game_config.opt_params = {
             # base (1x): RTP mostly in the base game (the hit floor) + a natural tier
             # tail; wincap is the rare draco-to-cap slice. Sum = 0.9665.
@@ -143,33 +214,46 @@ class OptimizationSetup:
                 "distribution_bias": ConstructFenceBias(["basegame"], [(2.0, 3.0)], [0.5]).return_dict(),
             },
             # buy_corvus: the safe tier -- all RTP in the corvus feature. Low vol.
+            # No wincap fence (game_config gives this mode no wincap Distribution), so
+            # its 10,000x ceiling is organic. maxwin_boost lifts it over the
+            # "realistically obtainable" gate; see that helper for why and for the
+            # fallback. MEASURE P(10,000x) on the new LUT -- target >= 1e-07.
             "buy_corvus": {
                 "conditions": {"corvus": feature_cond(rtp, hr=1)},
-                "scaling": ConstructScaling(tail_scaling("corvus")).return_dict(),
+                "scaling": ConstructScaling(
+                    tail_scaling("corvus") + maxwin_boost("corvus", wincaps["buy_corvus"], 4.0)
+                ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
             },
             # buy_ursa: the coin-flip tier, now also a 25,000x product. Mid-high vol.
-            # slice_rtp 0.0215 at cost 268 -> cap rate 0.0215*268/25000 = 1 in 4,342,
-            # against draco's 1 in 962: a 4.5x gap, comfortably past the 1.94x
-            # break-even where draco would stop being worth its price.
+            # RAISED 0.0215 -> 0.030 (see the cap-share ladder note in the docstring):
+            # at 0.0215 this buy was a WORSE max-win bet per dollar than grinding
+            # ante_starfall (0.025), which inverts the market pattern -- every audited
+            # game puts more cap value in its buys than in its base/ante.
+            # 0.030 at cost 268 -> cap rate 0.030*268/25000 = 1 in 3,109 (was 1 in 4,342).
             "buy_ursa": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_ursa", 0.0215),
-                    "ursa": feature_cond(round(rtp - 0.0215, 5), hr=1),
+                    "wincap": wincap_cond("buy_ursa", 0.030),
+                    "ursa": feature_cond(round(rtp - 0.030, 5), hr=1),
                 },
                 "scaling": ConstructScaling(tail_scaling("ursa")).return_dict(),
                 "parameters": run_params(3, 10, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ursa"], [(5.0, 20.0)], [0.3]).return_dict(),
             },
             # buy_draco: the dragon lottery -- very high vol, and the mode that reaches
-            # the shared 25,000x ceiling most often. slice_rtp 0.05 at cost 520 ->
-            # 1 in 962; 5.2% of draco's whole RTP is delivered at the cap, vs ursa's
-            # 2.2%. That gap IS draco's justification now that the ceiling is shared.
+            # the shared 25,000x ceiling most often. RAISED 0.05 -> 0.075 so that lifting
+            # ursa/mystery does NOT erode draco's crown: the ladder moves up together and
+            # draco/ursa stays 2.5x (was 2.33x), still far past the 1.94x price-ratio
+            # break-even below which buying draco would be strictly worse AND dearer.
+            # 0.075 at cost 520 -> 1 in 641, vs Rage Bait's mystery at ~1 in 787 -- the
+            # market puts a 25,000x on a ~500x buy at roughly this rate.
+            # COSTS 2.5% OF DRACO'S BODY: that RTP moves from mid-range wins to cap books,
+            # so re-check the win-range holes (was 1.00x) and the median after the run.
             "buy_draco": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_draco", 0.05),
-                    "draco": feature_cond(round(rtp - 0.05, 5), hr=1),
+                    "wincap": wincap_cond("buy_draco", 0.075),
+                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1),
                 },
                 "scaling": ConstructScaling(tail_scaling("draco")).return_dict(),
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),
@@ -200,18 +284,18 @@ class OptimizationSetup:
             # hr encodes the roll share and the rtp split encodes the payback share; they
             # are different numbers and only the second one responds to a ladder change.
             #
-            # The cap share is derived from the tier rates like the tiers themselves.
-            # ⚠ HELD AT 0.0199 DELIBERATELY, NOT RE-DERIVED. The new unforced at-cap
-            # rates are ursa 1/20,000, draco 1/1,538 and ascendant 1/67 -- ascendant
-            # could not reach 25,000x AT ALL before, and now caps on 1.49% of its
-            # features. Rolling those forward gives P(cap) = 1.67e-03 and slice_rtp
-            # = 1.67e-03 * 25000/563 = 0.074, which would put mystery's cap-value-per-
-            # stake at 0.074 against buy_draco's 0.050 and make the mystery the best
-            # max-win bet on the menu outright. Keeping the slice at 0.0199 asks the
-            # optimizer for the same designed cap share as before; what it CANNOT do is
-            # suppress the organic cap books living inside the ascendant fence, so the
-            # delivered rate will land above the slice. MEASURE IT on the 1e6 pool --
-            # it is the one number this re-sweep could plausibly break.
+            # CAP SHARE RAISED 0.0199 -> 0.040 (mystery_cap_rtp above). At 0.0199 this
+            # 563x buy was a worse max-win bet per dollar than a 1.5x ante spin (0.025) --
+            # backwards from every audited game, where the buys carry the most cap value
+            # (Rage Bait: base 0.045, super 0.056, mystery 0.064). 0.040 at cost 563 ->
+            # 1 in 1,110, against Rage Bait's ~1 in 787 for the same 500x-class mystery.
+            # ⚠ THE OLD WORRY IS NOW HEADROOM, NOT RISK. The unforced at-cap rates
+            # (ursa 1/20,000, draco 1/1,538, ascendant 1/67) roll forward to an organic
+            # slice_rtp near 0.074, and the optimizer cannot suppress organic cap books
+            # inside the ascendant fence -- so the DELIVERED share can drift above the
+            # 0.040 asked for here. Previously that risked mystery outranking draco at
+            # 0.050; with draco lifted to 0.075 the ordering survives even a large drift.
+            # STILL MEASURE IT: delivered mystery cap share must stay under draco's.
             #
             # ⚠ STILL PROVISIONAL at n=20k -- re-derive every split and the mode cost
             # from the 1e6 pool. A tail rate read off 20k books is the least stable
@@ -235,7 +319,7 @@ class OptimizationSetup:
             # the tiers keep the shape the sweeps gave them instead of being reshaped.
             "buy_mystery": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_mystery", 0.0199),
+                    "wincap": wincap_cond("buy_mystery", mystery_cap_rtp),
                     # ⚠ THE SHARES MUST BE EXHAUSTIVE: sum(1/hr) + wincap weight == 1.
                     # First attempt used the clean design mix (hr 10/4/3.39/2.857), whose
                     # shares sum to 0.995 because 0.5% was left for the cap slice -- but
@@ -248,10 +332,13 @@ class OptimizationSetup:
                     # Shares below are the 35/29.5/25/10 mix renormalised to 1 - 0.000448.
                     # hr = 1/roll share (UNCHANGED by the re-sweep); the first number is
                     # the PAYBACK split, which is what the new ladders moved.
-                    "ascendant": feature_cond(0.4520, hr=9.9545, kind=6),  # 10.046%
-                    "draco": feature_cond(0.2199, hr=3.9818, kind=5),      # 25.114%
-                    "ursa": feature_cond(0.1335, hr=3.3745, kind=4),       # 29.635%
-                    "corvus": feature_cond(0.1412, hr=2.8441, kind=3),     # 35.160%
+                    # rtp split = PAYBACK share; hr = 1 / ROLL share. Both derived above
+                    # from mystery_payback / mystery_roll_mix so raising the cap share
+                    # re-solves them instead of silently breaking an invariant.
+                    "ascendant": feature_cond(mystery_rtp["ascendant"], hr=mystery_hr["ascendant"], kind=6),
+                    "draco": feature_cond(mystery_rtp["draco"], hr=mystery_hr["draco"], kind=5),
+                    "ursa": feature_cond(mystery_rtp["ursa"], hr=mystery_hr["ursa"], kind=4),
+                    "corvus": feature_cond(mystery_rtp["corvus"], hr=mystery_hr["corvus"], kind=3),
                 },
                 "scaling": ConstructScaling(tail_scaling("ascendant") + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),

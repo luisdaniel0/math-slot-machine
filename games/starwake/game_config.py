@@ -19,6 +19,14 @@ class GameConfig(Config):
         self.game_id = "starwake"
         self.provider_number = 0
         self.working_name = "Starwake"
+        # These two are REVIEWER-FACING: write_configs publishes them into
+        # config_fe_starwake.json as gameName / providerName. Neither was set here
+        # before, so both silently inherited src/config/config.py's scaffold defaults
+        # ("sample_lines" / "sample_provider") all the way into the published config.
+        self.game_name = "Starwake"
+        # The studio. Also the name on the tile's third required asset,
+        # ProviderName-Logo.png (must be legible at small size).
+        self.provider_name = "Uptown Games"
         self.wincap = 25000.0
         self.win_type = "lines"
         # converge ~0.9665 so displayed RTP rounds to 96.7% while staying under
