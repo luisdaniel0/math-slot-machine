@@ -1,0 +1,1682 @@
+{
+  "modes": {
+    "base": {
+      "max_win": {
+        "description": "pays the published ceiling (25,000x)",
+        "books": [
+          {
+            "id": 937984,
+            "payout": 25000.0,
+            "weight": 895347.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 135169,
+            "payout": 25000.0,
+            "weight": 895347.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 321538,
+            "payout": 25000.0,
+            "weight": 895347.0,
+            "criteria": "wincap"
+          }
+        ]
+      },
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 780970,
+            "payout": 23070.9,
+            "weight": 696331.0,
+            "criteria": "ursa"
+          },
+          {
+            "id": 995586,
+            "payout": 22579.0,
+            "weight": 461947.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 508013,
+            "payout": 22523.6,
+            "weight": 391435.0,
+            "criteria": "draco"
+          }
+        ]
+      },
+      "corvus_top_rung": {
+        "description": "corvus: beast reaches its top ladder rung (200x)",
+        "books": [
+          {
+            "id": 4550,
+            "payout": 4239.75,
+            "weight": 982902.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          },
+          {
+            "id": 3025,
+            "payout": 2906.55,
+            "weight": 746623.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          }
+        ]
+      },
+      "corvus_wakes": {
+        "description": "corvus: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 8,
+            "payout": 571.3,
+            "weight": 570542.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 8,
+            "maxMultiplier": 44
+          },
+          {
+            "id": 10,
+            "payout": 78.9,
+            "weight": 12952481.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 4,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "corvus_never_completes": {
+        "description": "corvus: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 65,
+            "payout": 3.25,
+            "weight": 2927723655.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 53,
+            "payout": 1.5,
+            "weight": 79373934.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "corvus_roam_floor": {
+        "description": "corvus: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 81,
+            "payout": 46.35,
+            "weight": 19534418.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 88,
+            "payout": 26.7,
+            "weight": 38011991.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_top_rung": {
+        "description": "ursa: beast reaches its top ladder rung (500x)",
+        "books": [
+          {
+            "id": 72290,
+            "payout": 15099.35,
+            "weight": 381229.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          },
+          {
+            "id": 5195,
+            "payout": 14173.1,
+            "weight": 325272.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          }
+        ]
+      },
+      "ursa_wakes": {
+        "description": "ursa: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 15,
+            "payout": 381.35,
+            "weight": 371452.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 3
+          },
+          {
+            "id": 28,
+            "payout": 345.3,
+            "weight": 536211.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 8,
+            "maxMultiplier": 5
+          }
+        ]
+      },
+      "ursa_never_completes": {
+        "description": "ursa: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 427,
+            "payout": 67.75,
+            "weight": 12184403.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 306,
+            "payout": 58.4,
+            "weight": 63537836.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "ursa_roam_floor": {
+        "description": "ursa: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 246,
+            "payout": 107.9,
+            "weight": 22821521.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 645,
+            "payout": 75.6,
+            "weight": 48424161.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "draco_top_rung": {
+        "description": "draco: beast reaches its top ladder rung (600x)",
+        "books": [
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 895347.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          },
+          {
+            "id": 260,
+            "payout": 25000.0,
+            "weight": 895347.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 600
+          }
+        ]
+      },
+      "draco_wakes": {
+        "description": "draco: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 877,
+            "payout": 1489.35,
+            "weight": 2824126.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 11
+          },
+          {
+            "id": 524,
+            "payout": 726.2,
+            "weight": 9417969.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 4,
+            "maxMultiplier": 3
+          }
+        ]
+      },
+      "draco_never_completes": {
+        "description": "draco: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 688,
+            "payout": 134.35,
+            "weight": 23474903.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 503,
+            "payout": 47.75,
+            "weight": 26185920.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "draco_roam_floor": {
+        "description": "draco: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 1378,
+            "payout": 636.7,
+            "weight": 14585970.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          },
+          {
+            "id": 1524,
+            "payout": 451.4,
+            "weight": 71224086.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "zero_pay": {
+        "description": "a losing spin",
+        "books": [
+          {
+            "id": 1,
+            "payout": 0.0,
+            "weight": 1991650927.0,
+            "criteria": "0"
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 0,
+            "payout": 0.2,
+            "weight": 93843338.0,
+            "criteria": "basegame"
+          }
+        ]
+      }
+    },
+    "ante_starfall": {
+      "max_win": {
+        "description": "pays the published ceiling (25,000x)",
+        "books": [
+          {
+            "id": 720896,
+            "payout": 25000.0,
+            "weight": 1080518.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 565249,
+            "payout": 25000.0,
+            "weight": 1080518.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 974854,
+            "payout": 25000.0,
+            "weight": 1080518.0,
+            "criteria": "wincap"
+          }
+        ]
+      },
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 830521,
+            "payout": 24708.0,
+            "weight": 582013.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 865189,
+            "payout": 24166.15,
+            "weight": 608431.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 933228,
+            "payout": 24138.25,
+            "weight": 1180939.0,
+            "criteria": "ursa"
+          }
+        ]
+      },
+      "corvus_top_rung": {
+        "description": "corvus: beast reaches its top ladder rung (200x)",
+        "books": [
+          {
+            "id": 4984,
+            "payout": 4292.5,
+            "weight": 723020.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          },
+          {
+            "id": 2815,
+            "payout": 3709.05,
+            "weight": 716284.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          }
+        ]
+      },
+      "corvus_wakes": {
+        "description": "corvus: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 38,
+            "payout": 363.25,
+            "weight": 234194.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 13
+          },
+          {
+            "id": 3,
+            "payout": 152.1,
+            "weight": 41418849.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 6,
+            "maxMultiplier": 5
+          }
+        ]
+      },
+      "corvus_never_completes": {
+        "description": "corvus: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 55,
+            "payout": 1.7,
+            "weight": 68205441.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 53,
+            "payout": 1.5,
+            "weight": 45931302.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "corvus_roam_floor": {
+        "description": "corvus: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 80,
+            "payout": 37.4,
+            "weight": 3392006.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 88,
+            "payout": 26.7,
+            "weight": 5761214.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_top_rung": {
+        "description": "ursa: beast reaches its top ladder rung (500x)",
+        "books": [
+          {
+            "id": 5195,
+            "payout": 14173.1,
+            "weight": 1008849.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          },
+          {
+            "id": 40659,
+            "payout": 13915.6,
+            "weight": 774178.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          }
+        ]
+      },
+      "ursa_wakes": {
+        "description": "ursa: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 23,
+            "payout": 333.65,
+            "weight": 208585.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 8,
+            "maxMultiplier": 5
+          },
+          {
+            "id": 22,
+            "payout": 175.1,
+            "weight": 64470587.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_never_completes": {
+        "description": "ursa: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 49,
+            "payout": 101.85,
+            "weight": 179215691.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 52,
+            "payout": 92.85,
+            "weight": 105325194.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "ursa_roam_floor": {
+        "description": "ursa: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 22,
+            "payout": 175.1,
+            "weight": 64470587.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 96,
+            "payout": 100.7,
+            "weight": 191867612.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "draco_top_rung": {
+        "description": "draco: beast reaches its top ladder rung (600x)",
+        "books": [
+          {
+            "id": 624,
+            "payout": 25000.0,
+            "weight": 1080518.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          },
+          {
+            "id": 2476,
+            "payout": 25000.0,
+            "weight": 1080518.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          }
+        ]
+      },
+      "draco_wakes": {
+        "description": "draco: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 877,
+            "payout": 1489.35,
+            "weight": 457475.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 11
+          },
+          {
+            "id": 225,
+            "payout": 409.95,
+            "weight": 21301268.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "draco_never_completes": {
+        "description": "draco: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 240,
+            "payout": 262.6,
+            "weight": 43714725.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 24,
+            "payout": 135.65,
+            "weight": 47403645.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "draco_roam_floor": {
+        "description": "draco: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 1411,
+            "payout": 531.45,
+            "weight": 2334555.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          },
+          {
+            "id": 225,
+            "payout": 409.95,
+            "weight": 21301268.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "zero_pay": {
+        "description": "a losing spin",
+        "books": [
+          {
+            "id": 1,
+            "payout": 0.0,
+            "weight": 2370280794.0,
+            "criteria": "0"
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 0,
+            "payout": 0.2,
+            "weight": 136458347.0,
+            "criteria": "basegame"
+          }
+        ]
+      }
+    },
+    "buy_corvus": {
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 974270,
+            "payout": 9917.5,
+            "weight": 98491172.0,
+            "criteria": "corvus"
+          },
+          {
+            "id": 791755,
+            "payout": 9892.1,
+            "weight": 88094201.0,
+            "criteria": "corvus"
+          },
+          {
+            "id": 705916,
+            "payout": 9779.55,
+            "weight": 90886414.0,
+            "criteria": "corvus"
+          }
+        ]
+      },
+      "corvus_top_rung": {
+        "description": "corvus: beast reaches its top ladder rung (200x)",
+        "books": [
+          {
+            "id": 172,
+            "payout": 6232.75,
+            "weight": 95281598.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          },
+          {
+            "id": 215,
+            "payout": 1871.5,
+            "weight": 1569529471.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          }
+        ]
+      },
+      "corvus_wakes": {
+        "description": "corvus: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 0,
+            "payout": 1216.8,
+            "weight": 2384596054.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 8,
+            "maxMultiplier": 44
+          },
+          {
+            "id": 1,
+            "payout": 209.45,
+            "weight": 618055674.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 6,
+            "maxMultiplier": 5
+          }
+        ]
+      },
+      "corvus_never_completes": {
+        "description": "corvus: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 24,
+            "payout": 1.1,
+            "weight": 118045223.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 33,
+            "payout": 0.3,
+            "weight": 26719026.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "corvus_roam_floor": {
+        "description": "corvus: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 2,
+            "payout": 43.35,
+            "weight": 1111948070.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 5,
+            "payout": 18.75,
+            "weight": 8893421854.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 180,
+            "payout": 0.2,
+            "weight": 44545379.0,
+            "criteria": "corvus"
+          }
+        ]
+      }
+    },
+    "buy_ursa": {
+      "max_win": {
+        "description": "pays the published ceiling (25,000x)",
+        "books": [
+          {
+            "id": 720899,
+            "payout": 25000.0,
+            "weight": 50633641.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 50633641.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 688145,
+            "payout": 25000.0,
+            "weight": 50633641.0,
+            "criteria": "wincap"
+          }
+        ]
+      },
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 726691,
+            "payout": 24923.45,
+            "weight": 65317799.0,
+            "criteria": "ursa"
+          },
+          {
+            "id": 348015,
+            "payout": 24850.7,
+            "weight": 40553343.0,
+            "criteria": "ursa"
+          },
+          {
+            "id": 860102,
+            "payout": 24595.55,
+            "weight": 46195845.0,
+            "criteria": "ursa"
+          }
+        ]
+      },
+      "ursa_top_rung": {
+        "description": "ursa: beast reaches its top ladder rung (500x)",
+        "books": [
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 50633641.0,
+            "criteria": "wincap",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          },
+          {
+            "id": 260,
+            "payout": 25000.0,
+            "weight": 50633641.0,
+            "criteria": "wincap",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          }
+        ]
+      },
+      "ursa_wakes": {
+        "description": "ursa: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 1,
+            "payout": 277.45,
+            "weight": 530317361.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 10
+          },
+          {
+            "id": 2,
+            "payout": 205.25,
+            "weight": 338727866.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 4,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_never_completes": {
+        "description": "ursa: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 5,
+            "payout": 67.65,
+            "weight": 1502514112.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 0,
+            "payout": 29.4,
+            "weight": 1638180750.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "ursa_roam_floor": {
+        "description": "ursa: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 11,
+            "payout": 161.6,
+            "weight": 112392453.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 13,
+            "payout": 120.75,
+            "weight": 475116172.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 1982,
+            "payout": 0.2,
+            "weight": 537073972.0,
+            "criteria": "ursa"
+          }
+        ]
+      }
+    },
+    "buy_draco": {
+      "max_win": {
+        "description": "pays the published ceiling (25,000x)",
+        "books": [
+          {
+            "id": 720899,
+            "payout": 25000.0,
+            "weight": 112298446.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 112298446.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 851973,
+            "payout": 25000.0,
+            "weight": 112298446.0,
+            "criteria": "wincap"
+          }
+        ]
+      },
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 610889,
+            "payout": 24994.4,
+            "weight": 61061150.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 695150,
+            "payout": 24979.4,
+            "weight": 62046166.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 573542,
+            "payout": 24953.9,
+            "weight": 58352832.0,
+            "criteria": "draco"
+          }
+        ]
+      },
+      "draco_top_rung": {
+        "description": "draco: beast reaches its top ladder rung (600x)",
+        "books": [
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 112298446.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          },
+          {
+            "id": 260,
+            "payout": 25000.0,
+            "weight": 112298446.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 600
+          }
+        ]
+      },
+      "draco_wakes": {
+        "description": "draco: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 5,
+            "payout": 8649.3,
+            "weight": 59383739.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 10,
+            "maxMultiplier": 91
+          },
+          {
+            "id": 1,
+            "payout": 1124.2,
+            "weight": 1202195242.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 6,
+            "maxMultiplier": 6
+          }
+        ]
+      },
+      "draco_never_completes": {
+        "description": "draco: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 0,
+            "payout": 272.1,
+            "weight": 103532228.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 2,
+            "payout": 165.8,
+            "weight": 956200382.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "draco_roam_floor": {
+        "description": "draco: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 13,
+            "payout": 537.85,
+            "weight": 374261903.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          },
+          {
+            "id": 11,
+            "payout": 511.5,
+            "weight": 473654095.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 229,
+            "payout": 0.2,
+            "weight": 48513139.0,
+            "criteria": "draco"
+          }
+        ]
+      }
+    },
+    "buy_mystery": {
+      "max_win": {
+        "description": "pays the published ceiling (25,000x)",
+        "books": [
+          {
+            "id": 720899,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "wincap"
+          },
+          {
+            "id": 688145,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "wincap"
+          }
+        ]
+      },
+      "biggest_non_cap": {
+        "description": "largest win strictly below the ceiling",
+        "books": [
+          {
+            "id": 649404,
+            "payout": 24995.45,
+            "weight": 171696658.0,
+            "criteria": "ascendant"
+          },
+          {
+            "id": 610889,
+            "payout": 24994.4,
+            "weight": 104258544.0,
+            "criteria": "draco"
+          },
+          {
+            "id": 117636,
+            "payout": 24977.85,
+            "weight": 187567289.0,
+            "criteria": "ascendant"
+          }
+        ]
+      },
+      "corvus_top_rung": {
+        "description": "corvus: beast reaches its top ladder rung (200x)",
+        "books": [
+          {
+            "id": 884,
+            "payout": 3918.7,
+            "weight": 190222911.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          },
+          {
+            "id": 215,
+            "payout": 1871.5,
+            "weight": 632906574.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 9,
+            "maxMultiplier": 200
+          }
+        ]
+      },
+      "corvus_wakes": {
+        "description": "corvus: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 1,
+            "payout": 209.45,
+            "weight": 2440362291.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 6,
+            "maxMultiplier": 5
+          },
+          {
+            "id": 3,
+            "payout": 152.1,
+            "weight": 745360268.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 6,
+            "maxMultiplier": 5
+          }
+        ]
+      },
+      "corvus_never_completes": {
+        "description": "corvus: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 24,
+            "payout": 1.1,
+            "weight": 30028606.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 33,
+            "payout": 0.3,
+            "weight": 30428557.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "corvus_roam_floor": {
+        "description": "corvus: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 32,
+            "payout": 44.25,
+            "weight": 1141642412.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 36,
+            "payout": 37.3,
+            "weight": 707915675.0,
+            "criteria": "corvus",
+            "tier": "corvus",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_top_rung": {
+        "description": "ursa: beast reaches its top ladder rung (500x)",
+        "books": [
+          {
+            "id": 8140,
+            "payout": 24493.95,
+            "weight": 50209328.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          },
+          {
+            "id": 8287,
+            "payout": 13591.25,
+            "weight": 42223483.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 500
+          }
+        ]
+      },
+      "ursa_wakes": {
+        "description": "ursa: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 2,
+            "payout": 205.25,
+            "weight": 934519746.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 4,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 6,
+            "payout": 189.2,
+            "weight": 964341422.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 4,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "ursa_never_completes": {
+        "description": "ursa: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 19,
+            "payout": 90.9,
+            "weight": 810122550.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 20,
+            "payout": 78.0,
+            "weight": 1655997793.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "ursa_roam_floor": {
+        "description": "ursa: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 16,
+            "payout": 134.7,
+            "weight": 122845726.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          },
+          {
+            "id": 13,
+            "payout": 120.75,
+            "weight": 2018759114.0,
+            "criteria": "ursa",
+            "tier": "ursa",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 1
+          }
+        ]
+      },
+      "draco_top_rung": {
+        "description": "draco: beast reaches its top ladder rung (600x)",
+        "books": [
+          {
+            "id": 4,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          },
+          {
+            "id": 260,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "wincap",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 600
+          }
+        ]
+      },
+      "draco_wakes": {
+        "description": "draco: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 5,
+            "payout": 8649.3,
+            "weight": 98522053.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 10,
+            "maxMultiplier": 91
+          },
+          {
+            "id": 11,
+            "payout": 511.5,
+            "weight": 4136574859.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "draco_never_completes": {
+        "description": "draco: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 9,
+            "payout": 405.6,
+            "weight": 2733102964.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 0,
+            "payout": 272.1,
+            "weight": 368277497.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "draco_roam_floor": {
+        "description": "draco: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 11,
+            "payout": 511.5,
+            "weight": 4136574859.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          },
+          {
+            "id": 97,
+            "payout": 419.5,
+            "weight": 2122545889.0,
+            "criteria": "draco",
+            "tier": "draco",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "ascendant_top_rung": {
+        "description": "ascendant: beast reaches its top ladder rung (600x)",
+        "books": [
+          {
+            "id": 228,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 13,
+            "maxMultiplier": 600
+          },
+          {
+            "id": 534,
+            "payout": 25000.0,
+            "weight": 77186751.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 12,
+            "maxMultiplier": 600
+          }
+        ]
+      },
+      "ascendant_wakes": {
+        "description": "ascendant: constellation completes, beast wakes and roams",
+        "books": [
+          {
+            "id": 10,
+            "payout": 1332.6,
+            "weight": 206762479.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 11
+          },
+          {
+            "id": 8,
+            "payout": 709.15,
+            "weight": 119895112.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 5,
+            "maxMultiplier": 4
+          }
+        ]
+      },
+      "ascendant_never_completes": {
+        "description": "ascendant: partial progress only -- the wild carpet still pays (the no-win-range-gap / ETL evidence)",
+        "books": [
+          {
+            "id": 438,
+            "payout": 130.05,
+            "weight": 199716920.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          },
+          {
+            "id": 483,
+            "payout": 105.95,
+            "weight": 139641106.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": false,
+            "roamSpins": 0,
+            "maxMultiplier": 0
+          }
+        ]
+      },
+      "ascendant_roam_floor": {
+        "description": "ascendant: late completion held to the guaranteed 2-spin roam floor",
+        "books": [
+          {
+            "id": 205,
+            "payout": 266.25,
+            "weight": 213802060.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          },
+          {
+            "id": 53,
+            "payout": 194.9,
+            "weight": 191791182.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 2,
+            "maxMultiplier": 2
+          }
+        ]
+      },
+      "ascendant_prelit": {
+        "description": "Draco Ascendant: dealt with cells already lit from spin one",
+        "books": [
+          {
+            "id": 10,
+            "payout": 1332.6,
+            "weight": 206762479.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 7,
+            "maxMultiplier": 11
+          },
+          {
+            "id": 8,
+            "payout": 709.15,
+            "weight": 119895112.0,
+            "criteria": "ascendant",
+            "tier": "ascendant",
+            "woke": true,
+            "roamSpins": 5,
+            "maxMultiplier": 4
+          }
+        ]
+      },
+      "smallest_paying": {
+        "description": "the dust end -- smallest non-zero payout",
+        "books": [
+          {
+            "id": 356,
+            "payout": 0.2,
+            "weight": 12141725.0,
+            "criteria": "corvus"
+          }
+        ]
+      }
+    }
+  }
+}
