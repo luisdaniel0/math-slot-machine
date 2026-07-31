@@ -16,7 +16,7 @@ class GameConfig(Config):
         self.working_name = "Expanding Wilds"
         self.wincap = 5000
         self.win_type = "lines"
-        self.rtp = 0.97
+        self.rtp = 0.967
         self.construct_paths()
 
         # Game Dimensions

@@ -25,6 +25,7 @@ from utils.analysis.distribution_functions import (
     get_distribution_median,
     min_dist_difference,
     calculate_rtp,
+    get_etl_cvar_p5k_10k_vales,
 )
 from src.write_data.write_data import get_sha_256
 
@@ -53,6 +54,11 @@ class WinStatistics:
         num_non_zero_payouts=None,
         skew=None,
         excess_kurtosis=None,
+        prob5k=None,
+        prob10k=None,
+        etl40b=None,
+        etl10k=None,
+        cvar=None,
     ):
         self.win_distribution = win_distribution
         self.num_events = num_events
@@ -73,6 +79,11 @@ class WinStatistics:
         self.prob_less_bet = prob_less_bet
         self.skew = skew
         self.excess_kurtosis = excess_kurtosis
+        self.prob5k = prob5k
+        self.prob10k = prob10k
+        self.etl40b = etl40b
+        self.etl10k = etl10k
+        self.cvar = cvar
 
     def to_dict(self):
         map_object = {}
@@ -163,12 +174,33 @@ def get_num_non_zero_payouts(book_int_payouts) -> None:
     return len([p for p in book_int_payouts if p > 0])
 
 
+def verify_mode_volatility(name: str, MathStats: object) -> dict:
+    """Check math betlevel volatility limits. Returns dict of violated attributes."""
+    mode_limits = {"prob5k": 1e-2, "prob10k": 0.5e-2, "etl40b": 0.9, "etl10k": 0.8, "cvar": 800, "rtp": 0.967}
+    violated_attributes = {}
+
+    for key, limit in mode_limits.items():
+        val = getattr(MathStats, key, None)
+        if val is not None and val > limit:
+            violated_attributes[key] = val
+
+    if violated_attributes:
+        warnings.warn(f"\nMode [{name}] fails 3-star volatility limits:\n")
+        for key, val in violated_attributes.items():
+            print(f"\tVIOLATED: {key}  VALUE:{round(val, 4)} --- LIMIT: {mode_limits[key]}")
+        print("\n\n")
+    return violated_attributes
+
+
 def get_lut_statistics(
-    win_distribution, bet_cost, unique_payouts, weight_range, min_win, max_win, num_events
+    name, win_distribution, bet_cost, unique_payouts, weight_range, min_win, max_win, num_events
 ) -> object:
     """Run RGS statistic tests for upload verification."""
 
     var, std, skew, kurtosis = get_distribution_moments(win_distribution, bet_cost)
+    p5k, p10k, etl10k, etl40, cvarp01 = get_etl_cvar_p5k_10k_vales(
+        win_distribution, bet_cost, sum(list(win_distribution.values()))
+    )
     MathStats = WinStatistics(
         win_distribution=win_distribution,
         num_events=num_events,
@@ -188,13 +220,21 @@ def get_lut_statistics(
         num_non_zero_payouts=get_num_non_zero_payouts(unique_payouts),
         skew=skew,
         excess_kurtosis=kurtosis,
+        prob5k=p5k,
+        prob10k=p10k,
+        etl40b=etl40,
+        etl10k=etl10k,
+        cvar=cvarp01,
     )
     median = get_distribution_median(win_distribution, weight_range)
+
     if median > 0:
         m2m = MathStats.average_win / median
         MathStats.m2m = m2m
     else:
         MathStats.m2m = 0
+
+    verify_mode_volatility(name, MathStats)
     return MathStats
 
 
@@ -246,7 +286,7 @@ def execute_all_tests(config, excluded_modes=[]):
                 compare_payout_values(book_payouts, lut_payouts)
 
             StatsObject = get_lut_statistics(
-                win_dist, cost, lut_payouts, weights_range, min_win, max_win, num_events
+                name, win_dist, cost, lut_payouts, weights_range, min_win, max_win, num_events
             )
             mode_rtps.append(StatsObject.rtp)
             setattr(StatsObject, "name", name)

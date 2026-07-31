@@ -22,7 +22,7 @@ class GameConfig(Config):
         self.working_name = "Sample scatter pay (pay anywhere)"
         self.wincap = 5000.0
         self.win_type = "scatter"
-        self.rtp = 0.9700
+        self.rtp = 0.967
         self.construct_paths()
 
         # Game Dimensions

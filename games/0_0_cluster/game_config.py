@@ -23,7 +23,7 @@ class GameConfig(Config):
         self.working_name = "Sample Cluster Game"
         self.wincap = 5000.0
         self.win_type = "cluster"
-        self.rtp = 0.9700
+        self.rtp = 0.9670
         self.construct_paths()
 
         # Game Dimensions

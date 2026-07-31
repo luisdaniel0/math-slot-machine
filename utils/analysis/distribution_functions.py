@@ -90,6 +90,69 @@ def get_distribution_median(dist: dict, total_weight=None) -> float:
     return 0
 
 
+def conditional_value_at_risk(cutoff: float, dist: dict, total_weight) -> float:
+    """Calculate upper-tail CVaR from payout distribution."""
+    if total_weight is None:
+        total_weight = sum(dist.values())
+    if total_weight == 0:
+        return 0.0
+
+    ordered = sorted(dist.items(), key=lambda x: x[0])
+    cumulative_prob = 0.0
+    tail_start = ordered[0][0] if ordered else 0.0
+
+    for payout, weight in ordered:
+        cumulative_prob += weight / total_weight
+        if cumulative_prob >= cutoff:
+            tail_start = payout
+            break
+
+    tail_prob = 0.0
+    tail_value = 0.0
+
+    for payout, weight in ordered:
+        if payout >= tail_start:
+            prob = weight / total_weight
+            tail_prob += prob
+            tail_value += prob * payout
+
+    if tail_prob == 0.0:
+        return 0.0
+
+    return tail_value / tail_prob
+
+
+def get_prob_scale(bet_cost: float) -> float:
+    """Leniency factor applied to tail-probability checks for high bet-cost modes."""
+    if bet_cost >= 1000:
+        return 0.2
+    if bet_cost >= 500:
+        return 0.5
+    if bet_cost >= 200:
+        return 0.8
+    return 1.0
+
+
+def get_etl_cvar_p5k_10k_vales(dist: dict, bet_cost: float, total_weight=None) -> list[float]:
+    """Get Math Validation Values"""
+    if total_weight is None:
+        total_weight = sum(list(dist.values()))
+
+    p5k, p10k, cvar, etl40, etl10k = 0, 0, 0, 0, 0
+    for win, weight in dist.items():
+        if win >= 10000:
+            p10k += weight / total_weight
+            etl10k += win * (weight / total_weight)
+        if win >= 5000:
+            p5k += weight / total_weight
+        if win >= 40 * bet_cost:
+            etl40 += win * (weight / total_weight)
+    cvar = conditional_value_at_risk(0.999, dist, total_weight)
+    prob_scale = get_prob_scale(bet_cost)
+
+    return p5k * prob_scale, p10k * prob_scale, etl10k, etl40, cvar / bet_cost
+
+
 def get_maxwin_hitrate(dist: dict, total_weight=None) -> float:
     """Return frequency of max-win."""
     if total_weight is not None:
