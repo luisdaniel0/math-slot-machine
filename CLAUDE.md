@@ -703,9 +703,27 @@ WHAT IT COST, measured before/after off the LUTs (backup in library/lut_backup_p
 THE TRADE IS THE ONE WE WANTED: ~2pp fewer break-even returns for 2.4-2.6x more
 >=10x outcomes on ursa/mystery, and buy std moved toward the market's 2.6-4.0 band.
 All four buys still bust 0.00%, every >=1x rate still at or above the market's 13-28%.
-⚠ URSA'S MEDIAN HALVED (0.226 -> 0.118x cost) -- the optimizer packed the consolation
-band lower to fund the tail. Still inside market range (Rage Bait 0.05-0.22x) and its
->=1x barely moved, so it was accepted; revisit only if playtest says ursa feels mean.
+⚠ URSA OVERSHOT AT 0.030 AND WAS RE-TUNED TO 0.026 (same day, two extra optimizer
+passes). At 0.030 the optimizer funded the bigger cap slice by packing the consolation
+band down: buys returning <=0.25x cost went 53.4% -> 67.7% and the median halved
+0.226 -> 0.118x, making URSA THE HARSHEST BUY IN THE GAME and inverting its "coin
+flip" identity. Two things fixed it, and the SECOND one is the lesson:
+  v1  0.026 + scaling on 134-536x (0.5-2x cost)  -> >=1x recovered to 26.8% but
+      <=0.25x only fell to 62.8% and the median got WORSE (0.099x). Lifting the
+      1-2x band pulled mass out of 0.25-0.5x rather than out of the bottom.
+  v2  + scaling on 67-134x (0.25-0.5x cost)      -> the actual fix. That shoulder
+      band had collapsed 16.4% -> 5.3%, and rebuilding it to 26.0% is what drained
+      the bottom.
+FINAL vs the ORIGINAL 0.0215 state -- v2 is better on EVERY metric except >=1x:
+  <=0.25x 53.4 -> 47.4%   0.25-0.5x 16.4 -> 26.0%   median 0.226 -> 0.269x
+  >=5x 3.51 -> 4.36%      >=10x 0.203 -> 0.500%     std 2.16 -> 2.36
+  >=1x 25.3 -> 22.3%  (the one regression; still mid-market, Rage Bait mystery 23.4%)
+⚠ TO MOVE A DISTRIBUTION'S BOTTOM, SCALE THE BAND JUST ABOVE IT, NOT THE MIDDLE.
+Boosting 1-2x pulled from 0.25-0.5x; boosting 0.25-0.5x pulled from <=0.25x. The
+optimizer takes weight from the NEAREST band, so aim one step above the problem.
+NOT A BUG -- ursa (47.4%) still has a harsher floor than draco (38.6%) and mystery
+(33.2%). That is STRUCTURAL: draco lights 11 cells to ursa's 7, so its partial-progress
+carpet is worth more even though it completes far less often. Fewer cells = weaker floor.
 WIN-RANGE HOLES DID NOT MOVE: 1.00-1.02x on all four, and every surviving hole sits
 above 9,000x (tail sparsity, not structure). The worry that draco's body would hollow
 out did not materialise.

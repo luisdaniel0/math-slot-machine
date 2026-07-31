@@ -227,17 +227,37 @@ class OptimizationSetup:
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
             },
             # buy_ursa: the coin-flip tier, now also a 25,000x product. Mid-high vol.
-            # RAISED 0.0215 -> 0.030 (see the cap-share ladder note in the docstring):
-            # at 0.0215 this buy was a WORSE max-win bet per dollar than grinding
-            # ante_starfall (0.025), which inverts the market pattern -- every audited
-            # game puts more cap value in its buys than in its base/ante.
-            # 0.030 at cost 268 -> cap rate 0.030*268/25000 = 1 in 3,109 (was 1 in 4,342).
+            # RAISED 0.0215 -> 0.030 -> SETTLED AT 0.026. At 0.0215 this buy was a worse
+            # max-win bet per dollar than grinding ante_starfall (0.025), inverting the
+            # market pattern (every audited game puts more cap value in its buys). But
+            # 0.030 OVERSHOT: the optimizer funded the bigger cap slice by packing ursa's
+            # consolation band down, and buys returning <=0.25x cost went 53.4% -> 67.7%
+            # with the median halving 0.226 -> 0.118x. That made URSA THE HARSHEST BUY IN
+            # THE GAME -- harsher than draco (38.6%) -- which inverts the tier identity,
+            # since ursa is meant to be the COIN FLIP and draco the lottery.
+            # 0.026 keeps ursa above ante (the ordering fix that motivated this) at a
+            # buys/base ratio of 1.3x, which is exactly the market's (Rage Bait base
+            # 0.045 vs buys 0.056-0.064). Cap rate 0.026*268/25000 = 1 in 3,588.
+            # The extra scaling entry protects the 0.5-2x cost consolation band
+            # (134-536x base-bet) that the 0.030 run hollowed out -- a coin-flip tier
+            # needs a real middle, not just a tail.
             "buy_ursa": {
                 "conditions": {
-                    "wincap": wincap_cond("buy_ursa", 0.030),
-                    "ursa": feature_cond(round(rtp - 0.030, 5), hr=1),
+                    "wincap": wincap_cond("buy_ursa", 0.026),
+                    "ursa": feature_cond(round(rtp - 0.026, 5), hr=1),
                 },
-                "scaling": ConstructScaling(tail_scaling("ursa")).return_dict(),
+                "scaling": ConstructScaling(
+                    tail_scaling("ursa")
+                    + [{"criteria": "ursa", "scale_factor": 1.5,
+                        "win_range": (134, 536), "probability": 1.0},
+                       # 0.25-0.5x cost. The 0.030 run collapsed this band 16.4% -> 5.3%
+                       # and dumped the mass into <=0.25x instead of lifting it, which is
+                       # what drove ursa's median from 0.226x down to ~0.10x. Boosting it
+                       # is an attempt to rebuild the shoulder between "near-total loss"
+                       # and "money back" -- the part a coin-flip tier needs most.
+                       {"criteria": "ursa", "scale_factor": 1.6,
+                        "win_range": (67, 134), "probability": 1.0}]
+                ).return_dict(),
                 "parameters": run_params(3, 10, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ursa"], [(5.0, 20.0)], [0.3]).return_dict(),
             },
