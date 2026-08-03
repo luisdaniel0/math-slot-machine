@@ -17,6 +17,7 @@ Writes, per mode, into web-sdk/apps/starwake/src/stories/data/:
 """
 
 import argparse
+import csv
 import io
 import json
 import os
@@ -45,6 +46,28 @@ def scenario_ids(mode):
         for i, book in enumerate(body.get("books", [])):
             key = name if i == 0 else f"{name}_{i + 1}"
             out.setdefault(book["id"], key)
+    return out
+
+
+def lut_weights(mode):
+    """{book id -> optimizer weight} from the published lookup table.
+
+    ⚠ THE POOL IS NOT THE PLAYER EXPERIENCE. game_config generates books to QUOTAS
+    (base is ~40% zero-win and ~50% basegame by construction), and the optimizer
+    then assigns each book a WEIGHT that turns that pool into the real distribution
+    -- base's true bust rate is 70.75%, not 40%. So a uniform sample of books looks
+    far more generous than the game actually is, and any feel judgement made from it
+    would be wrong. Exporting these weights lets Storybook sample the way the RGS
+    would.
+    """
+    path = os.path.join(LIB, f"lookUpTable_{mode}_0.csv")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path, newline="") as fh:
+        for row in csv.reader(fh):
+            if len(row) >= 2:
+                out[int(row[0])] = float(row[1])
     return out
 
 
@@ -103,6 +126,22 @@ def write_mode(mode, dest, sample):
     )
     with open(os.path.join(dest, f"{mode}_books.ts"), "w") as fh:
         fh.write(banner + "export default " + json.dumps(ordered, indent=1) + ";\n")
+
+    # Weights aligned index-for-index with the book array so the frontend can
+    # sample the way the RGS does instead of uniformly -- see lut_weights().
+    weights = lut_weights(mode)
+    aligned = [weights.get(b.get("id"), 0.0) for b in ordered]
+    missing_w = sum(1 for w in aligned if w <= 0)
+    with open(os.path.join(dest, f"{mode}_weights.ts"), "w") as fh:
+        fh.write(
+            f"// GENERATED -- optimizer weight per book, aligned to {mode}_books.ts.\n"
+            "// Sample with these, NOT uniformly: the raw pool is quota-shaped, so a\n"
+            "// uniform pick shows a game far more generous than the real one.\n"
+            "export default " + json.dumps(aligned) + ";\n"
+        )
+    if missing_w:
+        print(f"  !! {missing_w} book(s) had no LUT weight -- pool and LUT may be out of sync")
+
     with open(os.path.join(dest, f"{mode}_scenarios.ts"), "w") as fh:
         fh.write(
             f"// GENERATED -- scenario name -> index into {mode}_books.ts\n"
@@ -111,7 +150,27 @@ def write_mode(mode, dest, sample):
     missing = [n for i, n in wanted.items() if i not in hits]
     if missing:
         print(f"  (not found in tape: {', '.join(missing)})")
-    print(f"  wrote {len(ordered)} books, {len(index)} named scenarios")
+
+    # ⚠ SIZE IS A REAL LIMIT, not a tidiness concern. These are .ts modules that
+    # Vite must parse, transform and source-map on every Storybook boot. At
+    # --sample 3000 the set reached 115 MB and the dev server died with
+    # "Failed to fetch dynamically imported module" + "Connection lost", which
+    # looks like a broken story file but is actually the compiler running out of
+    # memory. Keep the TOTAL across all modes under ~70 MB.
+    # Sample size barely matters for feel testing anyway: the session story picks
+    # books WEIGHTED by the LUT, so the weights carry the distribution -- 900 base
+    # books reproduce it as well as 3000 did.
+    size_mb = os.path.getsize(os.path.join(dest, f"{mode}_books.ts")) / 1e6
+    total_mb = sum(
+        os.path.getsize(os.path.join(dest, f))
+        for f in os.listdir(dest)
+        if f.endswith("_books.ts")
+    ) / 1e6
+    warn = "   <-- LARGE" if size_mb > 20 else ""
+    print(f"  wrote {len(ordered)} books, {len(index)} named scenarios  ({size_mb:.1f} MB{warn})")
+    if total_mb > 70:
+        print(f"  !! all story books now total {total_mb:.0f} MB -- Storybook may OOM above ~70 MB.")
+        print("     Re-export with a smaller --sample; weighted sampling makes size nearly irrelevant.")
     return True
 
 
