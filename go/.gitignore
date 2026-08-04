@@ -1,0 +1,10 @@
+# Generated simulation output. Same reasoning as games/*/library: these are
+# multi-GB pools regenerated in minutes, never source.
+out/
+
+# Built binaries.
+# ⚠ ROOT-ANCHORED. A bare `starwake` would match ANY path component with that
+# name and silently exclude cmd/starwake/ and internal/game/starwake/ -- i.e.
+# most of the engine -- from every commit.
+/starwake
+/bin/

@@ -10,7 +10,13 @@ import csv
 import os
 import sys
 
+# Default is the shipped Python pool. Override with a path argument to check any
+# other optimized LUT set -- e.g. the Go engine's output in games/starwake_go/,
+# which must clear exactly the same gates:
+#   env/bin/python games/starwake/check_risk_gates.py games/starwake_go/library/publish_files
 GAME_DIR = "games/starwake/library/publish_files"
+if len(sys.argv) > 1:
+    GAME_DIR = sys.argv[1]
 
 # cost per mode (from the converged config)
 COSTS = {

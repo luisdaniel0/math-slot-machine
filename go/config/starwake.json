@@ -1,0 +1,1543 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "games/starwake/export_go_config.py",
+  "game": {
+    "id": "starwake",
+    "name": "Starwake",
+    "provider": "Uptown Games",
+    "providerNumber": 0,
+    "winType": "lines",
+    "rtp": 0.9665,
+    "wincap": 25000.0,
+    "numReels": 5,
+    "numRows": [
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "includePadding": true,
+    "basegameType": "basegame",
+    "freegameType": "freegame"
+  },
+  "paytable": [
+    {
+      "kind": 5,
+      "symbol": "H1",
+      "value": 12
+    },
+    {
+      "kind": 4,
+      "symbol": "H1",
+      "value": 6
+    },
+    {
+      "kind": 3,
+      "symbol": "H1",
+      "value": 3
+    },
+    {
+      "kind": 5,
+      "symbol": "H2",
+      "value": 6
+    },
+    {
+      "kind": 4,
+      "symbol": "H2",
+      "value": 4
+    },
+    {
+      "kind": 3,
+      "symbol": "H2",
+      "value": 2
+    },
+    {
+      "kind": 5,
+      "symbol": "H3",
+      "value": 4
+    },
+    {
+      "kind": 4,
+      "symbol": "H3",
+      "value": 2.5
+    },
+    {
+      "kind": 3,
+      "symbol": "H3",
+      "value": 1.5
+    },
+    {
+      "kind": 5,
+      "symbol": "H4",
+      "value": 3
+    },
+    {
+      "kind": 4,
+      "symbol": "H4",
+      "value": 2
+    },
+    {
+      "kind": 3,
+      "symbol": "H4",
+      "value": 1
+    },
+    {
+      "kind": 5,
+      "symbol": "L1",
+      "value": 1.2
+    },
+    {
+      "kind": 4,
+      "symbol": "L1",
+      "value": 0.75
+    },
+    {
+      "kind": 3,
+      "symbol": "L1",
+      "value": 0.5
+    },
+    {
+      "kind": 5,
+      "symbol": "L2",
+      "value": 1
+    },
+    {
+      "kind": 4,
+      "symbol": "L2",
+      "value": 0.6
+    },
+    {
+      "kind": 3,
+      "symbol": "L2",
+      "value": 0.4
+    },
+    {
+      "kind": 5,
+      "symbol": "L3",
+      "value": 0.75
+    },
+    {
+      "kind": 4,
+      "symbol": "L3",
+      "value": 0.5
+    },
+    {
+      "kind": 3,
+      "symbol": "L3",
+      "value": 0.3
+    },
+    {
+      "kind": 5,
+      "symbol": "L4",
+      "value": 0.6
+    },
+    {
+      "kind": 4,
+      "symbol": "L4",
+      "value": 0.4
+    },
+    {
+      "kind": 3,
+      "symbol": "L4",
+      "value": 0.2
+    },
+    {
+      "kind": 5,
+      "symbol": "L5",
+      "value": 0.5
+    },
+    {
+      "kind": 4,
+      "symbol": "L5",
+      "value": 0.3
+    },
+    {
+      "kind": 3,
+      "symbol": "L5",
+      "value": 0.2
+    },
+    {
+      "kind": 5,
+      "symbol": "W",
+      "value": 15
+    }
+  ],
+  "paylines": [
+    {
+      "index": 1,
+      "rows": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "index": 2,
+      "rows": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "index": 3,
+      "rows": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "index": 4,
+      "rows": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "index": 5,
+      "rows": [
+        0,
+        1,
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "index": 6,
+      "rows": [
+        3,
+        2,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "index": 7,
+      "rows": [
+        1,
+        2,
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "index": 8,
+      "rows": [
+        2,
+        1,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "index": 9,
+      "rows": [
+        0,
+        1,
+        2,
+        3,
+        3
+      ]
+    },
+    {
+      "index": 10,
+      "rows": [
+        3,
+        2,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "index": 11,
+      "rows": [
+        0,
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "index": 12,
+      "rows": [
+        3,
+        3,
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "index": 13,
+      "rows": [
+        1,
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "index": 14,
+      "rows": [
+        2,
+        3,
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "index": 15,
+      "rows": [
+        0,
+        0,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "index": 16,
+      "rows": [
+        3,
+        3,
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "index": 17,
+      "rows": [
+        1,
+        1,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "index": 18,
+      "rows": [
+        2,
+        2,
+        3,
+        2,
+        2
+      ]
+    },
+    {
+      "index": 19,
+      "rows": [
+        1,
+        2,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "index": 20,
+      "rows": [
+        2,
+        1,
+        2,
+        3,
+        3
+      ]
+    }
+  ],
+  "specialSymbols": {
+    "wild": [
+      "W"
+    ],
+    "scatter": [
+      "S"
+    ],
+    "multiplier": [
+      "W"
+    ]
+  },
+  "reels": {
+    "BR0": "BR0.csv",
+    "FR0": "FR0.csv",
+    "WCAP": "FRWCAP.csv",
+    "ASC": "ASC.csv"
+  },
+  "reelsDir": "games/starwake/reels",
+  "anticipationTriggers": {
+    "basegame": 2,
+    "freegame": 2
+  },
+  "freespinTriggers": {
+    "basegame": [
+      {
+        "scatters": 3,
+        "spins": 10
+      },
+      {
+        "scatters": 4,
+        "spins": 15
+      },
+      {
+        "scatters": 5,
+        "spins": 15
+      },
+      {
+        "scatters": 6,
+        "spins": 15
+      }
+    ],
+    "freegame": [
+      {
+        "scatters": 3,
+        "spins": 10
+      },
+      {
+        "scatters": 4,
+        "spins": 15
+      },
+      {
+        "scatters": 5,
+        "spins": 15
+      },
+      {
+        "scatters": 6,
+        "spins": 15
+      }
+    ]
+  },
+  "scatterTiers": [
+    {
+      "scatters": 3,
+      "tier": "corvus"
+    },
+    {
+      "scatters": 4,
+      "tier": "ursa"
+    },
+    {
+      "scatters": 5,
+      "tier": "draco"
+    },
+    {
+      "scatters": 6,
+      "tier": "ascendant"
+    }
+  ],
+  "gameSpecific": {
+    "minRoamSpins": 2,
+    "tiers": {
+      "corvus": {
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ]
+        ],
+        "beastShape": [
+          2,
+          2
+        ],
+        "multLadder": [
+          1,
+          1,
+          1,
+          2,
+          3,
+          5,
+          13,
+          44,
+          200
+        ],
+        "ladderRungs": 9,
+        "prelitCells": [],
+        "beastName": "corvus",
+        "featureSpins": 10
+      },
+      "ursa": {
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "beastShape": [
+          2,
+          2
+        ],
+        "multLadder": [
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          3,
+          5,
+          10,
+          23,
+          55,
+          155,
+          500
+        ],
+        "ladderRungs": 13,
+        "prelitCells": [],
+        "beastName": "ursa",
+        "featureSpins": 15
+      },
+      "draco": {
+        "cells": [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "beastShape": [
+          2,
+          2
+        ],
+        "multLadder": [
+          2,
+          2,
+          2,
+          3,
+          4,
+          6,
+          11,
+          20,
+          41,
+          91,
+          223,
+          600
+        ],
+        "ladderRungs": 12,
+        "prelitCells": [],
+        "beastName": "draco",
+        "featureSpins": 15
+      },
+      "ascendant": {
+        "cells": [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "beastShape": [
+          2,
+          2
+        ],
+        "multLadder": [
+          2,
+          2,
+          2,
+          3,
+          4,
+          6,
+          11,
+          20,
+          41,
+          91,
+          223,
+          600
+        ],
+        "ladderRungs": 12,
+        "prelitCells": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "beastName": "draco",
+        "featureSpins": 15
+      }
+    }
+  },
+  "betModes": [
+    {
+      "name": "base",
+      "cost": 1.0,
+      "rtp": 0.9665,
+      "maxWin": 25000.0,
+      "autoCloseDisabled": false,
+      "isFeature": true,
+      "isBuyBonus": false,
+      "distributions": [
+        {
+          "criteria": "wincap",
+          "quota": 0.001,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "draco",
+          "quota": 0.007,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "ursa",
+          "quota": 0.025,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 4,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "corvus",
+          "quota": 0.067,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "basegame",
+          "quota": 0.5,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": false,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              }
+            },
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "0",
+          "quota": 0.4,
+          "fixedAmt": null,
+          "winCriteria": 0.0,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": false,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              }
+            },
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ante_starfall",
+      "cost": 1.5,
+      "rtp": 0.9665,
+      "maxWin": 25000.0,
+      "autoCloseDisabled": false,
+      "isFeature": true,
+      "isBuyBonus": false,
+      "distributions": [
+        {
+          "criteria": "wincap",
+          "quota": 0.0015,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "draco",
+          "quota": 0.015,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "ursa",
+          "quota": 0.045,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 4,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "corvus",
+          "quota": 0.1,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "basegame",
+          "quota": 0.5,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": false,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              }
+            },
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "0",
+          "quota": 0.3,
+          "fixedAmt": null,
+          "winCriteria": 0.0,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": false,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              }
+            },
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "buy_corvus",
+      "cost": 240.0,
+      "rtp": 0.9665,
+      "maxWin": 10000.0,
+      "autoCloseDisabled": false,
+      "isFeature": false,
+      "isBuyBonus": true,
+      "distributions": [
+        {
+          "criteria": "corvus",
+          "quota": 1.0,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "buy_ursa",
+      "cost": 268.0,
+      "rtp": 0.9665,
+      "maxWin": 25000.0,
+      "autoCloseDisabled": false,
+      "isFeature": false,
+      "isBuyBonus": true,
+      "distributions": [
+        {
+          "criteria": "wincap",
+          "quota": 0.005,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 4,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "ursa",
+          "quota": 0.995,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 4,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "buy_draco",
+      "cost": 520.0,
+      "rtp": 0.9665,
+      "maxWin": 25000.0,
+      "autoCloseDisabled": false,
+      "isFeature": false,
+      "isBuyBonus": true,
+      "distributions": [
+        {
+          "criteria": "wincap",
+          "quota": 0.01,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "draco",
+          "quota": 0.99,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "buy_mystery",
+      "cost": 563.0,
+      "rtp": 0.9665,
+      "maxWin": 25000.0,
+      "autoCloseDisabled": false,
+      "isFeature": false,
+      "isBuyBonus": true,
+      "distributions": [
+        {
+          "criteria": "wincap",
+          "quota": 0.005,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "ascendant",
+          "quota": 0.1,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "ASC": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 6,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "draco",
+          "quota": 0.25,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 5,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "ursa",
+          "quota": 0.295,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 4,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "criteria": "corvus",
+          "quota": 0.35,
+          "fixedAmt": null,
+          "winCriteria": null,
+          "conditions": {
+            "forceWincap": false,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

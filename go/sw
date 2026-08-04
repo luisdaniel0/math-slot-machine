@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# Starwake math, Go engine. One command for the whole loop.
+#
+#   sw buy_corvus 20000     sim one mode          (~0.6s)
+#   sw buy_corvus           same, default 20000
+#   sw 20000                every mode at 20000
+#   sw                      every mode at 20000
+#   sw all 1000000          every mode, production count   (~2.5 min)
+#
+#   sw optimize             optimizer, every mode          (~17 min)
+#   sw optimize buy_ursa    optimizer, one mode            (~3 min)
+#   sw gates                compliance gates on the Go pool
+#   sw full [sims]          sim everything -> optimize -> gates
+#
+#   sw test                 unit tests (Go + Python)
+#
+# Mirrors `python run.py <mode> <sims>` so the muscle memory carries over.
+# game_config.py stays the design surface -- edit it and just re-run; the config
+# export happens automatically when it is out of date.
+#
+# Output lands in go/out/ and games/starwake_go/. NEVER in games/starwake/library/,
+# which holds the converged production pool.
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$HERE/.." && pwd)"
+PY="$REPO/env/bin/python"
+BIN=/tmp/starwake
+ALL_MODES=(base ante_starfall buy_corvus buy_ursa buy_draco buy_mystery)
+DEFAULT_SIMS=20000
+
+cd "$HERE" || exit 1
+
+# --- keep the Go config in step with game_config.py -------------------------
+# THE ONE FOOTGUN: the engine reads config/starwake.json, not game_config.py.
+# Edit a ladder rung, forget to export, and the sim silently runs the OLD math
+# with entirely plausible numbers. So this is automatic, never a manual step.
+refresh_config() {
+    local cfg="$HERE/config/starwake.json" stale=0 src
+    for src in "$REPO/games/starwake/game_config.py" "$REPO"/games/starwake/reels/*.csv; do
+        [[ -e "$src" ]] || continue
+        if [[ ! -e "$cfg" || "$src" -nt "$cfg" ]]; then stale=1; fi
+    done
+    if [[ $stale -eq 1 ]]; then
+        echo "· config changed -- re-exporting from game_config.py"
+        ( cd "$REPO/games/starwake" && "$PY" export_go_config.py >/dev/null ) || exit 1
+    fi
+}
+
+# --- warn when the PYTHON engine drifts from the Go one -----------------------
+# CONFIG is shared (game_config.py -> starwake.json). ENGINE LOGIC IS NOT: these
+# files are reimplemented in Go, so editing one does NOT change the other. Adding
+# a rule to run_freespin or check_repeat in Python and re-running `sw` would
+# silently keep simulating the OLD rules -- exactly how the zero-pay redraw was
+# missed the first time. Nothing can auto-fix that, so it gets loud instead.
+ENGINE_FILES=(
+    "$REPO/games/starwake/gamestate.py"
+    "$REPO/games/starwake/game_override.py"
+    "$REPO/games/starwake/game_executables.py"
+    "$REPO/games/starwake/constellation.py"
+    "$REPO/games/starwake/game_events.py"
+    "$REPO/src/calculations/board.py"
+    "$REPO/src/calculations/lines.py"
+    "$REPO/src/calculations/symbol.py"
+    "$REPO/src/wins/multiplier_strategy.py"
+    "$REPO/src/wins/win_manager.py"
+    "$REPO/src/state/state.py"
+    "$REPO/src/executables/executables.py"
+    "$REPO/src/events/events.py"
+)
+STATE="$HERE/.engine_state"
+
+engine_hash() { sha256sum "${ENGINE_FILES[@]}" 2>/dev/null | sha256sum | cut -d' ' -f1; }
+
+check_engine_drift() {
+    local now; now="$(engine_hash)"
+    if [[ ! -f "$STATE" ]]; then echo "$now" > "$STATE"; return; fi
+    if [[ "$now" != "$(cat "$STATE")" ]]; then
+        echo
+        echo "  ⚠  PYTHON ENGINE LOGIC CHANGED SINCE THE GO PORT WAS VERIFIED."
+        echo "     Config changes flow through automatically; ENGINE changes do not."
+        echo "     Files watched: gamestate / game_override / game_executables /"
+        echo "     constellation / game_events, and src/ board, lines, symbol,"
+        echo "     multiplier_strategy, win_manager, state, executables, events."
+        echo
+        echo "     Mirror the change in go/internal/, then:  ./sw accept"
+        echo "     (Simulating anyway will use the OLD rules, silently.)"
+        echo
+    fi
+}
+
+build() { go build -o "$BIN" ./cmd/starwake || exit 1; }
+
+is_mode() {
+    local m
+    for m in "${ALL_MODES[@]}"; do [[ "$1" == "$m" ]] && return 0; done
+    return 1
+}
+
+run_sims() {
+    local sims="$1"; shift
+    local modes=("$@")
+    [[ ${#modes[@]} -eq 0 ]] && modes=("${ALL_MODES[@]}")
+    build
+    refresh_config
+    check_engine_drift
+    local start=$SECONDS
+    for m in "${modes[@]}"; do
+        "$BIN" -mode "$m" -sims "$sims" || exit 1
+    done
+    [[ ${#modes[@]} -gt 1 ]] && echo && echo "· $((SECONDS - start))s total"
+    return 0
+}
+
+case "${1:-}" in
+    optimize)
+        shift
+        refresh_config
+        "$PY" "$HERE/optimize_go.py" "${@:-${ALL_MODES[@]}}"
+        ;;
+    gates)
+        "$PY" "$REPO/games/starwake/check_risk_gates.py" \
+            "$REPO/games/starwake_go/library/publish_files"
+        ;;
+    full)
+        sims="${2:-1000000}"
+        run_sims "$sims"
+        "$PY" "$HERE/optimize_go.py" "${ALL_MODES[@]}" || exit 1
+        echo
+        "$PY" "$REPO/games/starwake/check_risk_gates.py" \
+            "$REPO/games/starwake_go/library/publish_files"
+        ;;
+    accept)
+        # Acknowledge that the Go engine has been brought back in line with the
+        # Python one. Only run this AFTER mirroring the change and re-testing.
+        engine_hash > "$STATE"
+        echo "· engine baseline updated -- Go is declared in sync with Python"
+        ;;
+    schema)
+        "$PY" "$HERE/schema_diff.py" "${2:-4000}"
+        ;;
+    parity)
+        "$PY" "$HERE/parity.py" "$HERE/out/library/publish_files"
+        ;;
+    test)
+        go test ./... || exit 1
+        ( cd "$REPO" && "$PY" -m pytest tests/starwake/ -q )
+        ;;
+    all)
+        run_sims "${2:-$DEFAULT_SIMS}"
+        ;;
+    "")
+        run_sims "$DEFAULT_SIMS"
+        ;;
+    *)
+        if is_mode "$1"; then
+            mode="$1"; shift
+            run_sims "${1:-$DEFAULT_SIMS}" "$mode"
+        elif [[ "$1" =~ ^[0-9]+$ ]]; then
+            run_sims "$1"
+        else
+            echo "unknown argument: $1" >&2
+            sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \?//' >&2
+            exit 1
+        fi
+        ;;
+esac
