@@ -262,10 +262,17 @@ func (b *Board) forceOnce(
 		total += weights[reel]
 	}
 
+	// ⚠ "IS THIS REEL FORCED" MUST BE A SEPARATE FLAG, NOT A NEGATIVE SENTINEL.
+	// A forced stop is legitimately NEGATIVE whenever the chosen scatter sits
+	// within num_rows of the strip's start (BR0 reel 4 carries one at position 0),
+	// because the stop is offset BACK from the symbol so it can land on any row.
+	// Treating "< 0" as "not forced" silently drops those placements and draws a
+	// random stop instead -- the retry loop then hides it by redrawing until the
+	// count is right, leaving the count correct and the POSITION distribution
+	// wrong. Python has no such collision: it keys forced reels by dict presence
+	// and lets the negative index wrap (src/calculations/board.py:91-96).
 	var forced [MaxReels]int
-	for reel := range forced {
-		forced[reel] = -1
-	}
+	var isForced [MaxReels]bool
 
 	for picked := 0; picked < want && total > 0; picked++ {
 		target := g.Float64() * total
@@ -288,18 +295,19 @@ func (b *Board) forceOnce(
 		// is offset back from the symbol's own position.
 		symPos := stops[chosen][g.IntN(len(stops[chosen]))]
 		forced[chosen] = symPos - g.IntN(b.NumRows[chosen])
+		isForced[chosen] = true
 		total -= weights[chosen]
 		weights[chosen] = 0
 	}
 
-	b.fillFromStops(stripID, strip, st, forced, anticipationTrigger, g)
+	b.fillFromStops(stripID, strip, st, forced, isForced, anticipationTrigger, g)
 }
 
 // fillFromStops fills the board, using a forced stop where one is set and a
 // random stop everywhere else. Port of force_board_from_reelstrips.
 func (b *Board) fillFromStops(
 	stripID string, strip Strip, st *SymbolTable,
-	forced [MaxReels]int, anticipationTrigger int, g *RNG,
+	forced [MaxReels]int, isForced [MaxReels]bool, anticipationTrigger int, g *RNG,
 ) {
 	b.StripID = stripID
 	b.Scatters = b.scatterBuf[:0]
@@ -308,10 +316,11 @@ func (b *Board) fillFromStops(
 	for reel := 0; reel < b.NumReels; reel++ {
 		length := len(strip[reel])
 		stop := forced[reel]
-		if stop < 0 {
+		if !isForced[reel] {
 			stop = g.IntN(length)
 		}
-		// Python's negative index wraps; Go's % keeps the sign, so normalise.
+		// A forced stop may be negative (see forceOnce). Python's negative index
+		// wraps; Go's % keeps the sign, so normalise.
 		stop = ((stop % length) + length) % length
 		b.ReelPositions[reel] = stop
 		b.fillPadding(strip, reel, stop)

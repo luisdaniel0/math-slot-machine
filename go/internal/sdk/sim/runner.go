@@ -32,6 +32,17 @@ func AssignCriteria(mode *config.BetMode, numSims int, seed uint64) (*Assignment
 		}
 	}
 
+	// Every distribution is seeded with at least one sim, so a run smaller than the
+	// distribution count can never be trimmed down to numSims -- the trim loop
+	// below would spin forever looking for a count it is allowed to decrement.
+	// Fail loudly instead: a bare unbounded loop that cannot make progress is the
+	// exact shape this port set out to remove from force_special_board.
+	if numSims < len(mode.Distributions) {
+		return nil, fmt.Errorf(
+			"%s: %d sims for %d distributions -- each distribution needs at least one book",
+			mode.Name, numSims, len(mode.Distributions))
+	}
+
 	counts := make(map[string]int, len(mode.Distributions))
 	names := make([]string, 0, len(mode.Distributions))
 	weights := make([]float64, 0, len(mode.Distributions))
