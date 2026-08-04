@@ -14,6 +14,31 @@ import (
 	"starwake/internal/sdk/config"
 )
 
+// WeightedInt is one (value, weight) row of a discrete distribution.
+//
+// A slice of pairs rather than a map[int]int on purpose: map iteration order is
+// randomised in Go, and the engine's output must stay byte-deterministic so
+// published sha256s are reproducible.
+type WeightedInt struct {
+	Value  int `json:"value"`
+	Weight int `json:"weight"`
+}
+
+// StarDrops is ACT TWO's multiplier-star table for one tier.
+//
+// Presence of this block is what SWITCHES A TIER TO ACT TWO. When set, the tier
+// consumes its sticky wilds at wake and the beast accumulates a multiplier by
+// collecting stars; when absent the tier runs the original climbing ladder.
+// ⚠ TRANSITIONAL. Both paths exist only so the two can be A/B swept against each
+// other to answer "can act 2 carry the money". Once that is measured, the loser
+// is DELETED -- do not let this become a permanent fork.
+type StarDrops struct {
+	// Count is how many stars fall on a roam spin.
+	Count []WeightedInt `json:"count"`
+	// Values is each star's multiplier value, drawn independently per star.
+	Values []WeightedInt `json:"values"`
+}
+
 // Tier is one constellation's full definition.
 //
 // "ascendant" arrives already resolved: game_config.py derives it from draco at
@@ -27,6 +52,7 @@ type Tier struct {
 	PrelitCells  []config.Cell `json:"prelitCells"`
 	BeastName    string        `json:"beastName"`
 	FeatureSpins int           `json:"featureSpins"`
+	StarDrops    *StarDrops    `json:"starDrops,omitempty"`
 }
 
 // FeatureConfig is the feature-wide config plus every tier definition.
@@ -120,8 +146,77 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 		if t.FeatureSpins < 1 {
 			return fmt.Errorf("tier %s: %d feature spins", name, t.FeatureSpins)
 		}
+
+		if t.StarDrops != nil {
+			if err := t.StarDrops.validate(name); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
+}
+
+func (sd *StarDrops) validate(tier string) error {
+	if err := validWeights(tier, "starDrops.count", sd.Count, 0); err != nil {
+		return err
+	}
+	// A star worth x1 adds nothing and would show the player a collect animation
+	// for no gain, so the floor is 2 -- the same floor Rage Bait's fish use.
+	if err := validWeights(tier, "starDrops.values", sd.Values, 2); err != nil {
+		return err
+	}
+	// Every count row being 0 stars means the beast can never collect anything and
+	// act two pays exactly nothing -- a silent zero, so it is loud here.
+	for _, row := range sd.Count {
+		if row.Value > 0 && row.Weight > 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("tier %s: starDrops.count never drops a star", tier)
+}
+
+func validWeights(tier, field string, rows []WeightedInt, minValue int) error {
+	if len(rows) == 0 {
+		return fmt.Errorf("tier %s: %s is empty", tier, field)
+	}
+	total := 0
+	seen := make(map[int]bool, len(rows))
+	for _, row := range rows {
+		if row.Value < minValue {
+			return fmt.Errorf("tier %s: %s value %d is below the %d floor",
+				tier, field, row.Value, minValue)
+		}
+		if row.Weight < 0 {
+			return fmt.Errorf("tier %s: %s value %d has negative weight", tier, field, row.Value)
+		}
+		if seen[row.Value] {
+			return fmt.Errorf("tier %s: %s value %d appears twice", tier, field, row.Value)
+		}
+		seen[row.Value] = true
+		total += row.Weight
+	}
+	if total <= 0 {
+		return fmt.Errorf("tier %s: %s has zero total weight", tier, field)
+	}
+	return nil
+}
+
+// Pick draws one value from a weighted table. Total weight is recomputed per call
+// rather than cached: these tables have a handful of rows and are drawn once per
+// roam spin, so the arithmetic is free next to keeping the config immutable.
+func pickWeighted(rows []WeightedInt, roll func(int) int) int {
+	total := 0
+	for _, row := range rows {
+		total += row.Weight
+	}
+	r := roll(total)
+	for _, row := range rows {
+		r -= row.Weight
+		if r < 0 {
+			return row.Value
+		}
+	}
+	return rows[len(rows)-1].Value // unreachable while total > 0
 }
 
 // RoamOrigins lists every top-left position where the beast block fits fully on
