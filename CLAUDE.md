@@ -257,6 +257,106 @@ Keybearer & knockout_mayhem are SCRATCHED (code remains in games/ as reference o
 - [ ] Write those odds into the frontend copy (the LAST publishing item; lives outside
       this repo -- the math SDK owns no lang/copy files)
 
+### ▶▶ ACT TWO -- DESIGNED, NOT BUILT (Aug 3 2026).  PARKED behind the Go port.
+STATUS: design decided in conversation, ZERO code written, math unchanged and still the
+converged Jul-31 pool. Resume here after the Go SDK port (go/) lands.
+
+THE PROBLEM, MEASURED. Draco ends a feature with 9.9 of 20 cells lit as sticky wilds,
+11.2 of 20 once the beast is out -- over half the board, ~70% during the roam. Almost
+everything is wild, so every line wins, so no individual win means anything: 15 winning
+lines that look like a jackpot and pay 0.5x the ticket. Meanwhile THE LADDER IS BARELY
+RUNNING -- mean roam depth is 1.3 rungs of 12 on draco, 3.2 of 13 on ursa. The multiplier
+is a rounding error and the wild carpet is the whole mode. That is the "x1 ladder feels
+bad" complaint and the "too packed but not paying" complaint; they are one defect.
+
+THE DESIGN. Split the feature into two acts and CONSUME THE STICKY WILDS AT WAKE.
+  Act 1 CHARGE  unchanged -- cells light when a winning line crosses, lit = sticky wild,
+                snowball builds. Ends at its most crowded, which is fine: that is the
+                climax of act one and it is over.
+  Act 2 ROAM    the stars pour into the beast and THE BOARD CLEARS. Normal symbols
+                return; the 2x2 is the ONLY wild left. Multiplier stars drop each spin,
+                the block collects them, its multiplier accumulates, and lines crossing
+                it pay symbol wins at a real multiplier.
+This replaces constellation_mult_ladders / constellation_ladder_rungs and the two guard
+tests. Losing the Jul-30 dead-top-rungs work is acceptable -- it was tuning a mechanism
+that climbs 1.3 rungs.
+WHY IT IS THE RIGHT FIX: it moves the payout OFF the carpet (the actual ask), it leaves
+room on the board for paying symbols, the two acts finally look different, and the
+completion ladder 84/63/32 SURVIVES UNTOUCHED because act 1 is unchanged.
+
+RAGE BAIT'S ACTUAL RULES (read off the in-game paytable, not inferred):
+  "Fish carry a multiplier value. Whenever a Wild is on the board it collects every Fish
+   and adds each Fish's value to that Wild's multiplier -- so any winning line passing
+   through the Wild is multiplied that much more. Each collected Fish is then cleared and
+   the symbols above cascade down, with new symbols dropping in -- which can land more
+   Fish to collect."  Values 2/3/5/10/25/50/100x.
+⚠ COLLECTION IS GLOBAL, APPLICATION IS POSITIONAL. The wild does NOT have to land on the
+fish. Copy that split: the block collects everything on the board each spin (simple, no
+lottery), but the multiplier only applies to lines crossing the block -- so WHERE it roams
+still decides which wins get multiplied. That is also our Option A, confirmed by market.
+⚠ THEIR CHAIN DOES NOT TRANSFER. collect -> cascade -> new fish -> collect again is the
+engine of their feature and WE HAVE NO CASCADES (the base-game meter idea was already
+reverted for this reason). Without them it is one beat per spin, not a chain. Do not
+design assuming the chain.
+⚠ EXPIRE vs PERSIST is moot under global collection -- nothing is ever left uncollected.
+An earlier plan had drop -> roam -> collect-what-it-covers, which invents a positional
+lottery Rage Bait does not have. Dropped.
+
+THE ONE RISK TO MEASURE FIRST: can act 2 carry the money? The paytable is deliberately
+dusty (lows 0.2-0.5, H1 3/6/12), so on a normal board with no wild carpet the raw wins
+are small and the multipliers must be big and accumulate fast. If act 2 comes in thin,
+draco's price collapses and the whole menu re-derives. MEASURE BEFORE COMMITTING.
+SECOND RISK: only 32% of dracos complete, and after this change act 2 is where both the
+money and the fun live -- two thirds of a 520x ticket would never reach it. Today the
+carpet pays the whole way, so this gate gets much sharper. IF it needs help, the levers
+are (a) move draco's gate cells to CENTRE rows -- its gates are currently the full reel-4
+column including rows 0 and 3, which few paylines cross -- or (b) a pre-lit floor, machinery
+we already have from Draco Ascendant. NOT fewer cells; see below.
+
+### ▶▶ CELL-COUNT SWEEP -- CUTTING THE CONSTELLATION IS REJECTED (Aug 3 2026)
+Harness: `games/starwake/reels/sweep_cell_counts.py` (n=20k/tier/variant, wincap slice
+stripped, ~5 min for all 12 runs). Tested cutting draco 11 -> 6/8/9 and ursa 7 -> 5/6.
+
+  variant         tier   cells  e/g  complete   lit  wild/20  roam    cost      max  beat tkt
+  current 4/7/11  corvus     4  4/0     83.7%   3.5      6.9   4.1    239x  10,000x    25.1%
+                  ursa       7  5/2     63.2%   6.4      9.0   3.2    269x  25,000x    20.4%
+                  draco     11  6/5     32.1%   9.9     11.2   1.3    523x  25,000x    18.9%
+  A  4/5/6        ursa       5  3/2     10.2%   3.4      3.8   0.4     55x   7,752x    24.6%
+                  draco      6  3/3     40.0%   4.8      6.4   1.6    221x  25,000x    16.2%
+  B  4/6/8        ursa       6  4/2     34.8%   5.0      6.4   1.6    136x  22,808x    18.6%
+                  draco      8  4/4     15.9%   6.1      6.8   0.5    103x  11,675x    22.6%
+  C  4/6/9        ursa       6  4/2     34.8%   5.0      6.4   1.6    136x  22,808x    18.6%
+                  draco      9  5/4     40.3%   7.9      9.5   1.5    308x  25,000x    21.6%
+
+⚠⚠ CELLS ARE FUEL, NOT DIFFICULTY. This is the headline and it is the opposite of the
+assumption the cut was proposed on. A lit cell becomes a sticky wild, and the EASY cells
+(reels 0-2) are the engine that manufactures the long wins needed to reach the HARD cells
+(reels 3-4). Remove easy cells and you do not remove work, you remove the engine.
+TWO CLEAN CONTROLS, both accidental, both ~2.5x off ONE cell:
+  ursa 6-cell (34.8%) vs current 7-cell (63.2%) -- identical but for one easy cell (2,0)
+  draco B 8-cell (15.9%) vs draco C 9-cell (40.3%) -- IDENTICAL GATES, one easy cell (1,2)
+SECOND EFFECT: once fuel is short, gate ROW beats gate COUNT. Variant A's draco has THREE
+gates and completes 40%; variant A's ursa has TWO and completes 10.2% -- because A-draco's
+gates sit in rows 1-2 (centre, high payline traffic) and A-ursa's (3,0) is an edge row.
+EVERY CUT VARIANT BREAKS THE TIER LADDER: A inverts it (draco 40.0% EASIER than ursa
+10.2% at a quarter of the price), B inverts price (draco 103x < ursa 136x), C still
+inverts completion (draco 40.3% > ursa 34.8%).
+AND SATURATION IS THE PAYOUT: draco's wild/20 falls 11.2 -> 9.5 -> 6.4 and its price falls
+523 -> 308 -> 221 -> 103x in lockstep. "Less packed AND pays more" is NOT reachable by
+cutting cells -- it needs a payout source that is not the carpet, i.e. Act Two.
+=> KEEP 4 / 7 / 11. The clutter motive is answered by consuming wilds at wake; the cost
+(a broken tier ladder) would remain. Change ONE thing at a time: build act 2 against the
+current shapes, measure, and only then revisit completion.
+
+⚠ POOL DAMAGE FROM THIS SWEEP, NOT YET REPAIRED. Books, publish LUTs, lookup_tables and
+segmented LUTs for buy_corvus/buy_ursa/buy_draco were backed up and RESTORED correctly.
+NOT backed up, and therefore now 20k-sweep vintage: library/forces/force_record_buy_*.json,
+library/configs/books_buy_*.verification.json and event_config_buy_*.json for those three
+modes. The gotcha below DOES name force records and verification files -- the backup was
+incomplete, not the documentation. Math and books are intact; this only breaks the reviewer
+force artifacts and config.json's sha256 for them. Fixed by the re-sim that any retune
+needs anyway -- do NOT ship the current library/ without re-running those three modes.
+
 ### ▶▶ REVIEWER SCENARIOS + PUBLISH PURGE (Jul 30 2026)
 TWO SHIPPED. Neither touches the math: the pool, the LUTs and every RTP are byte-identical
 (library/ is gitignored, so the purge is a publish-artifact fix, not a code change).
@@ -745,6 +845,12 @@ ALSO DONE Jul 31:
   the published file until generate_configs runs again.
 
 ### ▶▶ NEXT SESSION STARTS HERE (as of Jul 30 2026)
+⚠ SUPERSEDED AS THE ENTRY POINT (Aug 3 2026). Current order of work is:
+  1. the Go port of the SDK (go/) -- IN PROGRESS, everything below is parked behind it
+  2. then "ACT TWO -- DESIGNED, NOT BUILT" near the top of this file
+  3. then the publishing items in this section, which are still valid and still pending
+The math below is converged and correct; it is just no longer the next thing to touch.
+
 The math is converged and shippable. ONE publishing item remains, plus product calls.
  0. ⚠ THE TABLE BELOW AND IN "THE DEAD TOP RUNGS" PREDATE the Jul 31 cap-share pass --
     ursa/draco/mystery std, ETL and cap rates all moved. See the Jul 31 section above.
