@@ -9,10 +9,15 @@
 #
 #   sw optimize             optimizer, every mode          (~17 min)
 #   sw optimize buy_ursa    optimizer, one mode            (~3 min)
+#   sw publish              build the shippable artifact set
 #   sw gates                compliance gates on the Go pool
-#   sw full [sims]          sim everything -> optimize -> gates
+#   sw full [sims]          sim -> optimize -> publish -> gates
 #
 #   sw test                 unit tests (Go + Python)
+#   sw parity               compare against the Python pool's measured figures
+#   sw schema               compare event tapes against Python, key by key
+#   sw accept               declare Go back in sync after mirroring a Python
+#                           engine change
 #
 # Mirrors `python run.py <mode> <sims>` so the muscle memory carries over.
 # game_config.py stays the design surface -- edit it and just re-run; the config
@@ -118,6 +123,9 @@ case "${1:-}" in
         refresh_config
         "$PY" "$HERE/optimize_go.py" "${@:-${ALL_MODES[@]}}"
         ;;
+    publish)
+        "$PY" "$HERE/publish_go.py"
+        ;;
     gates)
         "$PY" "$REPO/games/starwake/check_risk_gates.py" \
             "$REPO/games/starwake_go/library/publish_files"
@@ -126,6 +134,8 @@ case "${1:-}" in
         sims="${2:-1000000}"
         run_sims "$sims"
         "$PY" "$HERE/optimize_go.py" "${ALL_MODES[@]}" || exit 1
+        echo
+        "$PY" "$HERE/publish_go.py" || exit 1
         echo
         "$PY" "$REPO/games/starwake/check_risk_gates.py" \
             "$REPO/games/starwake_go/library/publish_files"
