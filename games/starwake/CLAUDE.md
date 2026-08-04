@@ -28,8 +28,38 @@ NEXT: "ACT TWO -- DESIGNED, NOT BUILT" below. Order of work is
   (1) Act Two engine, unit-tested in isolation before it touches the sim
   (2) measure whether act 2 can carry the money — the one real risk
   (3) retune drop tables / prices / RTP, converge at 1e6
-  (4) `check_risk_gates.py`, confirm still <= 1 failing class
+  (4) `check_risk_gates.py`, confirm still 0 failed classes at 3-Star
   (5) publishing items (mystery odds copy, force-record re-sim)
+
+### ▶▶ DECIDED Aug 4 2026: TARGET 3-STAR, HOLD THE MAX WIN AT 25,000x
+TARGET RATING IS 3-STAR. Measured on the converged pool, Starwake ALREADY passes every
+3-Star non-critical test with ZERO failed classes (and all seven critical tests). So
+compliance is not a problem to solve — the retune's only compliance job is to not break
+something that already works. Every other decision goes to whether the game is GOOD.
+⚠ THE 2-STAR COLUMN IS NOISE FOR US. The absolute-CVaR "failure" recorded above is a
+2-Star failure only (limit 20,000, ours 25,000); the 3-Star limit is 50,000. Do not
+spend anything fixing it. Do not re-derive draco's cap rate to chase it.
+⚠ OPEN: nothing in the docs says how a game IS RATED 2- vs 3-Star — it may be studio
+or commercial rather than mathematical. Ask the RGS team. Either answer is survivable:
+at 2-Star the one failed class is free (0 and 1 both keep the full caps).
+
+MAX WIN STAYS AT 25,000x. It could have gone to 50,000x (2-Star now permits 50,000 and
+3-Star 100,000 — our 25,000 is a leftover from when 25,000 WAS the 2-Star ceiling, and
+the design doc still says so). Rejected because of the coupling below.
+⚠⚠ ABSOLUTE CVaR *IS* THE MAX WIN whenever a mode's cap lands more often than 1 in
+1,000. CVaR is measured over the worst 0.1% of outcomes, so if cap books alone exceed
+0.1% the whole window is cap books and CVaR equals the cap exactly. That is why
+buy_draco reads 25,000 (cap rate 1 in 642 = 0.156%) and buy_mystery 24,845 (1 in 1,110).
+CONSEQUENCE: absolute CVaR is a CAP ON THE CAP — 50,000 at 3-Star. Going to a 50,000x
+max win would land absolute CVaR exactly ON the 3-Star limit, so it would ALSO require
+pushing every mode's cap rate below ~1 in 1,000, which drains the cap's RTP contribution
+and forces buy_draco's value to be rebuilt out of the body. Two coupled re-derivations
+for a bigger number on the tin. Not worth it.
+HEADROOM AT 3-STAR, tightest first: CVaR absolute 2.0x | ETL40 2.3x | base std 2.5x |
+CVaR per-stake 3.0x | max cost 3.6x | ETL sum 3.6x | max payout 4.0x | p10k 5.6x |
+p5k 7.6x | ETL10k 9.4x. So at 3-Star the number to watch during the retune is absolute
+CVaR, and it only moves if the max win or a cap rate moves. p5k -- the tight one at
+2-Star (1.52x) -- has 7.6x here and is not a constraint.
 
 ### ▶▶ COMPLIANCE UNDER THE NEW REGIME (Aug 4 2026) — measured, 1 failing class
 Stake replaced "any failing statistical test blocks the game" with critical vs
