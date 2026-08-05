@@ -1342,7 +1342,7 @@
               },
               "roam": {
                 "ROAM": 1,
-                "ROAMCAP": 5
+                "ROAMCAP": 20
               }
             },
             "scatterTriggers": [

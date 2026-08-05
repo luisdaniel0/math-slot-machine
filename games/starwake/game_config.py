@@ -546,7 +546,18 @@ class GameConfig(Config):
         # predicts. Keying it lets a wincap slice mix in ROAMCAP at 5:1, the same
         # trick that keeps the ceiling reachable on the freegame side with WCAP.
         roam_weights = {"ROAM": 1}
+        # ⚠ URSA NEEDS A HEAVIER MIX THAN DRACO FOR THE SAME CEILING. Both must
+        # reach 25,000x, but ursa gets there from a weaker tier (7 cells, star table
+        # topping at 50x against draco's 100x), so its forced cap cost ~1,940
+        # redraws per wincap book against draco's ~117. That is not just slow: a
+        # forced slice has NO retry cap, so a rate that drifts to zero HANGS rather
+        # than failing, and 1-in-1,940 is one tuning change away from zero.
+        # Cost of the heavier mix is aesthetic only -- wincap books are forced to
+        # pay the ceiling either way, so this changes how FAST they are found, not
+        # the distribution. It does mean ursa's max-win replays all share the juiced
+        # strip's premium-heavy look, on top of FRWCAP already doing that to act one.
         roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 5}
+        ursa_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 20}
 
         def _tier_condition(star_count):
             """Force exactly `star_count` stars -> deal that one tier, run the feature."""
@@ -605,14 +616,14 @@ class GameConfig(Config):
         # that says the multiplier climbs every spin. It publishes an honest 10,000x.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
-        def _wincap_condition(star_count):
+        def _wincap_condition(star_count, roam_mix=None):
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
                     self.freegame_type: {"FR0": 1, "WCAP": 5},
                     # The act two half of the same trick -- without it the roam
                     # phase draws ordinary reels and the forced cap never lands.
-                    "roam": dict(roam_wincap_weights),
+                    "roam": dict(roam_mix or roam_wincap_weights),
                 },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
@@ -620,7 +631,7 @@ class GameConfig(Config):
                 "force_freegame": True,
             }
 
-        ursa_wincap_condition = _wincap_condition(4)
+        ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
 
         # Non-triggering base spins (draw_board redraws these to <3 stars). "0" is the
