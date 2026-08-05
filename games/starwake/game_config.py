@@ -484,21 +484,54 @@ class GameConfig(Config):
         # fewer paying cells -- so they sit on separate surfaces and must be swept
         # together.
         #
-        # FIRST-PASS VALUES, UNMEASURED. Shape borrowed from Rage Bait's published
-        # fish (2/3/5/10/25/50/100x): heavy weight low, a thin top. Draco is dealt a
-        # richer table than Corvus so the tier ladder gains a SECOND axis -- today
-        # the tiers differ only in how hard they are to complete (84/63/32%), and
-        # "draco's stars are worth more too" is a better story than "draco is just
-        # harder". Ascendant shares Draco's, as it shares everything else.
         # ⚠ THE ROAM STRIP IS NOT NAMED HERE. It comes from each distribution's
         # reel_weights["roam"] (see _tier_condition below), so a wincap slice can
         # weight a juiced roam strip the way it already weights WCAP. Pinning one
         # strip per tier is what made the published ceiling unreachable.
+        #
+        # ⚠ THE SPREAD BETWEEN THESE TABLES IS DOING ALL THE TIER SEPARATION, AND IT
+        # HAS TO BE FAR WIDER THAN IT LOOKS. Consuming the sticky wilds at wake also
+        # consumed the differentiation: draco used to out-pay ursa because its
+        # completed board carried 11 sticky wilds to ursa's 7, and after wake the
+        # cells do nothing. Both tiers now roam an identical bare board with an
+        # identical 2x2 block, so the star table and roam length are all that is
+        # left -- and roam length runs the WRONG WAY:
+        #     tier     completes   stars collected   completion x stars
+        #     corvus      83.9%          ~5.5              4.6
+        #     ursa        62.6%           5.7              3.6
+        #     draco       32.4%           4.6              1.5
+        # Draco completes half as often AND roams shorter, so on equal tables the
+        # prices order corvus > ursa > draco, backwards. The table must overcome a
+        # ~3x handicap.
+        #
+        # SWEPT (reels/sweep_star_values.py, n=20k, premium roam strip, 1x density).
+        # Mean star value per tier -> implied price, and whether the ladder holds:
+        #    3.8 / 5.3 /  8.2    506 / 621 /  505x   INVERTED (ursa above draco)
+        #    3.8 / 5.3 / 15.4    506 / 621 /  756x   ordered
+        #    3.4 / 4.7 / 20.2    451 / 556 /  922x   ordered   <- THIS ONE
+        #    3.1 / 4.2 / 26.7    423 / 511 / 1141x   ordered
+        # Chosen because its three tiers sit closest to PROPORTIONAL to the
+        # configured prices (1.88 / 2.08 / 1.77x of target, against the shipped
+        # tables' 2.11 / 2.32 / 0.97x). Similar surplus everywhere means the
+        # optimizer does similar work everywhere, so the menu shape survives
+        # convergence -- where a tier at 0.97x has no surplus to remove at all and
+        # would have to be repriced instead.
+        #
+        # ⚠ IT ALSO REPAIRS BUY_MYSTERY, WHICH IS NOT WHAT IT WAS CHOSEN FOR.
+        # Ascendant SHARES draco's table and completes ~90%, so it amplifies any
+        # change to draco. Measured payback split against the 14.9/14.1/23.2/47.8
+        # design: shipped tables give 27.1/27.1/19.4/26.4 -- ascendant's
+        # rare-and-huge identity gone and the mode flattened into four near-equal
+        # outcomes -- while spread gives 16.7/16.8/24.6/41.9. Two unrelated defects,
+        # one variant.
+        #
+        # ⚠ RAISING DRACO IS THE LEVER, NOT LOWERING URSA. "Draco's stars are worth
+        # a fortune" is an identity; "ursa's stars are junk" is only a nerf.
         self.constellation_star_symbol = "M"
         self.constellation_star_values = {
-            "corvus": {2: 50, 3: 25, 5: 15, 10: 8, 25: 2},
-            "ursa": {2: 40, 3: 25, 5: 18, 10: 11, 25: 5, 50: 1},
-            "draco": {2: 32, 3: 22, 5: 20, 10: 14, 25: 8, 50: 3, 100: 1},
+            "corvus": {2: 55, 3: 25, 5: 13, 10: 6, 25: 1},
+            "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
+            "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
         }
         self.constellation_star_values["ascendant"] = self.constellation_star_values["draco"]
 

@@ -125,10 +125,29 @@ STRIP_WEIGHTS = {
     #
     # No wilds: the block is the only wild in act two, by design. No stars ("S"):
     # the feature cannot retrigger.
+    # ⚠ PREMIUM-HEAVY, AND THAT INVERSION IS THE WHOLE FIX. This strip first
+    # shipped as a copy of FR0's lows-heavy curve, and act two came in thin AND
+    # FLAT: implied price 297x against a 520x target, mean/median 1.17 against the
+    # ladder's 1.72, max win 6,705x against a published 25,000x. With the wild
+    # carpet gone, act two's raw wins are 3-of-a-kind lows paying 0.2-0.5x, and a
+    # x50 multiplier on a 0.3x win is 15x -- there was nothing worth multiplying.
+    #
+    # Measured (reels/sweep_roam_strip.py, n=20k, wincap stripped, draco):
+    #   mix       dens    price   m/med      max
+    #   lows        1x     297x    1.17    6,705x   <- as shipped
+    #   premium     1x     505x    1.86   17,240x
+    #   premium     3x     766x    2.72   25,000x
+    # The mix ALONE restores both price and volatility at unchanged density.
+    #
+    # ⚠ DENSITY DELIBERATELY LEFT AT 1x. Raising it overshoots every tier and
+    # makes corvus beat its ticket 61.6% of the time, which is not a
+    # high-volatility buy. Stars are non-paying and break paylines, so past some
+    # density the board runs out of cells to pay and act two pays LESS -- an
+    # interior optimum, not a monotonic knob. The premium mix did the work.
     "FRROAM.csv": {
         "base": {
-            "H1": 8, "H2": 10, "H3": 12, "H4": 14,
-            "L1": 16, "L2": 18, "L3": 20, "L4": 22, "L5": 24,
+            "H1": 20, "H2": 16, "H3": 13, "H4": 11,
+            "L1": 9, "L2": 8, "L3": 7, "L4": 6, "L5": 6,
             "W": 0, "S": 0, "M": 0,
         },
         "per_reel": {1: {"M": 3}, 2: {"M": 6}, 3: {"M": 9}, 4: {"M": 12}},

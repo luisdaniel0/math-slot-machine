@@ -494,7 +494,7 @@
           "values": [
             {
               "value": 2,
-              "weight": 50
+              "weight": 55
             },
             {
               "value": 3,
@@ -502,15 +502,15 @@
             },
             {
               "value": 5,
-              "weight": 15
+              "weight": 13
             },
             {
               "value": 10,
-              "weight": 8
+              "weight": 6
             },
             {
               "value": 25,
-              "weight": 2
+              "weight": 1
             }
           ]
         }
@@ -574,7 +574,7 @@
           "values": [
             {
               "value": 2,
-              "weight": 40
+              "weight": 45
             },
             {
               "value": 3,
@@ -582,15 +582,15 @@
             },
             {
               "value": 5,
-              "weight": 18
+              "weight": 17
             },
             {
               "value": 10,
-              "weight": 11
+              "weight": 9
             },
             {
               "value": 25,
-              "weight": 5
+              "weight": 3
             },
             {
               "value": 50,
@@ -673,31 +673,31 @@
           "values": [
             {
               "value": 2,
-              "weight": 32
+              "weight": 16
             },
             {
               "value": 3,
-              "weight": 22
-            },
-            {
-              "value": 5,
-              "weight": 20
-            },
-            {
-              "value": 10,
               "weight": 14
             },
             {
+              "value": 5,
+              "weight": 18
+            },
+            {
+              "value": 10,
+              "weight": 18
+            },
+            {
               "value": 25,
-              "weight": 8
+              "weight": 15
             },
             {
               "value": 50,
-              "weight": 3
+              "weight": 12
             },
             {
               "value": 100,
-              "weight": 1
+              "weight": 7
             }
           ]
         }
@@ -785,31 +785,31 @@
           "values": [
             {
               "value": 2,
-              "weight": 32
+              "weight": 16
             },
             {
               "value": 3,
-              "weight": 22
-            },
-            {
-              "value": 5,
-              "weight": 20
-            },
-            {
-              "value": 10,
               "weight": 14
             },
             {
+              "value": 5,
+              "weight": 18
+            },
+            {
+              "value": 10,
+              "weight": 18
+            },
+            {
               "value": 25,
-              "weight": 8
+              "weight": 15
             },
             {
               "value": 50,
-              "weight": 3
+              "weight": 12
             },
             {
               "value": 100,
-              "weight": 1
+              "weight": 7
             }
           ]
         }
