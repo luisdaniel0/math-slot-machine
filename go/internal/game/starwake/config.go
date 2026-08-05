@@ -32,9 +32,19 @@ type WeightedInt struct {
 // ⚠ TRANSITIONAL. Both paths exist only so the two can be A/B swept against each
 // other to answer "can act 2 carry the money". Once that is measured, the loser
 // is DELETED -- do not let this become a permanent fork.
+//
+// ⚠ THERE IS NO COUNT TABLE, AND THAT IS THE POINT. How many stars land is decided
+// by the ROAM STRIP's density, because stars are real reel symbols; only the value
+// of each one is rolled from config. Density and value trade against each other
+// during tuning -- more stars means more multiplier but fewer paying cells -- so
+// they are deliberately kept on separate surfaces: density in reels/, value here.
 type StarDrops struct {
-	// Count is how many stars fall on a roam spin.
-	Count []WeightedInt `json:"count"`
+	// RoamStrip is the reel set drawn while the beast is awake. It is the only
+	// strip carrying the star symbol, which is what keeps stars out of act one
+	// where there is no beast to collect them.
+	RoamStrip string `json:"roamStrip"`
+	// StarSymbol is the non-paying symbol the beast collects.
+	StarSymbol string `json:"starSymbol"`
 	// Values is each star's multiplier value, drawn independently per star.
 	Values []WeightedInt `json:"values"`
 }
@@ -148,7 +158,7 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 		}
 
 		if t.StarDrops != nil {
-			if err := t.StarDrops.validate(name); err != nil {
+			if err := t.StarDrops.validate(name, c); err != nil {
 				return err
 			}
 		}
@@ -156,23 +166,23 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 	return nil
 }
 
-func (sd *StarDrops) validate(tier string) error {
-	if err := validWeights(tier, "starDrops.count", sd.Count, 0); err != nil {
-		return err
+func (sd *StarDrops) validate(tier string, c *config.Config) error {
+	if sd.RoamStrip == "" {
+		return fmt.Errorf("tier %s: starDrops.roamStrip is empty", tier)
 	}
-	// A star worth x1 adds nothing and would show the player a collect animation
-	// for no gain, so the floor is 2 -- the same floor Rage Bait's fish use.
-	if err := validWeights(tier, "starDrops.values", sd.Values, 2); err != nil {
-		return err
+	// Without this the roam would silently fall back to the charge strip, which
+	// carries no stars -- act two would run, collect nothing, and pay x1 all the
+	// way through while looking entirely normal.
+	if _, ok := c.Reels[sd.RoamStrip]; !ok {
+		return fmt.Errorf("tier %s: starDrops.roamStrip %q is not a configured reel set",
+			tier, sd.RoamStrip)
 	}
-	// Every count row being 0 stars means the beast can never collect anything and
-	// act two pays exactly nothing -- a silent zero, so it is loud here.
-	for _, row := range sd.Count {
-		if row.Value > 0 && row.Weight > 0 {
-			return nil
-		}
+	if sd.StarSymbol == "" {
+		return fmt.Errorf("tier %s: starDrops.starSymbol is empty", tier)
 	}
-	return fmt.Errorf("tier %s: starDrops.count never drops a star", tier)
+	// A star worth x1 adds nothing and would animate a collect for no gain, so the
+	// floor is 2 -- the same floor Rage Bait's fish use.
+	return validWeights(tier, "starDrops.values", sd.Values, 2)
 }
 
 func validWeights(tier, field string, rows []WeightedInt, minValue int) error {

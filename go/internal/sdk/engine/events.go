@@ -48,6 +48,21 @@ type Event struct {
 	Complete   *bool  `json:"complete,omitempty"`
 	BeastShape *Shape `json:"beastShape,omitempty"`
 	Multiplier *int   `json:"multiplier,omitempty"`
+
+	// --- act two: multiplier stars ---
+	Stars  []StarJSON `json:"stars,omitempty"`
+	Gained *int       `json:"gained,omitempty"`
+}
+
+// StarJSON is one multiplier star as the client sees it: where it landed and what
+// it was worth. Carried on BOTH starsLanded and starsCollected so the frontend can
+// animate the land and the fly-to-beast without holding state between events -- the
+// tape is a projection, and an event that only makes sense relative to an earlier
+// one breaks replay from an arbitrary point.
+type StarJSON struct {
+	Reel  int `json:"reel"`
+	Row   int `json:"row"`
+	Value int `json:"value"`
 }
 
 // Pos is a client-coordinate board position.

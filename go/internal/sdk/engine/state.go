@@ -120,6 +120,17 @@ type Spin struct {
 	GameType          string
 	Fs, TotFs         int
 	GlobalMult        int
+
+	// StripOverride pins the next draw to one named reel strip, bypassing the
+	// distribution's reel weights for this gametype.
+	//
+	// Needed because a strip is normally chosen ONCE PER BOOK from the
+	// distribution, and a two-phase feature has to change reels PART WAY THROUGH
+	// one -- Starwake's roam draws a strip carrying multiplier symbols that must
+	// not appear during the charge phase, where there is no beast to collect them.
+	// Empty means the normal weighted pick. The game is responsible for clearing
+	// it; ResetBook does not, because a book may legitimately end mid-phase.
+	StripOverride string
 	WincapTriggered   bool
 	TriggeredFreegame bool
 	Repeat            bool
@@ -265,6 +276,10 @@ func (s *Spin) DrawBoard(emitReveal bool) error {
 }
 
 func (s *Spin) pickStrip() (Strip, string, error) {
+	if s.StripOverride != "" {
+		strip, err := s.Reels.Strip(s.StripOverride)
+		return strip, s.StripOverride, err
+	}
 	weights, ok := s.Dist.Conditions.ReelWeights[s.GameType]
 	if !ok {
 		return nil, "", fmt.Errorf("%s/%s: no reel weights for gametype %q",

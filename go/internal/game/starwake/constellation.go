@@ -73,10 +73,6 @@ type Constellation struct {
 	collected int
 	fallen    []Star
 	fallenBuf [engine.MaxReels * engine.MaxRows]Star
-	freeBuf   []config.Cell
-
-	numReels int
-	numRows  [engine.MaxReels]int
 
 	// Per-spin scratch, consumed by the event emitters. Backed by a reusable
 	// array so a spin never allocates to report newly lit cells.
@@ -110,14 +106,9 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 		phase:      PhaseCharge,
 		multiplier: 1,
 		rung:       -1,
-		numReels:   c.Game.NumReels,
-	}
-	for reel := 0; reel < c.Game.NumReels; reel++ {
-		con.numRows[reel] = c.Rows(reel)
 	}
 	con.newlyLit = con.newlyLitBuf[:0]
 	con.fallen = con.fallenBuf[:0]
-	con.freeBuf = make([]config.Cell, 0, engine.MaxReels*engine.MaxRows)
 
 	for _, cell := range tier.Cells {
 		con.targets |= Bit(cell.Reel, cell.Row)
@@ -247,55 +238,46 @@ func (con *Constellation) Roam(g *engine.RNG) error {
 	return nil
 }
 
-// DropStars scatters this roam spin's multiplier stars and returns them.
+// RollStarValues finds the multiplier stars the reels just dealt and gives each
+// one a value.
 //
-// Stars land only on cells the block does NOT cover, so the player always sees
-// them as something separate that the beast then takes. They are an OVERLAY, not
-// a reel symbol: they do not displace a paying symbol and take no part in line
-// evaluation. That is a deliberate departure from Rage Bait, whose fish are real
-// symbols -- their board can afford it because collection triggers a cascade that
-// refills the grid, and we have no cascades. Displacing symbols on a board this
-// dusty would thin act two's wins exactly where they are already thinnest.
+// ⚠ STARS ARE REAL REEL SYMBOLS, NOT AN OVERLAY. Their POSITION comes from the
+// strip -- act two draws a roam-only strip carrying the star symbol -- and only
+// their VALUE is rolled here. Splitting it that way keeps the two knobs
+// independent: density is tuned on the strip (per reel, the same machinery the FR0
+// drying used) and the value table is tuned in config, which matters because the
+// two trade against each other.
 //
-// The previous spin's stars are cleared first: nothing persists, because global
-// collection means nothing is ever left behind anyway.
-func (con *Constellation) DropStars(g *engine.RNG) []Star {
+// A star is a non-paying symbol, so it BREAKS a payline the way a scatter does.
+// That cost is real and is why density belongs on the right-hand reels: on a
+// left-to-right lines game a blocker on reel 0 kills a win outright, while one on
+// reel 4 only shortens a 5-kind to a 4-kind.
+//
+// The value is stashed in the cell's own Mult field rather than a parallel map.
+// Safe because applyMult only reads cells INSIDE a winning run and a star never
+// matches, so it is never in one.
+func (con *Constellation) RollStarValues(b *engine.Board, star engine.SymID, g *engine.RNG) []Star {
 	con.fallen = con.fallenBuf[:0]
 	if !con.ActTwo() || con.phase != PhaseRoam {
 		return con.fallen
 	}
-	n := pickWeighted(con.drops.Count, g.IntN)
-	if n <= 0 {
-		return con.fallen
-	}
-
-	beast := con.BeastCells()
-	free := con.freeBuf[:0]
-	for reel := 0; reel < con.numReels; reel++ {
-		for row := 0; row < con.numRows[reel]; row++ {
-			if !beast.Has(reel, row) {
-				free = append(free, config.Cell{Reel: reel, Row: row})
+	for reel := 0; reel < b.NumReels; reel++ {
+		for row := 0; row < b.NumRows[reel]; row++ {
+			if b.At(reel, row).Sym != star {
+				continue
 			}
+			value := pickWeighted(con.drops.Values, g.IntN)
+			b.Set(reel, row, engine.Cell{Sym: star, Mult: uint16(value)})
+			con.fallen = append(con.fallen, Star{
+				Cell:  config.Cell{Reel: reel, Row: row},
+				Value: value,
+			})
 		}
 	}
-	if n > len(free) {
-		n = len(free)
-	}
-	// Partial Fisher-Yates: pick n distinct cells without building a permutation
-	// of the whole board.
-	for i := 0; i < n; i++ {
-		j := i + g.IntN(len(free)-i)
-		free[i], free[j] = free[j], free[i]
-		con.fallen = append(con.fallen, Star{
-			Cell:  free[i],
-			Value: pickWeighted(con.drops.Values, g.IntN),
-		})
-	}
-	con.freeBuf = free[:0]
 	return con.fallen
 }
 
-// Collect takes every star on the board and adds it to the beast's multiplier.
+// Collect takes every star the board dealt and adds it to the beast's multiplier.
 //
 // ⚠ COLLECTION IS GLOBAL, APPLICATION IS POSITIONAL -- copied from Rage Bait's own
 // rules ("whenever a Wild is on the board it collects every Fish... any winning
@@ -316,6 +298,22 @@ func (con *Constellation) Collect() (gained, total int) {
 
 // Fallen lists the stars currently on the board (this spin's drops).
 func (con *Constellation) Fallen() []Star { return con.fallen }
+
+// RoamStrip is the reel set act two draws while the beast is awake.
+func (con *Constellation) RoamStrip() string {
+	if con.drops == nil {
+		return ""
+	}
+	return con.drops.RoamStrip
+}
+
+// StarSymbol is the symbol name the beast collects.
+func (con *Constellation) StarSymbol() string {
+	if con.drops == nil {
+		return ""
+	}
+	return con.drops.StarSymbol
+}
 
 // Collected is the running sum of every star value taken so far.
 func (con *Constellation) Collected() int { return con.collected }
