@@ -39,9 +39,49 @@ something that already works. Every other decision goes to whether the game is G
 ⚠ THE 2-STAR COLUMN IS NOISE FOR US. The absolute-CVaR "failure" recorded above is a
 2-Star failure only (limit 20,000, ours 25,000); the 3-Star limit is 50,000. Do not
 spend anything fixing it. Do not re-derive draco's cap rate to chase it.
-⚠ OPEN: nothing in the docs says how a game IS RATED 2- vs 3-Star — it may be studio
-or commercial rather than mathematical. Ask the RGS team. Either answer is survivable:
-at 2-Star the one failed class is free (0 and 1 both keep the full caps).
+⚠⚠ CORRECTION (same day): THE STAR RATING IS A HUMAN QUALITY REVIEW, NOT A MATH TIER.
+This was recorded as an open question and then answered by
+stake-engine.com/docs/approval-guidelines/game-quality-rankings. 3-Star is "awarded only
+to studio-quality games showing exceptional creativity, uniqueness and attention to
+detail", judged on: tested across a range of devices, renders at all screen sizes, no
+laggy or low-quality sounds, optimised bundle size, clean animations and cohesive art,
+and GAMEPLAY DEPTH (the named failure is "players typically place only 1-2 bets before
+losing interest"). The named reasons games are sent back are generic AI-generated assets
+("standard fonts, gradients, emoji icons, and border effects are not sufficient"),
+mismatched art styles, poor animation, and missing engaging features.
+=> THE MATH CANNOT EARN A THIRD STAR. It already passes every 3-Star risk limit with
+zero failed classes and that is ALL it can contribute; the rating a reviewer gives then
+decides which exposure caps apply. The third star is won on the FRONTEND — art,
+animation, sound, performance, bundle size — plus depth of play.
+=> 1-Star IS NOT PUBLISHED AT ALL ("the developer will be asked to resubmit"). 2-Star is
+the publishing floor; 3-Star is what earns Burst Games / Stake Exclusives / featured
+New Releases placement.
+
+⚠ THE PUBLISHING FLOOR JUST ROSE, AND STARWAKE IS SUBJECT TO THE NEW ONE. Per the Stake
+Engine team (announced the week of Jul 28 2026): the minimum quality threshold went from
+4.5 points to 6 POINTS, "equivalent to a 2-star game before rounding", IN EFFECT
+IMMEDIATELY FOR NEW GAMES — only games already in the queue keep 4.5. Stated cause is AI
+tooling lowering the barrier and flooding the review queue with low-effort submissions;
+the team explicitly wants developers "who invest real time and money into art, design
+and gameplay" not to be drowned out. They also said review times are currently well past
+their 24-hour goal, and that the 6-point threshold is being personally monitored "over
+the coming weeks to see whether 6 points is the right threshold" — SO IT MAY MOVE AGAIN,
+and the only insulation is to sit well above the floor rather than on it.
+⚠ UNKNOWN: the points rubric itself (what the scale is out of, how points are allocated
+across art / depth / performance). Worth asking — it is the actual grading sheet.
+
+=> CONSEQUENCES FOR THE PLAN, and they reorder it:
+  1. ART AND ANIMATION ARE NOW CRITICAL PATH, not "eventually". Placeholder and generic
+     AI assets are the single most-cited reason for a sub-threshold rating, and hiring
+     has the longest lead time of anything left. It does NOT block on the math, so it
+     should run in PARALLEL with Act Two rather than after it.
+  2. BASE-GAME DRYNESS IS NOW A RATING RISK, not just a feel question. Ordinary base
+     spins cap at 21x and carry 62.8% of base RTP, with ~70% of spins paying nothing --
+     which is exactly the "1-2 bets before losing interest" shape the reviewers name.
+     See BASE VOLATILITY below; the doc parked base-boost until first playtest, and the
+     playtest has now happened.
+  3. Act Two still counts -- depth is on their list -- but it is no longer sufficient on
+     its own, and it cannot substitute for art.
 
 MAX WIN STAYS AT 25,000x. It could have gone to 50,000x (2-Star now permits 50,000 and
 3-Star 100,000 — our 25,000 is a leftover from when 25,000 WAS the 2-Star ceiling, and
