@@ -31,6 +31,64 @@ NEXT: "ACT TWO -- DESIGNED, NOT BUILT" below. Order of work is
   (4) `check_risk_gates.py`, confirm still 0 failed classes at 3-Star
   (5) publishing items (mystery odds copy, force-record re-sim)
 
+### ▶▶ ACT TWO CONVERGED + FULL AUDIT (Aug 5 2026). 1e6 x 6 modes, 23 min end to end
+POOL LIVES IN `games/starwake_go/library/` (optimized LUTs) and `go/out/library/`
+(books, segmented LUTs). `games/starwake/library/` still holds the OLD LADDER POOL.
+Read gates with: `check_risk_gates.py games/starwake_go/library/publish_files`.
+
+COMPLIANT: YES. All seven critical tests pass. 3-Star shows ZERO failed classes ->
+the $500 bet template. 2-Star still shows one (absolute CVaR 25,000 vs 20,000) and it
+is still free. NOTHING REGRESSED vs the ladder pool -- tail probability improved:
+
+  check              ladder    act two   3* limit   headroom
+  base std dev        24.16      24.77       60       2.4x
+  CVaR per-stake        234        229      700       3.1x
+  CVaR absolute      25,000     25,000   50,000       2.0x
+  P(>=5,000x)      6.57e-03   4.46e-03    0.050      11.2x
+  P(>=10,000x)     1.79e-03   2.16e-03    0.010       4.6x
+  ETL(>40x)           0.385      0.377      0.9       2.4x
+  ETL(>10,000x)       0.085      0.094      0.8       8.5x
+  ETL sum             0.411      0.404      1.5       3.7x
+WIN-RANGE GAPS: NONE, in any mode (re-read because act two reshaped every
+distribution). Largest books file 2.82 GB vs the 4.2 GB cap. Events per book
+86.8 on ursa vs 87.0 before -- act two's two new events replaced multiplierClimb.
+
+WHAT ACT TWO DELIVERED, measured:
+  - the tier ladder HOLDS at 1e6: implied 450 < 561 < 934x, ratios to configured
+    price 1.88 / 2.09 / 1.80 / 1.72. Tight enough that the optimizer converged every
+    mode AT THE EXISTING MENU PRICES -- no repricing needed, which kills an open item.
+  - beat-the-ticket is now uniform and market-normal (~22%): corvus 22.45, ursa
+    21.09, draco 21.73, mystery 21.97. Draco was the worst offender at 18.9%.
+  - mystery's payback split restored: 16.7/16.8/24.6/41.9 against the
+    14.9/14.1/23.2/47.8 design (the first star tables gave a near-flat 27/27/19/26).
+  - draco mean/median 1.17 -> 3.34 against the ladder's 1.72.
+  - ursa, draco and mystery reach 25,000x ORGANICALLY, not only via the forced slice.
+
+⚠⚠ B1, THE ONE BLOCKING MATH DEFECT: buy_corvus CANNOT PAY ITS PUBLISHED MAX WIN.
+Across a full 1e6 its top payout is 9,158x against a published 10,000x. The
+guidelines require "the maximum win amount matches the description in the game rules
+for each mode", so the published figure is simply wrong. Corvus has NO wincap slice
+(deliberately -- one was measured to trade away the best body in the game) and act
+two removed the fully-wild-board route that used to reach the ceiling. Cannot be
+tuned away. Tail curve, for choosing a replacement number:
+     >=5,000x  1 in    70,144      >=8,000x  1 in 1,450,177
+     >=7,500x  1 in   962,206      >=9,000x  1 in 2,476,458
+Guideline is "typically more frequent than 1 in 10,000,000", so anything here passes
+OBTAINABILITY -- the defect is the advertised number, not the odds.
+
+⚠ Q1, BASE DRYNESS IS UNTOUCHED AND SLIGHTLY WORSE. Act two only changed the
+feature. An ordinary base spin still tops out at 22x and carries 62.8% of base RTP,
+with 70.75% of spins paying nothing. And the share of base RTP arriving as a win
+above 100x fell 0.271 -> 0.226, because an act two feature can complete and still pay
+small where the ladder's fully-wild board always paid big.
+⚠ CORRECTION TO THE RECORD: the 0.372 figure quoted elsewhere in this file for
+"share of RTP above 100x" is the FEATURE + CAP RTP SHARE, an upper bound, not the
+measured >100x share. Measured like-for-like it is 0.271 (ladder) and 0.226 (act two).
+This is the "1-2 bets before losing interest" shape the ratings page names.
+
+STILL OPEN AFTER THIS RUN: corvus's ceiling (B1, below), base dryness (Q1), base std
+24.77 vs a 35-48 market band, the whole frontend, and the 10M-events question.
+
 ### ▶▶ DECIDED Aug 4 2026: TARGET 3-STAR, HOLD THE MAX WIN AT 25,000x
 TARGET RATING IS 3-STAR. Measured on the converged pool, Starwake ALREADY passes every
 3-Star non-critical test with ZERO failed classes (and all seven critical tests). So
