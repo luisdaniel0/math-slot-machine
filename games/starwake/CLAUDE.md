@@ -31,6 +31,64 @@ NEXT: "ACT TWO -- DESIGNED, NOT BUILT" below. Order of work is
   (4) `check_risk_gates.py`, confirm still 0 failed classes at 3-Star
   (5) publishing items (mystery odds copy, force-record re-sim)
 
+### ▶▶ CORVUS IS A PRICING PROBLEM, NOT A CEILING PROBLEM (Aug 5 2026)
+Measured on the converged act two pool, buy_corvus has no reason to exist:
+
+    mode         cost   median  med/cost   beat   ceiling  ceil/cost
+    buy_corvus    240      59x    0.24    22.4%    9,158x     38.2x
+    buy_ursa      268      33x    0.12    21.1%   25,000x     93.3x
+    buy_draco     520     140x    0.27    21.7%   25,000x     48.1x
+    buy_mystery   563     177x    0.31    22.0%   25,000x     44.4x
+
+LAST on ceiling-per-cost, second-worst on median, and its beat rate is inside the
+noise of the other three. Ursa costs 12% more and offers 2.7x the ceiling, because
+ursa reaches the global 25,000x cap and corvus's ceiling is organic. Publishing
+7,500x or 10,000x does not change any of this -- even at 10,000x corvus is 41.7x
+cost, still last.
+
+LONGER FEATURES DO NOT FIX IT (reels/sweep_feature_spins.py). Only corvus's ceiling
+is organic, so extra spins raise its number while leaving ursa/draco/mystery's
+forced 25,000x untouched -- the asymmetry that made the idea worth testing. It
+works mechanically (corvus reaches 10,000x at 14-15 spins) and costs too much:
+  completion 83.9/62.6/32.4 -> 89.4/75.4/44.5 (+20%) -> 93.1/84.5/55.1 (+40%),
+    where corvus and ursa stop being distinguishable and draco is no longer rare
+  implied price reaches 4.9x (corvus) and 6.8x (draco) of configured, so ~85% of
+    the value would have to be optimized away, thinning the very tail it creates
+  draco events/book 85 -> 120 = 120M per mode against the open 10M question, and
+    its books file 2.82 -> ~4.0 GB against a 4.2 GB cap
+And corvus is STILL last on ceiling-per-cost afterwards.
+
+RE-PRICING DOES FIX IT. Same 1e6 pool, re-optimized per price:
+
+    cost      RTP    median  med/cost   beat   ceil/cost   max win 1 in
+    240x   0.9665       49x     0.20   23.9%      38.2x      3,115,983
+    150x   0.9665       36x     0.24   18.3%      61.1x      4,350,921
+    120x   0.9665       21x     0.17   20.7%      76.3x      4,732,641
+
+At 120x corvus clears draco's 48.1x and approaches ursa's 93.3x, and THE MAX WIN
+STAYS OBTAINABLE at 1 in 4.7M against the 1-in-10M guideline. It survives because
+the ceiling contributes almost nothing to RTP (9,158x at 1 in 3.1M is ~0.001% of a
+232x mean), so the optimizer hits a lower target by reweighting the BODY and has no
+reason to touch the tail. beat/median wobble is optimizer variance, not a trend.
+Menu becomes 120 / 268 / 520 / 563 -- a real ladder instead of 240 and 268 sitting
+on top of each other.
+
+⚠⚠ TWO HARNESS TRAPS FOUND THE HARD WAY HERE, BOTH SILENT:
+ 1. THE SWEEPS WRITE TO go/out/library/, THE SAME TREE THE CONVERGED POOL LIVES IN.
+    sweep_feature_spins left corvus/ursa/draco as 20k books from its last variant
+    (48-56 MB against 1.5-2.8 GB) and the next optimizer run happily consumed them,
+    reporting RTP 1.9330 and a 10,000x ceiling the real pool cannot reach. Re-sim
+    those modes after ANY sweep: `go/run_modes.sh 1000000 <modes>`. The engine is
+    deterministic, so a re-sim restores byte-identical books.
+ 2. optimize_go.py COPIES math_config.json FROM games/starwake/library/configs/ --
+    the OLD LADDER GAME'S directory -- and that file, not game_config.py, is where
+    the optimizer reads bet_modes[].cost. Editing game_config.py to test a price
+    changes only what the report divides by, so every run targets the same RTP and
+    the output looks like a cost effect while being optimizer noise. Patch the math
+    config to test a price. It also means the Go pipeline silently uses whatever
+    fences and costs that file was last generated with -- currently Jul 31, still
+    correct only because opt_params and the costs have not moved since.
+
 ### ▶▶ ACT TWO CONVERGED + FULL AUDIT (Aug 5 2026). 1e6 x 6 modes, 23 min end to end
 POOL LIVES IN `games/starwake_go/library/` (optimized LUTs) and `go/out/library/`
 (books, segmented LUTs). `games/starwake/library/` still holds the OLD LADDER POOL.
