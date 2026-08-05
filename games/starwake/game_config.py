@@ -722,7 +722,16 @@ class GameConfig(Config):
         # repeats on a win_criteria mismatch, so its clamped books are KEPT, not redrawn.
         # Corvus is rounded DOWN from its natural max so only the sliver above clamps and
         # RTP survives to 5dp.
-        corvus_cap = 10000.0
+        # 10,000x UNTIL Aug 5 2026, when it became a lie. Act two removed the
+        # fully-wild-board route to the ceiling, and across a full 1e6 pool corvus
+        # topped out at 9,158x -- so the published figure failed the guidelines'
+        # "the maximum win amount matches the description in the game rules for each
+        # mode". Corvus has NO wincap slice to force it, so this is the only lever.
+        # 9,000x rather than 9,158x deliberately: 9,158 is ONE SEED'S observed
+        # maximum, and publishing at the observed max leaves 1.7% of margin against
+        # a number that moves whenever anything is retuned. At 9,000x the rate is
+        # 1 in 2.48M against a ~1-in-10M guideline, with room to spare.
+        corvus_cap = 9000.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that
@@ -768,8 +777,24 @@ class GameConfig(Config):
             # cap is unreachable (it can be bought with a taller ladder) but because
             # buying it costs corvus the best body in the game. The deliberate grind
             # tier: highest >cost, lowest ceiling.
+            #
+            # ⚠ 240x UNTIL Aug 5 2026, WHEN IT MADE CORVUS UNBUYABLE. Measured on the
+            # converged act two pool, corvus was LAST on ceiling-per-cost (38.2x
+            # against ursa's 93.3x and draco's 48.1x) and second-worst on median,
+            # with a beat rate inside the other three's noise -- ursa cost 12% more
+            # and offered 2.7x the ceiling, because ursa reaches the global 25,000x
+            # cap while corvus's is organic. No ceiling number fixes that: even at
+            # 10,000x corvus was 41.7x cost, still last. A longer feature does not
+            # either (reels/sweep_feature_spins.py: it works, and compresses the
+            # 84/63/32 completion ladder to 93/85/55 doing it).
+            # Re-optimizing the same 1e6 pool at 120x gives ceiling-per-cost 76.3x,
+            # clearing draco and approaching ursa, and the max win STAYS OBTAINABLE
+            # at 1 in 4.7M -- it survives because the ceiling is ~0.001% of RTP, so
+            # a lower target is met by reweighting the body, not the tail.
+            # The menu becomes 120 / 268 / 520 / 563: a ladder, where 240 and 268
+            # were two names for the same rung.
             BetMode(
-                name="buy_corvus", cost=240.0, rtp=self.rtp, max_win=corvus_cap,
+                name="buy_corvus", cost=120.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),

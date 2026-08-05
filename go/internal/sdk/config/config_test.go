@@ -123,9 +123,15 @@ func TestBetModes(t *testing.T) {
 	}{
 		{"base", 1.0, 25000, false},
 		{"ante_starfall", 1.5, 25000, false},
-		// buy_corvus publishes an HONEST 10,000x: it cannot reach the cap, and
-		// MaxWin is the engine clamp as well as the advertised ceiling.
-		{"buy_corvus", 240, 10000, true},
+		// buy_corvus publishes an HONEST ceiling below the global cap: it cannot
+		// reach 25,000x, and MaxWin is the engine clamp as well as the advertised
+		// number. 10,000x until act two removed the fully-wild-board route and a
+		// full 1e6 pool topped out at 9,158x, making the published figure a lie.
+		// 9,000x rather than 9,158x because 9,158 was one seed's observed maximum.
+		// And 120x rather than 240x because at 240x corvus was last on
+		// ceiling-per-cost behind a mode costing 12% more -- a rung nobody should
+		// pick is worse than no rung.
+		{"buy_corvus", 120, 9000, true},
 		{"buy_ursa", 268, 25000, true},
 		{"buy_draco", 520, 25000, true},
 		{"buy_mystery", 563, 25000, true},

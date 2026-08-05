@@ -32,15 +32,24 @@ import sys
 
 GAME_DIR = sys.argv[1] if len(sys.argv) > 1 else "games/starwake/library/publish_files"
 
-# cost per mode (from the converged config)
-COSTS = {
-    "base": 1.0,
-    "ante_starfall": 1.5,
-    "buy_corvus": 240.0,
-    "buy_ursa": 268.0,
-    "buy_draco": 520.0,
-    "buy_mystery": 563.0,
-}
+
+def _costs():
+    """Cost per mode, read from game_config rather than restated here.
+
+    ⚠ THESE WERE HARDCODED UNTIL Aug 5 2026, AND IT PRODUCED A FALSE FAILURE. After
+    buy_corvus was repriced 240 -> 120 the optimizer converged correctly at 0.9665,
+    but this file still divided by 240 and reported RTP 0.4832 -- tripping the
+    "every mode RTP in 90.0-96.7%" CRITICAL test and printing SUBMISSION BLOCKED for
+    a pool that was fine. A gate checker that can invent a critical failure from a
+    stale constant is worse than no gate checker.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, here)
+    from game_config import GameConfig
+    return {bm.get_name(): bm.get_cost() for bm in GameConfig().bet_modes}
+
+
+COSTS = _costs()
 
 CRITICAL = {
     "base_std_min": 0.6,
