@@ -52,7 +52,14 @@ STRIP = "FRROAM.csv"
 STRIP_BAK = os.path.join(HERE, "FRROAM.csv.valbak")
 CONFIG = os.path.join(ROOT, "go", "config", "starwake.json")
 CONFIG_BAK = CONFIG + ".valbak"
-GO_BOOKS = os.path.join(ROOT, "go", "out", "library", "publish_files")
+# ⚠ SWEEPS WRITE TO THEIR OWN TREE, NOT go/out/library.
+# go/out/library holds the CONVERGED 1e6 POOL. sweep_feature_spins once left
+# corvus/ursa/draco there as 20k books from its last variant (48-56 MB against
+# 1.5-2.8 GB) and the next optimizer run consumed them without complaint,
+# reporting RTP 1.9330 and a ceiling the real pool cannot reach. The Go binary
+# takes -out, so a sweep has no reason to share the converged pool's directory.
+SWEEP_OUT = os.path.join(ROOT, "go", "out", "sweep")
+GO_BOOKS = os.path.join(SWEEP_OUT, "publish_files")
 
 # The winning mix from sweep_roam_strip.py: premium-heavy, so the collected
 # multiplier has something worth multiplying.
@@ -117,7 +124,7 @@ def export_with(values):
 def run_mode(mode, nsims):
     subprocess.run(
         ["go", "run", "./cmd/starwake", "-mode", mode, "-sims", str(nsims),
-         "-no-wincap", "-quiet"],
+         "-no-wincap", "-quiet", "-out", SWEEP_OUT],
         cwd=os.path.join(ROOT, "go"), check=True,
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 

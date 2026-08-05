@@ -47,7 +47,14 @@ import generate_reels as gr  # noqa: E402
 
 STRIP = "FRROAM.csv"
 BACKUP = os.path.join(HERE, "FRROAM.csv.sweepbak")
-GO_BOOKS = os.path.join(ROOT, "go", "out", "library", "publish_files")
+# ⚠ SWEEPS WRITE TO THEIR OWN TREE, NOT go/out/library.
+# go/out/library holds the CONVERGED 1e6 POOL. sweep_feature_spins once left
+# corvus/ursa/draco there as 20k books from its last variant (48-56 MB against
+# 1.5-2.8 GB) and the next optimizer run consumed them without complaint,
+# reporting RTP 1.9330 and a ceiling the real pool cannot reach. The Go binary
+# takes -out, so a sweep has no reason to share the converged pool's directory.
+SWEEP_OUT = os.path.join(ROOT, "go", "out", "sweep")
+GO_BOOKS = os.path.join(SWEEP_OUT, "publish_files")
 
 # Paying-symbol mixes. "lows" is what act two shipped with (a copy of FR0's
 # curve); "premium" inverts it so a collected multiplier has something to land on.
@@ -80,7 +87,7 @@ def run_mode(mode, nsims):
     variant and flatter every variant equally."""
     subprocess.run(
         ["go", "run", "./cmd/starwake", "-mode", mode, "-sims", str(nsims),
-         "-no-wincap", "-quiet"],
+         "-no-wincap", "-quiet", "-out", SWEEP_OUT],
         cwd=os.path.join(ROOT, "go"), check=True,
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
     )
