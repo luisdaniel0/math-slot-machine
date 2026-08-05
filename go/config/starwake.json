@@ -374,13 +374,17 @@
     ],
     "multiplier": [
       "W"
+    ],
+    "multiplier_star": [
+      "M"
     ]
   },
   "reels": {
     "BR0": "BR0.csv",
     "FR0": "FR0.csv",
     "WCAP": "FRWCAP.csv",
-    "ASC": "ASC.csv"
+    "ASC": "ASC.csv",
+    "ROAM": "FRROAM.csv"
   },
   "reelsDir": "games/starwake/reels",
   "anticipationTriggers": {
@@ -483,7 +487,33 @@
         "ladderRungs": 9,
         "prelitCells": [],
         "beastName": "corvus",
-        "featureSpins": 10
+        "featureSpins": 10,
+        "starDrops": {
+          "roamStrip": "ROAM",
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 50
+            },
+            {
+              "value": 3,
+              "weight": 25
+            },
+            {
+              "value": 5,
+              "weight": 15
+            },
+            {
+              "value": 10,
+              "weight": 8
+            },
+            {
+              "value": 25,
+              "weight": 2
+            }
+          ]
+        }
       },
       "ursa": {
         "cells": [
@@ -538,7 +568,37 @@
         "ladderRungs": 13,
         "prelitCells": [],
         "beastName": "ursa",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "roamStrip": "ROAM",
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 40
+            },
+            {
+              "value": 3,
+              "weight": 25
+            },
+            {
+              "value": 5,
+              "weight": 18
+            },
+            {
+              "value": 10,
+              "weight": 11
+            },
+            {
+              "value": 25,
+              "weight": 5
+            },
+            {
+              "value": 50,
+              "weight": 1
+            }
+          ]
+        }
       },
       "draco": {
         "cells": [
@@ -608,7 +668,41 @@
         "ladderRungs": 12,
         "prelitCells": [],
         "beastName": "draco",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "roamStrip": "ROAM",
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 32
+            },
+            {
+              "value": 3,
+              "weight": 22
+            },
+            {
+              "value": 5,
+              "weight": 20
+            },
+            {
+              "value": 10,
+              "weight": 14
+            },
+            {
+              "value": 25,
+              "weight": 8
+            },
+            {
+              "value": 50,
+              "weight": 3
+            },
+            {
+              "value": 100,
+              "weight": 1
+            }
+          ]
+        }
       },
       "ascendant": {
         "cells": [
@@ -687,7 +781,41 @@
           ]
         ],
         "beastName": "draco",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "roamStrip": "ROAM",
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 32
+            },
+            {
+              "value": 3,
+              "weight": 22
+            },
+            {
+              "value": 5,
+              "weight": 20
+            },
+            {
+              "value": 10,
+              "weight": 14
+            },
+            {
+              "value": 25,
+              "weight": 8
+            },
+            {
+              "value": 50,
+              "weight": 3
+            },
+            {
+              "value": 100,
+              "weight": 1
+            }
+          ]
+        }
       }
     }
   },

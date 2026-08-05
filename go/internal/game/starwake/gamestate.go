@@ -85,18 +85,22 @@ func (g *Game) RunSpin(sim int, seed uint64) error {
 // Valid after RunSpin returns: the redraw loop clears g.Con at the top of each
 // attempt, so what survives is the constellation of the book that was KEPT.
 //
-// roamSpins is rung+1, not rung: the beast shows rung 0 on the spin it first
-// appears (a roam spin that pays but does not climb), and each later roam takes
-// the next rung. That is the same count Python's measure harness gets from
-// counting beastRoam events.
-func (g *Game) FeatureOutcome() (dealt, completed bool, roamSpins, topRung int) {
+// roamSpins counts the spins the beast spent on the board, including the one it
+// appeared on -- the same count Python's measure harness gets from counting
+// beastRoam events. It is tracked explicitly rather than derived from the ladder
+// rung, because act two has no rungs and the derived version reported a flat zero
+// for every act two feature while looking like a real measurement.
+//
+// topMult is the multiplier the feature ended on: the last ladder rung reached, or
+// the total collected under act two.
+func (g *Game) FeatureOutcome() (dealt, completed bool, roamSpins, topMult int) {
 	if g.Con == nil {
 		return false, false, 0, 0
 	}
 	if g.Con.Phase() != PhaseRoam {
 		return true, false, 0, 0
 	}
-	return true, true, g.Con.Rung() + 1, g.Con.Multiplier()
+	return true, true, g.Con.RoamSpins(), g.Con.Multiplier()
 }
 
 // checkRepeat is Starwake's redraw rule on top of the SDK's.

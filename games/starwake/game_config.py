@@ -117,7 +117,16 @@ class GameConfig(Config):
         self.include_padding = True
         # "S" is the Star: bonus trigger by count (3/4/5 -> Corvus/Ursa/Draco)
         # in base, and the constellation-cell filler inside the feature
-        self.special_symbols = {"wild": ["W"], "scatter": ["S"], "multiplier": ["W"]}
+        # "M" is ACT TWO's multiplier star: a real reel symbol, non-paying (absent
+        # from the paytable, so it breaks a payline the way a scatter does), living
+        # only on the roam strip. It is registered under its own key rather than
+        # under "multiplier" -- that key marks symbols whose Multiplier attribute the
+        # LINE EVALUATOR reads, and a star must never contribute its value to a win.
+        # Its value rides on the cell and is collected by the beast instead.
+        self.special_symbols = {
+            "wild": ["W"], "scatter": ["S"], "multiplier": ["W"],
+            "multiplier_star": ["M"],
+        }
 
         # Fixed-length feature, length PER TIER: corvus 10, ursa 15, draco 15.
         # This REVISES the original "scatter count scales the TIER, never the spin
@@ -440,11 +449,63 @@ class GameConfig(Config):
         # TOPS, never by putting the floor back.
         self.min_roam_spins = 2
 
-        # Reels
-        reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
-                 "ASC": "ASC.csv"}
+        # ---------------------------------------------------------- ACT TWO
+        # The beast stops climbing a fixed ladder and starts COLLECTING. At wake the
+        # sticky wilds are consumed (the board returns to normal symbols, the 2x2 is
+        # the only wild left), and each roam spin the roam strip deals multiplier
+        # stars which the block collects -- all of them, wherever they landed --
+        # accumulating a multiplier that pays any line crossing the block.
+        #
+        # WHY. Draco ended a feature with 9.9 of 20 cells lit and 11.2 wild once the
+        # beast was out: every line wins, so no win means anything -- fifteen winning
+        # lines that look like a jackpot and pay a third of the ticket. Meanwhile a
+        # COMPLETED draco roamed ~4.0 rungs of 12, so the ladder was a rounding error
+        # and the wild carpet was the entire mode. This moves the payout onto the
+        # multiplier and hands the board back to paying symbols.
+        #
+        # COLLECTION IS GLOBAL, APPLICATION IS POSITIONAL -- read off Rage Bait's own
+        # paytable ("whenever a Wild is on the board it collects every Fish... any
+        # winning line passing through the Wild is multiplied that much more"). The
+        # block does not have to land on a star, so there is no positional lottery;
+        # but WHERE it roams still decides which wins get paid at the new value.
+        # Their collect -> cascade -> collect chain does NOT transfer: we have no
+        # cascades, so it is one beat per spin.
+        #
+        # ⚠ SETTING A TIER'S VALUES IS WHAT SWITCHES IT TO ACT TWO. A tier absent
+        # from this dict runs the original ladder unchanged. Both paths exist ONLY to
+        # be A/B swept against each other -- once "can act two carry the money" is
+        # measured, the loser is deleted. Do not let this become a permanent fork.
+        #
+        # ⚠ DENSITY IS NOT HERE. How many stars land is the ROAM STRIP's density
+        # (reels/generate_reels.py, weighted to the right-hand reels because a
+        # non-paying symbol on reel 0 kills a win outright while one on reel 4 only
+        # shortens a 5-kind). Only the VALUE of each star is rolled from this table.
+        # The two trade against each other -- more stars means more multiplier but
+        # fewer paying cells -- so they sit on separate surfaces and must be swept
+        # together.
+        #
+        # FIRST-PASS VALUES, UNMEASURED. Shape borrowed from Rage Bait's published
+        # fish (2/3/5/10/25/50/100x): heavy weight low, a thin top. Draco is dealt a
+        # richer table than Corvus so the tier ladder gains a SECOND axis -- today
+        # the tiers differ only in how hard they are to complete (84/63/32%), and
+        # "draco's stars are worth more too" is a better story than "draco is just
+        # harder". Ascendant shares Draco's, as it shares everything else.
+        self.constellation_roam_strip = "ROAM"
+        self.constellation_star_symbol = "M"
+        self.constellation_star_values = {
+            "corvus": {2: 50, 3: 25, 5: 15, 10: 8, 25: 2},
+            "ursa": {2: 40, 3: 25, 5: 18, 10: 11, 25: 5, 50: 1},
+            "draco": {2: 32, 3: 22, 5: 20, 10: 14, 25: 8, 50: 3, 100: 1},
+        }
+        self.constellation_star_values["ascendant"] = self.constellation_star_values["draco"]
+
+        # Reels. Kept on self so export_go_config reads THIS map rather than
+        # restating it -- a strip added here and missed there would leave the Go
+        # engine drawing the wrong reels with no error.
+        self.reel_files = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
+                           "ASC": "ASC.csv", "ROAM": "FRROAM.csv"}
         self.reels = {}
-        for r, f in reels.items():
+        for r, f in self.reel_files.items():
             self.reels[r] = self.read_reels_csv(os.path.join(self.reels_path, f))
 
         self.padding_reels[self.basegame_type] = self.reels["BR0"]

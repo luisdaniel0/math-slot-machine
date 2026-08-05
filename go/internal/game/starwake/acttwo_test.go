@@ -102,7 +102,7 @@ func TestWakeConsumesTheStickyWilds(t *testing.T) {
 
 func TestLadderTierStillCarpetsTheBoard(t *testing.T) {
 	// Regression: a tier with no starDrops must behave exactly as before, so the
-	// two mechanics can be A/B swept against each other.
+	// two mechanics can be A/B swept against each other. deal() strips the block.
 	_, cst := deal(t, "draco")
 	if cst.ActTwo() {
 		t.Fatal("a tier without starDrops must not run act two")

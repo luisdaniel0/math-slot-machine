@@ -12,6 +12,13 @@ import (
 // global multiplier silently multiplied nothing until the win strategy was
 // changed, and no full-run metric revealed it.
 
+// deal returns a tier on the LADDER path.
+//
+// ⚠ IT STRIPS starDrops. Every tier in the shipped config now carries an act two
+// block, and these tests cover either act one (shared by both mechanics) or the
+// ladder specifically. Leaving act two on would silently convert the ladder tests
+// into act two tests -- they would still pass in places and assert the wrong thing
+// in others. Act two has its own harness in acttwo_test.go.
 func deal(t *testing.T, tierName string) (*config.Config, *Constellation) {
 	t.Helper()
 	c, con := load(t)
@@ -19,6 +26,7 @@ func deal(t *testing.T, tierName string) (*config.Config, *Constellation) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+	tier.StarDrops = nil
 	cst, err := NewConstellation(tier, tierName, c)
 	if err != nil {
 		t.Fatalf("deal %s: %v", tierName, err)

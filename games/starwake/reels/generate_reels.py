@@ -103,6 +103,36 @@ STRIP_WEIGHTS = {
         "L1": 6, "L2": 6, "L3": 6, "L4": 6, "L5": 6,
         "W": 16, "S": 0,
     },
+    # ACT TWO roam strip -- the ONLY strip carrying the multiplier star "M".
+    #
+    # Drawn while the beast is awake and nowhere else. Act one keeps FR0, so a star
+    # can never land in the charge phase where there is no beast to collect it and
+    # a visibly inert symbol would be worse than either design.
+    #
+    # ⚠ M IS NON-PAYING, SO IT BREAKS A PAYLINE THE WAY A SCATTER DOES, AND THE COST
+    # DEPENDS ENTIRELY ON THE REEL. On a left-to-right lines game a blocker on reel 0
+    # kills every win through that row outright; one on reel 4 only shortens a 5-kind
+    # to a 4-kind. So density is weighted to the RIGHT: reel 0 stays clean, and the
+    # count climbs across the board. That also matches where act two's wins come from
+    # -- with the wild carpet gone, 5-kinds are rare and the left reels are carrying
+    # the 3-kinds that pay the body.
+    #
+    # ⚠ DENSITY AND VALUE TRADE AGAINST EACH OTHER AND THERE IS AN INTERIOR OPTIMUM.
+    # More stars = more multiplier but fewer paying cells to multiply, so pushing
+    # density past some point makes act two pay LESS. Density lives here; the value
+    # table lives in game_config.constellation_star_values. Sweep them together.
+    # FIRST-PASS NUMBERS, UNMEASURED -- this is the thing the next sweep is for.
+    #
+    # No wilds: the block is the only wild in act two, by design. No stars ("S"):
+    # the feature cannot retrigger.
+    "FRROAM.csv": {
+        "base": {
+            "H1": 8, "H2": 10, "H3": 12, "H4": 14,
+            "L1": 16, "L2": 18, "L3": 20, "L4": 22, "L5": 24,
+            "W": 0, "S": 0, "M": 0,
+        },
+        "per_reel": {1: {"M": 3}, 2: {"M": 6}, 3: {"M": 9}, 4: {"M": 12}},
+    },
     # DRACO ASCENDANT trigger strip -- the ONLY strip that can show 6 stars.
     #
     # WHY IT EXISTS. _force_special_board (src/calculations/board.py) places at most

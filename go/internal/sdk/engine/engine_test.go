@@ -33,9 +33,21 @@ func load(t *testing.T) (*config.Config, *SymbolTable, *ReelSet) {
 func TestSymbolTable(t *testing.T) {
 	_, st, _ := load(t)
 
-	// 11 symbols: W, S, H1-H4, L1-L5.
-	if got := st.Count(); got != 11 {
-		t.Errorf("interned %d symbols, want 11", got)
+	// 12 symbols: W, S, H1-H4, L1-L5, and M -- act two's multiplier star, which
+	// is non-paying and so reaches the table only via the roam strip.
+	if got := st.Count(); got != 12 {
+		t.Errorf("interned %d symbols, want 12", got)
+	}
+	// M must be neither wild nor scatter: wild would let it join winning runs and
+	// contribute its collected value to a line, scatter would let it trigger.
+	m := st.MustID("M")
+	if st.IsWild(m) || st.IsScatter(m) {
+		t.Error("the multiplier star must be a plain non-paying symbol")
+	}
+	for kind := 1; kind <= st.MaxKind(); kind++ {
+		if pay := st.Pay(kind, m); pay != 0 {
+			t.Errorf("M pays %v at kind %d; it must never pay", pay, kind)
+		}
 	}
 	if st.Name(NoSym) != "" {
 		t.Errorf("slot 0 should be reserved/empty, got %q", st.Name(NoSym))

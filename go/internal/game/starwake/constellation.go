@@ -61,6 +61,7 @@ type Constellation struct {
 	phase      Phase
 	multiplier int
 	rung       int
+	roamSpins  int
 	ladder     []int
 
 	beastW, beastH int
@@ -212,6 +213,11 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
 	con.beastPlaced = true
 	con.WokeThisSpin = true
+	// The beast is ON THE BOARD from the next spin, and that spin pays -- so the
+	// roam window starts at 1 here. Counted explicitly rather than derived from the
+	// rung: act two has no rungs, and deriving it read a flat zero for every act
+	// two feature while looking like a real measurement.
+	con.roamSpins = 1
 	return nil
 }
 
@@ -228,6 +234,7 @@ func (con *Constellation) Roam(g *engine.RNG) error {
 		return fmt.Errorf("%s: roam before the beast woke", con.Tier)
 	}
 	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
+	con.roamSpins++
 	if !con.ActTwo() {
 		if con.rung+1 < len(con.ladder) {
 			con.rung++
@@ -237,6 +244,10 @@ func (con *Constellation) Roam(g *engine.RNG) error {
 	con.WokeThisSpin = false
 	return nil
 }
+
+// RoamSpins is how many spins the beast has been on the board, including the one
+// it appeared on.
+func (con *Constellation) RoamSpins() int { return con.roamSpins }
 
 // RollStarValues finds the multiplier stars the reels just dealt and gives each
 // one a value.

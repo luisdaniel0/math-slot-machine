@@ -178,6 +178,22 @@ def export_constellation(config) -> dict:
             "featureSpins": config.num_feature_spins[tier],
         }
 
+        # ACT TWO. Present only for tiers given a star-value table; a tier without
+        # one runs the original climbing ladder, which is how the two mechanics are
+        # A/B swept. Values are emitted as an ORDERED LIST of {value, weight} pairs,
+        # never a map: Go randomises map iteration order and the engine's output has
+        # to stay byte-deterministic for the published sha256s to reproduce.
+        values = getattr(config, "constellation_star_values", {}).get(tier)
+        if values:
+            tiers[tier]["starDrops"] = {
+                "roamStrip": config.constellation_roam_strip,
+                "starSymbol": config.constellation_star_symbol,
+                "values": [
+                    {"value": int(v), "weight": int(w)}
+                    for v, w in sorted(values.items())
+                ],
+            }
+
     return {"minRoamSpins": config.min_roam_spins, "tiers": tiers}
 
 
@@ -261,7 +277,11 @@ def build_payload(config) -> dict:
         "paylines": export_paylines(config),
         "specialSymbols": {k: list(v) for k, v in config.special_symbols.items()},
         # Filenames only -- Go reads the CSVs so the strips keep one source of truth.
-        "reels": {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv", "ASC": "ASC.csv"},
+        # Mirrors game_config's own map rather than restating it, so a new strip
+        # cannot reach the Python config and silently miss the Go one -- the roam
+        # strip failing to export would leave act two drawing FR0, collecting
+        # nothing, and paying x1 all the way through while looking entirely normal.
+        "reels": dict(config.reel_files),
         "reelsDir": "games/starwake/reels",
         "anticipationTriggers": dict(config.anticipation_triggers),
         "freespinTriggers": {
