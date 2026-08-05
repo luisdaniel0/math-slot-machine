@@ -205,9 +205,9 @@ func (g *Game) RunFreespin() error {
 		// symbols, which is what keeps them out of the charge phase where there is
 		// no beast to collect them. Set per spin rather than once at wake so the
 		// charge phase is provably untouched.
-		g.StripOverride = ""
+		g.StripKey = ""
 		if con.ActTwo() && con.Phase() == PhaseRoam {
-			g.StripOverride = con.RoamStrip()
+			g.StripKey = RoamStripKey
 		}
 		if err := g.DrawBoard(false); err != nil {
 			return err
@@ -275,7 +275,7 @@ func (g *Game) RunFreespin() error {
 	}
 
 	// The basegame draws from the distribution again after the feature returns.
-	g.StripOverride = ""
+	g.StripKey = ""
 	g.EndFreespin()
 	return nil
 }

@@ -31,7 +31,6 @@ func actTwoTier(t *testing.T, name string) (*config.Config, Tier) {
 		t.Fatalf("%v", err)
 	}
 	tier.StarDrops = &StarDrops{
-		RoamStrip:  "FR0", // stands in for the real roam strip
 		StarSymbol: starStandIn,
 		Values:     []WeightedInt{{Value: 2, Weight: 4}, {Value: 5, Weight: 2}, {Value: 25, Weight: 1}},
 	}
@@ -364,32 +363,58 @@ func TestStarValuesAreDeterministic(t *testing.T) {
 }
 
 func TestStarDropConfigValidation(t *testing.T) {
-	c, _ := load(t)
 	valid := []WeightedInt{{Value: 2, Weight: 1}, {Value: 100, Weight: 1}}
 
 	bad := []struct {
 		name  string
 		drops StarDrops
 	}{
-		{"no roam strip", StarDrops{StarSymbol: "M", Values: valid}},
-		{"unknown roam strip", StarDrops{RoamStrip: "NOPE", StarSymbol: "M", Values: valid}},
-		{"no star symbol", StarDrops{RoamStrip: "FR0", Values: valid}},
-		{"empty values", StarDrops{RoamStrip: "FR0", StarSymbol: "M"}},
-		{"x1 star is a no-op", StarDrops{RoamStrip: "FR0", StarSymbol: "M",
+		{"no star symbol", StarDrops{Values: valid}},
+		{"empty values", StarDrops{StarSymbol: "M"}},
+		{"x1 star is a no-op", StarDrops{StarSymbol: "M",
 			Values: []WeightedInt{{Value: 1, Weight: 1}}}},
-		{"duplicate value", StarDrops{RoamStrip: "FR0", StarSymbol: "M",
+		{"duplicate value", StarDrops{StarSymbol: "M",
 			Values: []WeightedInt{{Value: 2, Weight: 1}, {Value: 2, Weight: 1}}}},
-		{"zero total weight", StarDrops{RoamStrip: "FR0", StarSymbol: "M",
+		{"zero total weight", StarDrops{StarSymbol: "M",
 			Values: []WeightedInt{{Value: 2, Weight: 0}}}},
 	}
 	for _, tc := range bad {
-		if err := tc.drops.validate("test", c); err == nil {
+		if err := tc.drops.validate("test"); err == nil {
 			t.Errorf("%s: accepted, want rejected", tc.name)
 		}
 	}
-
-	ok := StarDrops{RoamStrip: "FR0", StarSymbol: "M", Values: valid}
-	if err := ok.validate("test", c); err != nil {
+	ok := StarDrops{StarSymbol: "M", Values: valid}
+	if err := ok.validate("test"); err != nil {
 		t.Errorf("valid table rejected: %v", err)
+	}
+}
+
+// A slice that can reach the feature but declares no roam strip is the silent
+// failure this guard exists for: pickStrip would only error on the first spin
+// after a beast wakes, and a wincap slice missing it would hunt an unreachable
+// ceiling forever instead of failing at all.
+func TestRoamWeightsAreRequiredWhereverTheFeatureCanBeReached(t *testing.T) {
+	c, _ := load(t)
+	if err := validateRoamWeights(c); err != nil {
+		t.Fatalf("shipped config: %v", err)
+	}
+
+	// Every wincap slice must mix in a juiced roam strip, or its forced ceiling
+	// is out of reach and the sim hangs rather than failing.
+	sawWincap := false
+	for _, mode := range c.BetModes {
+		for _, dist := range mode.Distributions {
+			if dist.Criteria != "wincap" {
+				continue
+			}
+			sawWincap = true
+			if len(dist.Conditions.ReelWeights[RoamStripKey]) < 2 {
+				t.Errorf("%s/wincap has no juiced roam strip: %v",
+					mode.Name, dist.Conditions.ReelWeights[RoamStripKey])
+			}
+		}
+	}
+	if !sawWincap {
+		t.Fatal("no wincap slices found; this test proves nothing")
 	}
 }

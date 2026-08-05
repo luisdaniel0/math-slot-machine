@@ -186,7 +186,6 @@ def export_constellation(config) -> dict:
         values = getattr(config, "constellation_star_values", {}).get(tier)
         if values:
             tiers[tier]["starDrops"] = {
-                "roamStrip": config.constellation_roam_strip,
                 "starSymbol": config.constellation_star_symbol,
                 "values": [
                     {"value": int(v), "weight": int(w)}

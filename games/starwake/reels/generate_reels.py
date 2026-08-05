@@ -133,6 +133,29 @@ STRIP_WEIGHTS = {
         },
         "per_reel": {1: {"M": 3}, 2: {"M": 6}, 3: {"M": 9}, 4: {"M": 12}},
     },
+    # ACT TWO wincap helper -- the roam-phase twin of FRWCAP, mixed in at 5:1 on
+    # forced-wincap slices only.
+    #
+    # WHY IT EXISTS. A forced wincap slice redraws until it finds a book paying the
+    # mode's ceiling, with no retry cap, so a ceiling out of structural reach HANGS
+    # rather than failing. Act two's payout is (symbol win) x (collected multiplier)
+    # and BOTH halves are thin on the ordinary roam strip: measured max win was
+    # 6,705x against a published 25,000x. So this strip fattens both halves at once
+    # -- star density roughly 4x ROAM's so the multiplier actually accumulates, and
+    # premium-heavy paying symbols so there is something worth multiplying.
+    #
+    # ⚠ IT IS NOT SIMPLY "MORE STARS". Past some density the board runs out of
+    # paying cells and act two pays LESS -- stars are non-paying and break paylines.
+    # That is why the premiums are boosted alongside: the two must move together.
+    # Reel 0 stays star-free so the leftmost reel can always start a win.
+    "FRROAMCAP.csv": {
+        "base": {
+            "H1": 20, "H2": 14, "H3": 10, "H4": 8,
+            "L1": 6, "L2": 6, "L3": 6, "L4": 6, "L5": 6,
+            "W": 0, "S": 0, "M": 0,
+        },
+        "per_reel": {1: {"M": 12}, 2: {"M": 24}, 3: {"M": 36}, 4: {"M": 48}},
+    },
     # DRACO ASCENDANT trigger strip -- the ONLY strip that can show 6 stars.
     #
     # WHY IT EXISTS. _force_special_board (src/calculations/board.py) places at most

@@ -38,16 +38,20 @@ type WeightedInt struct {
 // of each one is rolled from config. Density and value trade against each other
 // during tuning -- more stars means more multiplier but fewer paying cells -- so
 // they are deliberately kept on separate surfaces: density in reels/, value here.
+//
+// ⚠ NOR IS THE ROAM STRIP NAMED HERE. It comes from each distribution's
+// reelWeights["roam"], the same mechanism every other strip choice uses, so a
+// wincap slice can weight a juiced roam strip exactly as it weights WCAP today.
+// Pinning one strip per tier is what made the published ceiling unreachable.
 type StarDrops struct {
-	// RoamStrip is the reel set drawn while the beast is awake. It is the only
-	// strip carrying the star symbol, which is what keeps stars out of act one
-	// where there is no beast to collect them.
-	RoamStrip string `json:"roamStrip"`
 	// StarSymbol is the non-paying symbol the beast collects.
 	StarSymbol string `json:"starSymbol"`
 	// Values is each star's multiplier value, drawn independently per star.
 	Values []WeightedInt `json:"values"`
 }
+
+// RoamStripKey is the reelWeights entry act two draws from.
+const RoamStripKey = "roam"
 
 // Tier is one constellation's full definition.
 //
@@ -97,6 +101,7 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 	if len(con.Tiers) == 0 {
 		return fmt.Errorf("no tiers")
 	}
+	anyActTwo := false
 
 	for name, t := range con.Tiers {
 		// THE LADDER INVARIANT, and the one the original Python guard got wrong.
@@ -158,31 +163,61 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 		}
 
 		if t.StarDrops != nil {
-			if err := t.StarDrops.validate(name, c); err != nil {
+			if err := t.StarDrops.validate(name); err != nil {
 				return err
 			}
+			anyActTwo = true
 		}
+	}
+	// Only demanded when a tier actually runs act two, so the ladder path stays
+	// loadable with no roam weights at all -- which is what the A/B sweep needs.
+	if anyActTwo {
+		return validateRoamWeights(c)
 	}
 	return nil
 }
 
-func (sd *StarDrops) validate(tier string, c *config.Config) error {
-	if sd.RoamStrip == "" {
-		return fmt.Errorf("tier %s: starDrops.roamStrip is empty", tier)
-	}
-	// Without this the roam would silently fall back to the charge strip, which
-	// carries no stars -- act two would run, collect nothing, and pay x1 all the
-	// way through while looking entirely normal.
-	if _, ok := c.Reels[sd.RoamStrip]; !ok {
-		return fmt.Errorf("tier %s: starDrops.roamStrip %q is not a configured reel set",
-			tier, sd.RoamStrip)
-	}
+func (sd *StarDrops) validate(tier string) error {
 	if sd.StarSymbol == "" {
 		return fmt.Errorf("tier %s: starDrops.starSymbol is empty", tier)
 	}
 	// A star worth x1 adds nothing and would animate a collect for no gain, so the
 	// floor is 2 -- the same floor Rage Bait's fish use.
 	return validWeights(tier, "starDrops.values", sd.Values, 2)
+}
+
+// validateRoamWeights checks that every slice which can reach the feature also
+// declares a roam strip.
+//
+// ⚠ THIS IS THE GUARD FOR A SILENT FAILURE, NOT A TYPO CHECK. A missing roam entry
+// does not crash: pickStrip would error, but only on the first spin AFTER a beast
+// wakes, which on draco is 32% of books deep inside a mode -- and the same slice
+// omitted from a wincap distribution would leave that slice drawing an ordinary
+// roam strip and hunting a ceiling it can never reach, which HANGS with no error
+// at all. Checked once at load, where it is loud and free.
+func validateRoamWeights(c *config.Config) error {
+	for _, mode := range c.BetModes {
+		for _, dist := range mode.Distributions {
+			// Only slices that can enter the feature need one. A base-mode "0"
+			// slice declares basegame weights and nothing else.
+			if _, canTrigger := dist.Conditions.ReelWeights[c.Game.FreegameType]; !canTrigger {
+				continue
+			}
+			weights, ok := dist.Conditions.ReelWeights[RoamStripKey]
+			if !ok || len(weights) == 0 {
+				return fmt.Errorf(
+					"%s/%s reaches the feature but declares no reelWeights[%q]",
+					mode.Name, dist.Criteria, RoamStripKey)
+			}
+			for id := range weights {
+				if _, known := c.Reels[id]; !known {
+					return fmt.Errorf("%s/%s: roam strip %q is not a configured reel set",
+						mode.Name, dist.Criteria, id)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func validWeights(tier, field string, rows []WeightedInt, minValue int) error {

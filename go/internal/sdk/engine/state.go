@@ -121,16 +121,24 @@ type Spin struct {
 	Fs, TotFs         int
 	GlobalMult        int
 
-	// StripOverride pins the next draw to one named reel strip, bypassing the
-	// distribution's reel weights for this gametype.
+	// StripKey selects which entry of the distribution's ReelWeights the next draw
+	// reads, instead of the current GameType. Empty means GameType, as normal.
 	//
-	// Needed because a strip is normally chosen ONCE PER BOOK from the
-	// distribution, and a two-phase feature has to change reels PART WAY THROUGH
-	// one -- Starwake's roam draws a strip carrying multiplier symbols that must
-	// not appear during the charge phase, where there is no beast to collect them.
-	// Empty means the normal weighted pick. The game is responsible for clearing
-	// it; ResetBook does not, because a book may legitimately end mid-phase.
-	StripOverride string
+	// A game with more than two phases needs more than two reel sets, and reel
+	// weights are already the mechanism for "this slice draws from these strips
+	// with these odds" -- Starwake's wincap slices use it today to mix WCAP in at
+	// 5:1 so the ceiling stays reachable. Naming a KEY rather than pinning a STRIP
+	// keeps that: the roam phase reads reelWeights["roam"] and still gets a
+	// weighted pick, so a wincap slice can weight a juiced roam strip the same way.
+	//
+	// ⚠ AN EARLIER VERSION PINNED A SINGLE STRIP PER TIER. That silently made the
+	// published ceiling unreachable -- the roam phase drew the ordinary strip even
+	// in a forced-wincap book, so the sim hunted a book that could not exist and
+	// hung. Pin keys, not strips.
+	//
+	// The game is responsible for clearing it; ResetBook does not, because a book
+	// may legitimately end mid-phase.
+	StripKey string
 	WincapTriggered   bool
 	TriggeredFreegame bool
 	Repeat            bool
@@ -276,14 +284,14 @@ func (s *Spin) DrawBoard(emitReveal bool) error {
 }
 
 func (s *Spin) pickStrip() (Strip, string, error) {
-	if s.StripOverride != "" {
-		strip, err := s.Reels.Strip(s.StripOverride)
-		return strip, s.StripOverride, err
+	key := s.GameType
+	if s.StripKey != "" {
+		key = s.StripKey
 	}
-	weights, ok := s.Dist.Conditions.ReelWeights[s.GameType]
+	weights, ok := s.Dist.Conditions.ReelWeights[key]
 	if !ok {
-		return nil, "", fmt.Errorf("%s/%s: no reel weights for gametype %q",
-			s.Mode.Name, s.Criteria, s.GameType)
+		return nil, "", fmt.Errorf("%s/%s: no reel weights for %q",
+			s.Mode.Name, s.Criteria, key)
 	}
 	id := pickWeightedString(weights, s.RNG)
 	strip, err := s.Reels.Strip(id)

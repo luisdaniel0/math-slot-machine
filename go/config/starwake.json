@@ -384,7 +384,8 @@
     "FR0": "FR0.csv",
     "WCAP": "FRWCAP.csv",
     "ASC": "ASC.csv",
-    "ROAM": "FRROAM.csv"
+    "ROAM": "FRROAM.csv",
+    "ROAMCAP": "FRROAMCAP.csv"
   },
   "reelsDir": "games/starwake/reels",
   "anticipationTriggers": {
@@ -489,7 +490,6 @@
         "beastName": "corvus",
         "featureSpins": 10,
         "starDrops": {
-          "roamStrip": "ROAM",
           "starSymbol": "M",
           "values": [
             {
@@ -570,7 +570,6 @@
         "beastName": "ursa",
         "featureSpins": 15,
         "starDrops": {
-          "roamStrip": "ROAM",
           "starSymbol": "M",
           "values": [
             {
@@ -670,7 +669,6 @@
         "beastName": "draco",
         "featureSpins": 15,
         "starDrops": {
-          "roamStrip": "ROAM",
           "starSymbol": "M",
           "values": [
             {
@@ -783,7 +781,6 @@
         "beastName": "draco",
         "featureSpins": 15,
         "starDrops": {
-          "roamStrip": "ROAM",
           "starSymbol": "M",
           "values": [
             {
@@ -844,6 +841,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -882,6 +883,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -920,6 +924,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -958,6 +965,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1054,6 +1064,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -1092,6 +1106,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1130,6 +1147,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1168,6 +1188,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1263,6 +1286,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1313,6 +1339,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -1351,6 +1381,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1401,6 +1434,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -1439,6 +1476,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1489,6 +1529,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -1527,6 +1571,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1565,6 +1612,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1603,6 +1653,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1641,6 +1694,9 @@
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [

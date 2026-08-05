@@ -310,14 +310,6 @@ func (con *Constellation) Collect() (gained, total int) {
 // Fallen lists the stars currently on the board (this spin's drops).
 func (con *Constellation) Fallen() []Star { return con.fallen }
 
-// RoamStrip is the reel set act two draws while the beast is awake.
-func (con *Constellation) RoamStrip() string {
-	if con.drops == nil {
-		return ""
-	}
-	return con.drops.RoamStrip
-}
-
 // StarSymbol is the symbol name the beast collects.
 func (con *Constellation) StarSymbol() string {
 	if con.drops == nil {

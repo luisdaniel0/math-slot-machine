@@ -490,7 +490,10 @@ class GameConfig(Config):
         # the tiers differ only in how hard they are to complete (84/63/32%), and
         # "draco's stars are worth more too" is a better story than "draco is just
         # harder". Ascendant shares Draco's, as it shares everything else.
-        self.constellation_roam_strip = "ROAM"
+        # ⚠ THE ROAM STRIP IS NOT NAMED HERE. It comes from each distribution's
+        # reel_weights["roam"] (see _tier_condition below), so a wincap slice can
+        # weight a juiced roam strip the way it already weights WCAP. Pinning one
+        # strip per tier is what made the published ceiling unreachable.
         self.constellation_star_symbol = "M"
         self.constellation_star_values = {
             "corvus": {2: 50, 3: 25, 5: 15, 10: 8, 25: 2},
@@ -503,7 +506,8 @@ class GameConfig(Config):
         # restating it -- a strip added here and missed there would leave the Go
         # engine drawing the wrong reels with no error.
         self.reel_files = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
-                           "ASC": "ASC.csv", "ROAM": "FRROAM.csv"}
+                           "ASC": "ASC.csv", "ROAM": "FRROAM.csv",
+                           "ROAMCAP": "FRROAMCAP.csv"}
         self.reels = {}
         for r, f in self.reel_files.items():
             self.reels[r] = self.read_reels_csv(os.path.join(self.reels_path, f))
@@ -531,10 +535,27 @@ class GameConfig(Config):
         # freegame mult_values are {1:1}.
         fg_mult = {self.basegame_type: {1: 1}, self.freegame_type: {1: 1}}
 
+        # ACT TWO's reel set, keyed like any other. "roam" is a third reel-weights
+        # entry alongside basegame and freegame: act one draws freegame, and the
+        # moment the beast wakes the engine reads THIS instead.
+        #
+        # ⚠ IT IS A WEIGHTED PICK, NOT A PINNED STRIP, AND THAT IS THE WHOLE POINT.
+        # An earlier version named one roam strip per tier, which meant a forced
+        # wincap book still drew the ORDINARY roam strip -- so it hunted a 25,000x
+        # book that could not exist and HUNG, exactly as the wincap warning below
+        # predicts. Keying it lets a wincap slice mix in ROAMCAP at 5:1, the same
+        # trick that keeps the ceiling reachable on the freegame side with WCAP.
+        roam_weights = {"ROAM": 1}
+        roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 5}
+
         def _tier_condition(star_count):
             """Force exactly `star_count` stars -> deal that one tier, run the feature."""
             return {
-                "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1}},
+                "reel_weights": {
+                    self.basegame_type: {"BR0": 1},
+                    self.freegame_type: {"FR0": 1},
+                    "roam": dict(roam_weights),
+                },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
                 "force_wincap": False,
@@ -552,7 +573,11 @@ class GameConfig(Config):
         # 6 succeeds on ~92% of attempts there; on BR0 it would be ~20% and would
         # break silently the next time BR0's weights are touched.
         ascendant_condition = {
-            "reel_weights": {self.basegame_type: {"ASC": 1}, self.freegame_type: {"FR0": 1}},
+            "reel_weights": {
+                self.basegame_type: {"ASC": 1},
+                self.freegame_type: {"FR0": 1},
+                "roam": dict(roam_weights),
+            },
             "scatter_triggers": {6: 1},
             "mult_values": fg_mult,
             "force_wincap": False,
@@ -585,6 +610,9 @@ class GameConfig(Config):
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
                     self.freegame_type: {"FR0": 1, "WCAP": 5},
+                    # The act two half of the same trick -- without it the roam
+                    # phase draws ordinary reels and the forced cap never lands.
+                    "roam": dict(roam_wincap_weights),
                 },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
