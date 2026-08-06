@@ -66,10 +66,44 @@ FILLER = "L5"
 STRIP_WEIGHTS = {
     # Base: lows-heavy (frequent crumbs = hit-rate floor), wilds rare, stars only
     # to seed forced triggers + anticipation. Higher-paying symbol = lower count.
+    # ⚠ PREMIUMS ARE STACKED, AND THAT IS WHAT GIVES BASE A CEILING. Until Aug 5
+    # 2026 this was a flat shuffle and an ordinary base spin topped out at 22x while
+    # carrying 62.8% of base RTP -- the mode players spend 95% of their time in,
+    # structurally unable to produce a big win. That was never a paytable limit
+    # (twenty lines of H1 is 240x); a shuffled strip just never puts a premium on
+    # more than one payline at a time. Laying H1/H2/H3 down in runs of 4 means a stop
+    # on the run shows a SOLID COLUMN, so every row pays at once.
+    #
+    # Counts are raised alongside (H1 8->16, H2 10->16, H3 12->16, lows down to pay
+    # for it) because run length alone is not enough: H1 at count 8 gives only two
+    # 4-runs per reel, so P(one reel solid) is ~1.2% and a three-reel alignment is
+    # ~1 in 500k. More stacks per reel is what makes the big board reachable.
+    #
+    # MEASURED, delivered after the optimizer at 1e6:
+    #   variant       std    bust%    hit%   plain max   >100x share
+    #   flat        24.51   70.75%  29.25%        22x        0.229
+    #   x4 free     24.94   70.75%  29.25%        90x        0.250
+    #   x4 richer   24.99   70.75%  29.25%       180x        0.321   <- THIS
+    #   x4 richest  25.18   70.75%  29.25%       240x        0.372
+    # 0.372 is the ceiling the old structure could ever reach, since that bound was
+    # feature share plus cap share and ordinary spins contributed nothing to it.
+    # "richest" reaches it but turns base premium-heavy enough to read as a different
+    # game; "richer" takes most of the gain and keeps base recognisable.
+    #
+    # ⚠ HIT RATE, BUST RATE AND THE BASEGAME RTP SHARE CANNOT MOVE HERE -- opt_params
+    # pins all three. So stacking does not buy the ceiling with them; it redistributes
+    # the same RTP inside the same hit rate, which means the TYPICAL paying spin pays
+    # less. That is the trade.
+    # ⚠ AND IT DOES NOT FIX BASE STD (24.51 -> 24.99). Base variance is dominated by
+    # the wincap slice's 25,000x at 1 in 1.25M; a 180x ordinary ceiling barely
+    # registers. Std was never a compliance problem (gate is >=0.6, ceiling 50/60).
     "BR0.csv": {
-        "H1": 8, "H2": 10, "H3": 12, "H4": 14,
-        "L1": 18, "L2": 20, "L3": 22, "L4": 24, "L5": 26,
-        "W": 2, "S": 5,
+        "base": {
+            "H1": 16, "H2": 16, "H3": 16, "H4": 14,
+            "L1": 14, "L2": 16, "L3": 18, "L4": 20, "L5": 22,
+            "W": 2, "S": 5,
+        },
+        "stacks": {"H1": 4, "H2": 4, "H3": 4},
     },
     # Freegame: THE completion-ladder strip. Reels 0-2 wet enough that the snowball
     # ignites (Corvus stays a reliable beast hunt, no cold-start bust); reels 3-4
@@ -302,6 +336,13 @@ def build_reel(weights, target_len, rng, scatter_layout=None, reel=None, stacks=
     control is needed. `stacks` lays chosen symbols down in contiguous runs; see
     _place_stacks for why.
     """
+    if stacks and scatter_layout:
+        # The two paths both own symbol placement, and this one runs first -- so a
+        # spec asking for both would SILENTLY SKIP the scatter layout. On ASC that
+        # means losing the reel-2 step-3 run that guarantees a 6-scatter board, and
+        # forcing 6 would then hang forever rather than fail. Loud here instead.
+        raise ValueError("a strip cannot use both `stacks` and `scatter_layout`; "
+                         "the scatter layout would be silently dropped")
     if stacks:
         placed = _place_stacks(target_len, stacks, weights, rng)
         body = []
