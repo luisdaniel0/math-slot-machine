@@ -18,18 +18,76 @@ history of decisions that cost a sim run to re-derive. Read order if you are new
      and the older one says so explicitly.
 Repo-wide rules (remotes, what never to commit) live in the ROOT `CLAUDE.md`.
 
-### ▶▶ WHERE WE ARE (Aug 4 2026)
-MATH: converged, tagged `starwake-math-v1`, and NOT currently shippable — the Aug 3
-cell-count sweep clobbered force records / verification files for the three buy modes
-(books and LUTs were restored). Any retune re-sims those anyway.
-IN FLIGHT: the Go SDK port (`go/`) — sim engine, publishing and a full 1e6 x 6-mode run
-all landed and merged to main. See root `CLAUDE.md` for how to run it.
-NEXT: "ACT TWO -- DESIGNED, NOT BUILT" below. Order of work is
-  (1) Act Two engine, unit-tested in isolation before it touches the sim
-  (2) measure whether act 2 can carry the money — the one real risk
-  (3) retune drop tables / prices / RTP, converge at 1e6
-  (4) `check_risk_gates.py`, confirm still 0 failed classes at 3-Star
-  (5) publishing items (mystery odds copy, force-record re-sim)
+### ▶▶ WHERE WE ARE (Aug 5 2026)
+MATH: DONE. Act Two built, converged and gated — see "THE MATH IS DONE" below for
+the numbers and the pool location. All seven critical tests pass and 3-Star carries
+zero failed classes.
+NEXT IS THE FRONTEND, and it is the larger half of the remaining work. It is also
+what decides the STAR RATING, which is a human quality review of art, animation,
+sound, performance and depth — the math cannot earn a third star, only fail to lose
+one. And the publishing floor rose to 6 points for new games. In rough order:
+  (1) wire starsLanded / starsCollected; delete the ladder events
+  (2) replay mode — MANDATORY and entirely absent
+  (3) six-mode buy menu with the >2x confirmation, info/rules screen
+  (4) mobile + popout layouts, sweeps_ language files, the SUPERSPIN remap
+  (5) ART, ANIMATION, SOUND — longest lead time, does not block on the math, and
+      the single most-cited reason a game is sent back. Start hiring in parallel.
+  (6) mystery odds into the frontend copy (the last math-side publishing item;
+      ⚠ re-read them off the CURRENT pool, the old 35.161/29.635/25.115/10.055 and
+      the 526x price are both stale)
+⚠ BEFORE ANY PUBLISH: re-measure buy_corvus's max-win rate on the exact pool being
+shipped. It has no wincap slice, so its rate is an optimizer draw — measured across
+identical runs at 1 in 3.1M to 6.6M, with one outlier at 1 in 14.5M, against a
+1-in-10M gate. This is a permanent per-pool check, not a one-off.
+
+### ▶▶ THE MATH IS DONE (Aug 5 2026). Clean 1e6 x 6, 23 min, all gates green.
+POOL: `games/starwake_go/library/publish_files` (optimized LUTs) and
+`go/out/library` (books, segmented LUTs). Every mode from ONE config state in one
+pass. `games/starwake/library/` still holds the OLD LADDER POOL -- do not read it.
+
+  mode              cost   median  med/c    beat  ceiling  ceil/c        max win  gaps
+  base                1x       0x   0.00    8.0%  25,000x  25000x 1 in 1,250,001  none
+  ante_starfall     1.5x       0x   0.00    3.2%  25,000x  16667x   1 in 666,667  none
+  buy_corvus        120x      28x   0.23   18.6%   9,000x   75.0x 1 in 4,613,159  none
+  buy_ursa          268x      46x   0.17   21.4%  25,000x   93.3x     1 in 3,589  none
+  buy_draco         520x     122x   0.24   21.8%  25,000x   48.1x       1 in 642  none
+  buy_mystery       563x     184x   0.33   18.7%  25,000x   44.4x     1 in 1,110  none
+
+COMPLIANT: all seven critical tests pass; 3-Star has ZERO failed classes -> the
+$500 bet template. 2-Star still shows one (absolute CVaR) and it is still free.
+  base std        25.36    limit 60 (critical floor 0.6)
+  CVaR/stake        245    limit 700
+  CVaR absolute  25,000    limit 50,000
+  P(>=5,000x)  5.01e-03    limit 0.050
+  P(>=10,000x) 2.24e-03    limit 0.010
+  ETL(>40x)       0.558    limit 0.9      <- moved 0.377 -> 0.558; the stacked base
+  ETL sum         0.580    limit 1.5         pushes RTP into heavy-tail wins, as designed
+NO WIN-RANGE GAPS in any mode. Largest books file 2.82 GB vs the 4.2 GB cap.
+
+BASE DRYNESS FIXED, and it was the defect players would actually feel:
+  ordinary base spin ceiling   22x -> 180x
+  base RTP above 100x        0.229 -> 0.311
+Hit rate, bust rate and the basegame RTP share are UNCHANGED at 29.25 / 70.75 /
+62.8% -- opt_params pins all three, so the ceiling was not bought with any of them.
+Same money, same hit rate, redistributed: the typical paying spin gives a little
+less and the occasional one gives a lot more.
+
+CORVUS'S MAX WIN LANDED AT 1 IN 4.61M, a mid draw of the measured 1-in-3.1M to
+6.6M range and comfortably inside the 1-in-10M gate. ⚠ THAT CHECK IS PERMANENT:
+corvus has no wincap slice, so its rate is set by the optimizer's draw and must be
+re-measured on every pool that ships. One earlier draw landed at 1 in 14.5M.
+
+⚠ WHAT IS **NOT** FIXED, deliberately: base std 25.36 against a 35-48 market band.
+Stacking moved it only 24.51 -> 25.36 because base variance is dominated by the
+wincap slice's 25,000x at 1 in 1.25M -- a 180x ordinary ceiling barely registers.
+It was never a compliance issue (critical floor 0.6, non-critical ceiling 50/60);
+the band is a competitor observation. Chasing it means changing what the CAP
+contributes, which is far more invasive than anything done here. ACCEPTED.
+
+NEXT IS NOT MATH. Replay mode (mandatory) does not exist; starsLanded/
+starsCollected are not wired and the ladder events need removing; no buy menu,
+info screen, mobile/popout, sweeps_ language files; no art, animation or sound.
+That is what decides the star rating and the 6-point publishing threshold.
 
 ### ▶▶ CORVUS IS A PRICING PROBLEM, NOT A CEILING PROBLEM (Aug 5 2026)
 Measured on the converged act two pool, buy_corvus has no reason to exist:
