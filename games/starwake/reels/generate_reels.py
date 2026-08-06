@@ -226,6 +226,45 @@ def reel_tables(spec):
     return [dict(spec) for _ in range(NUM_REELS)]  # flat: same table every reel
 
 
+def _place_stacks(target_len, stack_spec, tables, rng):
+    """Lay symbols down in CONTIGUOUS RUNS instead of scattering them.
+
+    Returns {position: symbol}; every position it claims is removed from the
+    shuffled body so counts stay exact.
+
+    WHY STACKS. An ordinary base spin tops out at 22x, and that is not a paytable
+    ceiling -- 20 lines of H1 would be 240x. It is that a randomly-shuffled strip
+    almost never puts a premium on more than one payline at a time. Stacking H1 in
+    runs of 3-4 means a stop that hits the run shows a SOLID COLUMN of Leo, so
+    every row pays at once: four simultaneous 3-kinds instead of one. That is how
+    a lines game gets a big base win WITHOUT a multiplier.
+
+    ⚠ The strip is read circularly by the board draw ((stop + row) % len), so runs
+    wrap and the overlap check has to wrap with them.
+    """
+    placed = {}
+    occupied = set()
+    for sym, length in stack_spec.items():
+        count = tables.get(sym, 0)
+        n_runs = count // length
+        if n_runs == 0:
+            continue
+        for _ in range(n_runs):
+            for _attempt in range(500):
+                start = rng.randrange(target_len)
+                span = [(start + k) % target_len for k in range(length)]
+                if any(p in occupied for p in span):
+                    continue
+                for p in span:
+                    occupied.add(p)
+                    placed[p] = sym
+                break
+            else:
+                raise ValueError(
+                    f"could not place a {length}-run of {sym} on a strip of {target_len}")
+    return placed
+
+
 def _positions_min_gap(n, k, gap, rng):
     """k positions on a circle of length n, every circular gap >= `gap`.
 
@@ -252,15 +291,28 @@ def _positions_run(n, k, step, rng):
     return [(start + i * step) % n for i in range(k)]
 
 
-def build_reel(weights, target_len, rng, scatter_layout=None, reel=None):
+def build_reel(weights, target_len, rng, scatter_layout=None, reel=None, stacks=None):
     """One shuffled reel from a weight table, padded to target_len with FILLER.
 
-    With no `scatter_layout` the scatters are shuffled in with everything else
-    (the original behaviour -- BR0/FR0/FRWCAP must stay bit-identical, so this
-    path makes exactly the same rng calls it always did). A layout instead places
-    scatters at controlled positions and shuffles only the remaining symbols
-    around them; see STRIP_WEIGHTS["ASC.csv"] for why that control is needed.
+    With no `scatter_layout` and no `stacks` the scatters are shuffled in with
+    everything else (the original behaviour -- BR0/FR0/FRWCAP must stay
+    bit-identical, so this path makes exactly the same rng calls it always did). A
+    layout instead places scatters at controlled positions and shuffles only the
+    remaining symbols around them; see STRIP_WEIGHTS["ASC.csv"] for why that
+    control is needed. `stacks` lays chosen symbols down in contiguous runs; see
+    _place_stacks for why.
     """
+    if stacks:
+        placed = _place_stacks(target_len, stacks, weights, rng)
+        body = []
+        for sym, count in weights.items():
+            remaining = count - sum(1 for s in placed.values() if s == sym)
+            body.extend([sym] * remaining)
+        body.extend([FILLER] * (target_len - len(body) - len(placed)))
+        rng.shuffle(body)
+        filler = iter(body)
+        return [placed[i] if i in placed else next(filler) for i in range(target_len)]
+
     if scatter_layout is None:
         strip = []
         for sym, count in weights.items():
@@ -299,8 +351,10 @@ def write_strip(filename, spec):
     rng = random.Random(SEED + zlib.crc32(filename.encode()) % 10_000)
     tables = reel_tables(spec)
     layout = spec.get("scatter_layout")
+    stacks = spec.get("stacks")
     target_len = max(sum(t.values()) for t in tables)
-    reels = [build_reel(tables[r], target_len, rng, layout, r) for r in range(NUM_REELS)]
+    reels = [build_reel(tables[r], target_len, rng, layout, r, stacks)
+             for r in range(NUM_REELS)]
     path = os.path.join(STARWAKE_REELS, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
