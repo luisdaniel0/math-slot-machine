@@ -18,6 +18,44 @@ history of decisions that cost a sim run to re-derive. Read order if you are new
      and the older one says so explicitly.
 Repo-wide rules (remotes, what never to commit) live in the ROOT `CLAUDE.md`.
 
+### ▶▶ FULL MATH AUDIT (Aug 6 2026) — 1 NEW BLOCKER. Report: `docs/audits/starwake-math-audit-2026-08-06.md`
+Re-derived from a FRESH 1e6 x 6-mode Go pool + a full optimizer pass (library/ is
+gitignored, so nothing was inherited). The math is sound and the Go port is correct;
+three recorded numbers do not reproduce and one gate flipped.
+
+⚠⚠ **TAIL PROBABILITY NOW FAILS -> 2 FAILED CLASSES -> $50 TEMPLATE, NOT $100.**
+buy_mystery p5k = **1.71e-02** against the 1.0e-02 limit. The Aug 4 note called this
+"the class closest to flipping" at 6.57e-03; it flipped. 94% of it is the ASCENDANT
+fence (p5k 1.60e-02 on 10.06% of rolls): mystery costs 563x, so 5,000x is only 8.9x its
+ticket, and ascendant is designed to average 4.5x its ticket. ~16% of ascendant rolls
+land above 5,000x; the mode's whole budget allows ~9%.
+⚠ NOTHING IN game_optimization.py CONSTRAINS THIS. The rtp split fixes ascendant's MEAN
+and leaves the optimizer free to spread it. Same config gave 6.57e-03 on the shipped
+pool and 1.71e-02 here — 2.6x apart, landing on either side of the line at random.
+FIX (optimizer-only, ~12 min, no re-sim): a ConstructScaling entry damping ascendant's
+5,000-25,000x band, then re-measure. MEASURE p5k ON EVERY POOL, like RTP.
+
+⚠ THE LADDER-OBTAINABILITY TABLE IN game_config IS 4-19x PESSIMISTIC. Measured on BOTH
+engines (Python reproduces it, so it is not a Go artifact): corvus 200x 1 in **122**
+(recorded 466), ursa 500x 1 in **1,695** (recorded 17,995), draco roam 12 1 in **~4,000**
+(recorded 75,112). Probably the "REACHED rung N" vs "PAID at rung N" distinction this
+file already documents. THE RUNG COUNTS ARE STILL RIGHT — ursa depth 14 and draco depth
+13 were NEVER seen in 200k organic books — but re-derive before trusting any of those
+rates again (draco's 13th rung was cut on one of them).
+
+ALSO: config.json publishes the TARGET rtp for every mode while buy_draco delivers
+0.9650 (systematic — 0.9655/0.9650/0.9650 across three runs). The 10M-event question is
+unchanged and still open (10.7M-86.8M events per mode at 1e6 books). Capped base books
+still carry the cosmetic split-field mismatch: 214 per 1e6, worst +5.50x.
+
+VERIFIED CLEAN, so do not re-check these: go/config/starwake.json byte-identical to a
+fresh export; reels regenerate byte-identical; 43 Python + 36 Go tests pass; Go vs Python
+KS 0.0062 (critical 0.0136) with identical event schemas; RTP band 0.9650-0.9665, spread
+0.151%; NO book above any published ceiling; buys bust 0.00%; win-range holes <=1.13x;
+corvus 10,000x obtainable at 1 in 2.21M; the cap-share ladder delivers EXACTLY
+0/0.0200/0.0250/0.0260/0.0400/0.0749 (draco/ursa 2.88x); mystery's delivered mix matches
+its published mix to 0.02pp; publish set self-consistent with every sha256 matching.
+
 ### ▶▶ WHERE WE ARE (Aug 4 2026)
 MATH: converged, tagged `starwake-math-v1`, and NOT currently shippable — the Aug 3
 cell-count sweep clobbered force records / verification files for the three buy modes
