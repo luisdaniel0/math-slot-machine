@@ -218,10 +218,29 @@ class OptimizationSetup:
             # its 10,000x ceiling is organic. maxwin_boost lifts it over the
             # "realistically obtainable" gate; see that helper for why and for the
             # fallback. MEASURE P(10,000x) on the new LUT -- target >= 1e-07.
+            # ⚠ THE CONSOLATION BANDS BELOW ARE LOAD-BEARING AND THE TAIL BOOST IS
+            # THEIR PRICE. Repricing corvus 240 -> 120 left it returning under a
+            # quarter of the ticket on 59.1% of buys with a 0.17x median -- harsh for
+            # the entry tier a first-time buyer reaches for. Boosting 0.25-0.5x,
+            # 0.5-1x and 1-2x cost (30-60 / 60-120 / 120-240 in base-bet terms) moves
+            # that to 42.3% and 0.29x, a 17-point shift and larger than the ~8 points
+            # of optimizer run-to-run noise on this mode.
+            # ⚠ AN EARLIER TWO-BAND VERSION PUSHED THE MAX WIN TO 1 IN 14.5M, OUTSIDE
+            # the "realistically obtainable" gate. Corvus has no wincap slice, so
+            # weight moved into the body comes straight out of an unprotected tail --
+            # measured 1 in 6.76M with these three bands, but it MUST be re-measured
+            # on whatever pool ships rather than assumed. See maxwin_boost above.
             "buy_corvus": {
                 "conditions": {"corvus": feature_cond(rtp, hr=1)},
                 "scaling": ConstructScaling(
-                    tail_scaling("corvus") + maxwin_boost("corvus", wincaps["buy_corvus"], 4.0)
+                    tail_scaling("corvus")
+                    + maxwin_boost("corvus", wincaps["buy_corvus"], 4.0)
+                    + [{"criteria": "corvus", "scale_factor": 1.4,
+                        "win_range": (30, 60), "probability": 1.0},
+                       {"criteria": "corvus", "scale_factor": 2.0,
+                        "win_range": (60, 120), "probability": 1.0},
+                       {"criteria": "corvus", "scale_factor": 1.5,
+                        "win_range": (120, 240), "probability": 1.0}]
                 ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
