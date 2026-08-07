@@ -22,6 +22,12 @@ Repo-wide rules (remotes, what never to commit) live in the ROOT `CLAUDE.md`.
 MATH: DONE. Act Two built, converged and gated — see "THE MATH IS DONE" below for
 the numbers and the pool location. All seven critical tests pass and 3-Star carries
 zero failed classes.
+⚠ AMENDED Aug 6: ONE MATH ITEM REOPENED. buy_corvus shipped WITHOUT the consolation
+bands from 5e9c59c — optimize_go.py copies a Jul 31 dress block and only syncs
+cost/rtp/max_win, so the bands never reached the optimizer. Gates all still pass; the
+entry-tier buy is simply harsher than the signed-off design (52.2% under a quarter
+ticket vs 42.3% intended). Fix stage(), re-optimize corvus, re-measure. Details in
+"THE PUBLISH LAYER WENT STALE" below.
 NEXT IS THE FRONTEND, and it is the larger half of the remaining work. It is also
 what decides the STAR RATING, which is a human quality review of art, animation,
 sound, performance and depth — the math cannot earn a third star, only fail to lose
@@ -39,6 +45,251 @@ one. And the publishing floor rose to 6 points for new games. In rough order:
 shipped. It has no wincap slice, so its rate is an optimizer draw — measured across
 identical runs at 1 in 3.1M to 6.6M, with one outlier at 1 in 14.5M, against a
 1-in-10M gate. This is a permanent per-pool check, not a one-off.
+⚠ AND RE-RUN `go/publish_go.py` AFTER ANY game_config.py CHANGE — the Go pipeline does
+not publish. See "THE PUBLISH LAYER WENT STALE" (Aug 6) for the 36-hour drift this cost.
+
+### ▶▶ THE PUBLISH LAYER WENT STALE AND NOTHING NOTICED (Aug 6 2026)
+FOUND BY AN OUTSIDE TOOL, not by us: mnemoo/tools (community LUT explorer,
+github.com/mnemoo/tools) read the pool and flagged buy_corvus NON-COMPLIANT at RTP
+48.32%. THE MATH WAS FINE. The price tag was stale.
+
+THE POOL AND THE PUBLISH LAYER HAD DRIFTED 36 HOURS APART:
+  game_config.py             Aug 5 16:34  cost 120, corvus_cap 9000  <- the reprice
+  go/config/starwake.json    Aug 5 23:03  cost 120                    correct
+  LUTs + books               Aug 5 23:04+ mean payout 115.98x         correct
+  index.json                 Aug 4 01:19  cost 240                    STALE
+  config.json                Aug 4 01:19  cost 240, maxWin 10,000     STALE
+  event_config_*.json        Aug 4 01:19  multiplierClimb, no act two STALE
+  books_*.verification.json  Aug 4 01:19  hashes of REPLACED books    STALE
+115.98x / 120 = 0.9665 (correct). / 240 = 0.4832 = exactly what the tool reported.
+
+⚠⚠ THE SHIPPED config.json STILL ADVERTISED corvus maxWin 10,000 — that is B1, the
+defect recorded below as "THE ONE BLOCKING MATH DEFECT" and fixed in game_config.py on
+Aug 5. FIXING THE SOURCE IS NOT FIXING THE ARTIFACT. The publish step is what closes it.
+
+WHY NOTHING CAUGHT IT: the Go pipeline (run_modes.sh / full_run.sh / optimize_go.py)
+writes books and LUTs AND NOTHING ELSE. Publishing is a SEPARATE step — go/publish_go.py
+— and it had not run since Aug 4. Its own verify() would have caught the stale sha256s
+the moment it ran, but it checks mode NAMES and HASHES, not COSTS, so the 240 would
+still have shipped. A cost cross-check against game_config.py is a cheap addition.
+=> RULE: `env/bin/python go/publish_go.py` after ANY game_config.py change. It takes
+   seconds. Editing a price and re-simming is only two thirds of the job.
+
+FIXED Aug 6 by re-running publish_go.py: index 240->120, config 240->120 and maxWin
+10,000->9,000, event configs rebuilt, hashes recomputed, verify() clean. GATES
+RE-CHECKED on the republished pool, not assumed (several divide by cost, and corvus's
+just halved): base_std 25.357, etl40 0.558, p5k 5.01e-03, p10k 2.24e-03, 3-Star 0
+failed classes, 2-Star 1 (the known absolute CVaR). Nothing moved.
+
+⚠⚠ AND THE SAME DRIFT REACHED THE MATH ITSELF: **buy_corvus SHIPPED WITHOUT ITS
+CONSOLATION BANDS.** optimize_go.py:55 copies math_config.json from the OLD LADDER
+GAME'S directory (games/starwake/, Jul 31) and then _sync_bet_modes() overwrites
+cost/rtp/max_win from the live GameConfig — so PRICES ARE SAFE and corvus would NOT
+revert to 240x. But the sync touches ONLY the bet-mode block. **`dresses` and `fences`
+are copied blind.** The docstring at optimize_go.py:81-84 claims fence drift "is checked
+below rather than silently tolerated" — THERE IS NO SUCH CHECK. Fences happened to be
+identical; dresses were not.
+
+Commit 5e9c59c (Aug 5 21:26) added three consolation bands to buy_corvus — scale 1.4/2.0/
+1.5 on win ranges 30-60 / 60-120 / 120-240 — and its own note calls them LOAD-BEARING:
+the 240->120 reprice left corvus returning under a quarter of the ticket on 59.1% of buys
+at a 0.17x median, and the bands were measured to move that to 42.3% and 0.29x, "larger
+than the ~8 points of optimizer run-to-run noise on this mode". It also moved the
+maxwin_boost dress from win range [9000,10000] to [8100,9000] to match the corrected cap.
+THE Aug 5 23:13 OPTIMIZER RUN NEVER SAW ANY OF IT — the Jul 31 file has 3 corvus dresses,
+the live config produces 6.
+
+MEASURED ON THE SHIPPED LUT, and it is unambiguous:
+  [8100,9000) shoulder   1 in 19,511,305   <- the band TODAY's dress boosts 4.0x;
+                                              4x RARER than the cap. Not applied.
+  cap, exactly 9,000x    1 in  4,613,159   <- all cap weight, = the max-win figure
+                                              recorded above. The Jul 31 dress's mark.
+  under 0.25x ticket             52.2%     vs 42.3% intended (59.1% unbanded + noise)
+  weighted median               0.230x     vs 0.29x intended
+=> CORVUS IS SHIPPING THE PRE-BAND ECONOMY. Not a compliance failure — every gate still
+passes — but the entry-tier buy is harsher than the design that was signed off, and the
+17-point improvement recorded in 5e9c59c was never actually delivered.
+
+⚠ WHY THIS WAS INVISIBLE: the shadow math_config reads cost 120 / max_win 9,000, because
+the sync wrote those. It LOOKS fresh. Only the dresses are stale, and nothing prints them.
+=> FIXED Aug 6 2026 IN optimize_go.py. stage() no longer copies: it calls a new
+   write_math_config() which runs make_temp_math_config() against the live GameConfig,
+   deriving bet modes, fences and dresses from config.opt_params in one pass.
+   _sync_bet_modes() is deleted — generating makes it redundant, and a dead check that
+   lies in its own docstring is what caused this. optimize_go.py no longer references
+   games/starwake/ at all. VERIFIED: the generated file is BYTE-IDENTICAL to the one
+   publish_go.py produces (same generator, same source), corvus now carries all 6
+   dresses, and the 30 unit tests pass. Net -18 lines.
+
+POOL REBUILT Aug 6 2026. buy_corvus re-optimized (161s) + republished. RTP 0.9665,
+zero-pay 0.00%, max win 9,000x. Gates re-read: UNCHANGED, 3-Star 0 failed classes.
+
+                          pre-band    with bands   design target
+  under 0.25x ticket         52.2%         36.5%   42.3%   <- beat it
+  weighted median           0.230x        0.325x   0.29x   <- beat it
+  beat the ticket           18.64%        15.23%           <- the price, -3.4 pts
+  max win               1 in 4.61M    1 in 9.29M   > 1 in 10M
+  [8100,9000) shoulder  1 in 19.5M    1 in 7.13M           <- dress now lands
+THE BODY FIX WORKED AND OVERSHOT IN THE GOOD DIRECTION. The entry-tier buy now returns
+under a quarter ticket on 36.5% of buys rather than 52.2%, better than the 42.3% the
+bands were designed for.
+
+⚠⚠ BUT THE TAIL HEADROOM IS NEARLY GONE, AND THIS IS THE LIVE DECISION. Corvus's max
+win moved 1 in 4.61M -> 1 in 9.29M against a "typically more frequent than 1 in
+10,000,000" gate: headroom fell from 2.2x to 1.08x. Exactly the trade 5e9c59c warned
+about -- corvus has no wincap slice, so body weight comes out of an unprotected tail.
+⚠ AND THIS MODE'S CAP RATE IS AN OPTIMIZER DRAW WITH KNOWN SPREAD: identical runs have
+measured 1 in 3.1M to 6.6M with a 14.5M outlier. Sitting at 9.29M, A ROUTINE RE-RUN CAN
+NOW LAND OUTSIDE THE GATE. The permanent per-pool max-win check recorded at the top of
+this file has stopped being a formality and become the binding constraint on corvus.
+DIALED BACK Aug 6 to 1.25/1.6/1.3 (from 1.4/2.0/1.5), re-optimized and republished.
+Gates unchanged, 3-Star 0 failed classes. SHIPPED STATE IS 1.25/1.6/1.3.
+
+  bands            RTP   under .25x   median    beat        max win
+  pre-band      0.9665       52.2%    0.230   18.64%   1 in 4.61M
+  1.4/2.0/1.5   0.9665       36.5%    0.325   15.23%   1 in 9.29M
+  1.25/1.6/1.3  0.9665       34.4%    0.338   19.07%   1 in 8.32M
+  design target 0.9665       42.3%    0.290              > 1 in 10M
+
+⚠⚠ THE DIAL-BACK DID NOT DO WHAT IT WAS MEANT TO DO, AND THE REASON MATTERS: WEAKER
+BANDS PRODUCED A *BETTER* BODY (34.4% vs 36.5%), A BETTER MEDIAN AND A BETTER BEAT RATE.
+That is not a monotonic response to a smaller scale factor — IT IS THE OPTIMIZER'S OWN
+RUN-TO-RUN NOISE, the exact thing commit 5e9c59c is named for. Every delta BETWEEN the
+two band settings (2.1 pts body, 3.8 pts beat, 0.97M cap) sits inside this mode's
+documented spread: ~8 points on the body, and cap-rate draws measured from 1 in 3.1M to
+1 in 14.5M on IDENTICAL configs. n=1 per setting cannot separate them.
+### ▶▶ CORVUS HAS A WINCAP SLICE (Aug 6 2026). RATE CONTROL WORKS; BODY COST UNRESOLVED
+BUILT: corvus_wincap_condition = _wincap_condition(3, {"ROAM":1,"ROAMCAP":40}) + a
+Distribution(criteria="wincap", quota=0.002, win_criteria=corvus_cap) on buy_corvus, and
+a wincap fence in game_optimization.py at corvus_cap_rtp = 0.0000375.
+⚠ win_criteria MUST be corvus_cap (9,000), NOT the global 25,000 cap — this mode clamps
+at 9,000 via BetMode.max_win, so a slice hunting 25,000 would loop forever.
+
+THE RATE FORMULA IS EXACT, not approximate: rate = slice_rtp * cost / cap reproduces
+every mode's measured cap frequency to ~1 part in 1e6 (base 0.02 -> 1 in 1,250,000 vs
+measured 1,250,001; ursa 0.026 -> 3,588 vs 3,589; draco 0.075 -> 641 vs 642). Corvus
+targeted 1 in 2,000,000 and LANDED ON 1 IN 2,000,003. Cap RTP share 0.0039% vs 0.00375%
+predicted. USE THIS FORMULA TO SET ANY CAP RATE — it is a dial, not a hope.
+
+  FEARED: a forced slice hangs when its cap is near the top of organic reach.
+  MEASURED: 2.74 redraws/book at 1e6 vs draco's ~117. ROAMCAP 40 made it cheap.
+  Sim 1e6 in 23.5s, 2,000 wincap books, zero-pay 0.00%, completion 83.80% unchanged.
+  Gates after: 3-Star 0 failed classes, 2-Star 1 (the known absolute CVaR). No change.
+
+SETTLED BY n=8 WITH THE SLICE IN (Aug 6). Same harness, same pool:
+
+                     UNSLICED n=8        SLICED n=8
+  cap rate        1 in 2.9M .. 11.2M   1 in 2,000,003 ON ALL EIGHT RUNS
+                  1 OF 8 FAILED gate   zero spread, gate failure impossible
+  body mean              41.78%             46.20%
+  body sd                  9.98               6.10
+  body range           28.05-54.31        39.94-59.04  (26.3 pts -> 19.1 pts)
+
+⚠ THE CAP RESULT IS NOT STATISTICAL, IT IS STRUCTURAL. Every run returned the identical
+figure because the rate is now set by slice_rtp rather than drawn. This is the entire
+point of the change and it worked completely.
+
+⚠ THE BODY COST IS REAL-LOOKING BUT NOT ESTABLISHED. +4.4 points of mean is roughly
+t=1.1 on ~12 df (p~0.3) — suggestive, NOT significant at n=8 each. The ~40% drop in sd
+is likewise directionally right (the slice removes a free variable, which is what it
+should do) but F=2.67 against a ~3.79 critical value, so also not formally significant.
+DO NOT RECORD EITHER AS FACT. What IS certain: the slice's RTP cost is 0.0039%, far too
+small to fund 4 points of body, so if the shift is real its cause is the SECOND FENCE
+consuming the >=9,000x books, not the payback it spends.
+
+⚠ THE SHIPPED DRAW IS AN UNLUCKY ONE: 55.8% under a quarter ticket against a sliced mean
+of 46.2%, second-worst of the nine sliced measurements taken. Since the cap rate is now
+fixed by construction, RE-DRAWING ONLY VARIES THE BODY, and players experience the
+SHIPPED pool rather than the distribution of possible pools — so re-optimizing a few
+times and shipping the best-balanced draw is defensible product work, not p-hacking, PROVIDED
+the chosen draw is gated in full and the selection stops there.
+
+DONE Aug 6. Six fresh draws, criteria FIXED BEFORE RUNNING (primary: lowest under-0.25x;
+guards: median must rise inversely, beat >= ~16%, RTP/cap/max-win invariants, full gates
+on the winner). Draw 6 won outright — best on the primary AND on both guards, so no
+fallback was needed and the selection stopped there.
+
+  draw   under.25x   median   beat        cap
+    1       47.90%    0.264  20.70%   1 in 2,000,003
+    2       62.46%    0.165  18.05%   1 in 2,000,003
+    3       65.59%    0.120  19.66%   1 in 2,000,003
+    4       46.43%    0.268  12.72%   1 in 2,000,003
+    5       46.66%    0.273  18.84%   1 in 2,000,003
+    6       41.62%    0.294  17.20%   1 in 2,000,003   <- SHIPPED
+  (old)     55.80%    0.206  13.56%   1 in 2,000,003
+
+SHIPPED CORVUS IS NOW 41.62% / 0.294x / 17.20% — better than the pool it replaced on all
+three. Gates re-read on the winner: 3-Star 0 failed classes, 2-Star 1 (absolute CVaR),
+base_std 25.357, etl40 0.558, p5k 5.01e-03, p10k 2.24e-03. Unchanged.
+⚠ CAP RATE WAS 1 IN 2,000,003 ON ALL SIX, as on the previous eight — FOURTEEN CONSECUTIVE
+RUNS at the identical figure. The slice is deterministic; this is settled, stop testing it.
+⚠ THE BODY SPREAD IS STILL 41.6-65.6% ACROSS DRAWS. Selection fixed THIS pool, not the
+config. Any future re-optimize of corvus re-rolls the body and needs re-measuring — the
+same permanent per-pool discipline the max-win check used to need before the slice.
+
+⚠ THE 20k SMOKE TEST DESTROYED THE SHIPPED BOOKS, and this will happen again. go/out's
+books_buy_corvus.jsonl.zst is HARD LINKED (link count 2) to the published pool's copy, so
+the engine truncating one truncated BOTH — a 1.5 GB shipped file became a 30 MB stub.
+The 1e6 re-sim + publish repaired it. BACK UP go/out/library/{publish_files/books_,
+forces/force_record_,lookup_tables/lookUpTable_}<mode> BEFORE ANY SMALL-COUNT RUN.
+
+### ▶▶ CORVUS VARIANCE MEASURED, n=8 (Aug 6 2026). THE NOISE IS BIGGER THAN EVERY EFFECT
+Harness: /tmp/corvus_variance/run_variance.sh — 8 optimizer runs on the SHIPPED config
+(bands 1.25/1.6/1.3), same pool, ~25 min, restoring the published LUT byte-for-byte at
+the end (verified: config.json's sha256 still matches).
+
+  metric            min       max     median   spread
+  RTP            0.9665    0.9665     0.9665   ZERO — converges perfectly every time
+  under 0.25x     28.05%    54.31%    38.84%   26 POINTS
+  median          0.215x    0.370x    0.310x
+  beat            12.76%    18.94%    17.5%    6 points
+  cap rate      1 in 2.9M 1 in 11.2M 1 in 5.2M  4x
+
+⚠⚠ RETRACTION — "THE BANDS WORK" (recorded above, same day) IS NOT SUPPORTED. The
+unbanded measurement of 52.2% sits INSIDE the banded distribution: runs 2, 5 and 8 came
+in at 53.85 / 54.31 / 50.80 with the bands ON. n=1 unbanded against n=8 banded cannot
+establish a difference, and 52.2% lands around the 75th percentile of the banded spread.
+The bands MAY help — banded mean is 41.8% — but IT IS UNPROVEN AND WAS ASSERTED TOO EARLY.
+The same applies to "the bands push the tail rarer": unbanded drew 1 in 4.61M against a
+banded median of 1 in 5.24M. Noise.
+
+⚠⚠ THE ANSWER WE ACTUALLY WENT LOOKING FOR: **1 OF 8 DRAWS FAILS THE 1-IN-10M GATE**
+(run 1, 1 in 11.18M). A ~12% failure rate per re-optimize — point estimate only, the
+95% interval on 1/8 is wide. The SHIPPED pool sits at 1 in 8.32M, i.e. in the unlucky
+end of its own distribution, and passes.
+=> THE PERMANENT PER-POOL MAX-WIN CHECK IS NOT OPTIONAL AND NOW HAS A NUMBER ON IT.
+   Roughly one in eight rebuilds ships an unpublishable corvus. Never re-optimize this
+   mode without re-measuring, and never assume a passing draw survives a re-run.
+
+⚠ WHY SO NOISY, mechanically: RTP converges to 0.9665 EVERY time, so the optimizer is
+not struggling — it is UNDER-CONSTRAINED. Corvus's raw pool implies ~3.75x its configured
+price, so ~73% of the value is discarded, and there are many shapes that discard it while
+hitting the same RTP. No wincap slice means the tail is one of the free variables.
+=> DO NOT TUNE THE BANDS FURTHER OFF SINGLE DRAWS. Any change smaller than ~26 points of
+body or ~4x of cap rate is unmeasurable at n=1, which is every change anyone would want.
+=> THE STRUCTURAL FIX NOW HAS THE STRONGER CASE: give corvus a wincap slice, which turns
+the cap rate from a 12%-failure lottery into a design parameter — what ursa, draco and
+mystery already do. Rejected earlier because it "trades away the best body in the game";
+that judgement was made against a single-draw body measurement which we now know carries
+a 26-point spread, so THE EVIDENCE IT RESTED ON WAS NEVER SOLID. Re-ask it properly,
+with replicates on both sides. NOT YET DECIDED.
+
+⚠ event_config_<mode>.json IS AUTO-DISCOVERED FROM THE BOOKS (publish_go.py:153), NOT
+from game_events.py. The published event vocabulary therefore SELF-HEALS on republish:
+multiplierClimb vanished from all six modes with no code change. game_events.py is still
+act-one-shaped and that did not matter here. CONFIRMED NAMES for frontend item (1):
+**starsLanded** and **starsCollected** (14-15 types/mode; buy_corvus alone has no
+`wincap` event — correct, it carries no wincap slice).
+
+⚠ THE TOOL'S COMPLIANCE TAB IS NOT OUR RUBRIC. mnemoo hardcodes global limits (p5k
+0.005, p10k 0.001, ETL40 2.0, CVaR 50,000) that its own source calls "tentative
+defaults", and they disagree with the docs-derived per-rating limits in
+check_risk_gates.py — p5k/p10k are 10x stricter there, so it reports tail failures we
+pass with 10x headroom. Its star-tier table also differs (std-dev max 35/40/50, exposure
+100k/5M/10M vs our $15M). USE IT TO FIND DISCREPANCIES, NOT TO DECIDE COMPLIANCE;
+check_risk_gates.py remains the authority. What it is genuinely good for: CrowdSim
+(session-level PoP / drawdown / streaks, which nothing of ours measures) and the
+LGS + force-outcome + replay harness for the frontend phase.
 
 ### ▶▶ THE MATH IS DONE (Aug 5 2026). Clean 1e6 x 6, 23 min, all gates green.
 POOL: `games/starwake_go/library/publish_files` (optimized LUTs) and
