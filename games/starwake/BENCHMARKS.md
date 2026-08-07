@@ -282,6 +282,72 @@ SOURCES, and they are cheap to re-pull:
 ⚠ 6. REPLAY URL FORMAT, useful for the mandatory replay work:
   https://fair.stake-engine.com/replay/<publisher>/<game>/<version>/<mode>/{event}
 
+## 3c. COMPETITOR: Coins and Cauldrons (Meta Gaming, v13) — measured Aug 7 2026
+
+⚠ THE stakestats API RETURNS EVERY VERSION. Filter to activeVersion or you will read a
+retired build. C&C carries v10/v11/v13; v11's base std dev is 29.155 and v13's is 59.870
+-- THEY ROUGHLY DOUBLED THE VOLATILITY OF A LIVE GAME BETWEEN VERSIONS. A published
+game's variance is not fixed, and studios do retune it upward.
+
+  mode              cost      RTP   std dev    bust   any win   >=1x    maxMult     events
+  base                1x   96.01%    59.870  69.82%    30.18%   8.53%   50,000x  1,903,275
+  bonus2x             2x   96.01%    34.472  93.00%     7.00%   6.78%   25,000x    938,743
+  bonus_wild_coin     8x   96.01%    16.259  48.13%    51.87%  16.19%    6,250x    859,365
+  bonus_fs          100x   96.01%     4.474   0.00%   100.00%  22.18%      500x  1,000,001
+  bonus_fs_4sc      200x   96.01%     3.754   0.00%   100.00%  22.25%      250x  1,000,001
+  bonus_fs_wild     500x   96.01%     3.957   0.00%   100.00%  14.56%      100x  1,999,687
+  RTP is 96.01%, NOT the 96.70% cap -- sitting on the cap is not universal. Max win is
+  50,000x (2x ours). Buy ladder 2x/8x/100x/200x/500x: cheap feature buys next to
+  expensive ones, where our cheapest is 120x.
+
+⚠⚠ THE DRYNESS FINDING FROM RAGE BAIT DOES NOT SURVIVE A SECOND DATA POINT.
+  base            RAGE BAIT   COINS & CAULDRONS   STARWAKE
+  pays nothing        62.5%              69.82%     70.75%
+  any win             37.5%              30.18%     29.25%
+  pays >= 1x         16.08%               8.53%      8.00%
+WE MATCH C&C TO WITHIN A POINT ON ALL THREE. Rage Bait is the outlier on hit frequency,
+not us. An earlier note here concluded from Rage Bait alone that our base pays >=1x half
+as often as the market; that was n=1 and it was wrong.
+
+⚠⚠ WHAT *DOES* SURVIVE: OUR TAIL IS LIGHT. And the full curve locates it exactly.
+
+  CHANCE OF MULTIPLIER OR BETTER, base game, per spin:
+    >= mult      STARWAKE          C&C              who
+      0.5x       1 in 4.4          1 in 6.2         us 1.4x
+      1x         1 in 12.5         1 in 11.7        equal
+      2x         1 in 43.1         1 in 16.6        THEM 2.6x
+      5x         1 in 51.2         1 in 76.7        us 1.5x
+      10x        1 in 67.7         1 in 112.1       us 1.7x
+      50x        1 in 238          1 in 593         us 2.5x
+      100x       1 in 667          1 in 1,319       us 2.0x
+      250x       1 in 4,390        1 in 3,850       equal   <- CROSSOVER
+      500x       1 in 31,493       1 in 8,306       THEM 3.8x
+      1,000x     1 in 70,561       1 in 17,902      THEM 3.9x
+      2,500x     1 in 332,709      1 in 40,981      THEM 8.1x
+      5,000x     1 in 930,862      1 in 94,452      THEM 9.9x
+      25,000x    1 in 1,250,001    1 in 901,583     THEM 1.4x
+      (their 50,000x max win: 1 in 1,983,481)
+
+=> WE ARE UP TO 2.5x MORE GENEROUS FROM 5x TO 100x AND 4-10x LESS GENEROUS FROM 500x TO
+   5,000x. That single fact IS the std-dev gap (25.4 vs 59.9) and IS the top-heavy-RTP
+   gap (31.3% vs 41%). Variance lives in the far tail, so their advantage above 500x
+   buys 2.4x our standard deviation while their base pays LESS often than ours below 100x.
+=> THEREFORE THE LEVER IS NOT "ADD MORE WINS". Our base is generous in the body and thin
+   in the tail. Market-normal volatility means moving RTP from the 5x-100x shoulder into
+   500x+, which is the OPPOSITE of what the dryness framing implied.
+
+⚠ AN ANOMALY THIS EXPOSED IN OUR OWN CURVE: the 2x-5x band is a DIP. Odds by band run
+1 in 18 (1-2x) -> 1 in 273 (2-5x) -> 1 in 211 (5-10x) -> 1 in 182 (10-20x). A 15x rarity
+jump and then back down. C&C runs 1 in 21 smoothly through the same band. It passes the
+win-range-gap check (no zero-weight range) but it is a visible pothole in an otherwise
+smooth curve, and it is exactly what a reviewer eyeballing a hit-rate table would query.
+
+STAKECRUNCHER'S QUALITATIVE LABELS, worth knowing since a reviewer may think this way:
+  C&C base       "Swingy -- long dry streaks punctuated by meaningful hits. Needs bankroll."
+  Rage Bait ALL  "Psychotic -- most of the RTP is locked behind the tail, dry for ages,
+                  then you either hit big or go home."
+  C&C base dry streaks: median 2, bad day 4, rough 8, nightmare 13 consecutive 0x spins.
+
 ## 4. Compliance position (for context, not comparison)
 
 3-Star: 0 failed classes -> $500 bet template. 2-Star: 1 (absolute CVaR 25,000 vs 20,000).
