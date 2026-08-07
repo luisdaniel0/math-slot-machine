@@ -28,7 +28,8 @@ the better product: "draco's stars are worth a fortune" is a real identity,
 where "ursa's stars are junk" is just a nerf.
 
 ⚠ OVERWRITES FRROAM.csv and go/config/starwake.json. Both restored on exit.
-Books land in go/out/library, never in games/starwake/library.
+Books land in go/out/SWEEP -- never go/out/library, which holds the converged pool.
+(That line used to say go/out/library and was wrong; the -out flag fixed it.)
 """
 import io
 import json
@@ -91,6 +92,35 @@ VARIANTS = {
         "ursa": {2: 50, 3: 25, 5: 15, 10: 7, 25: 2, 50: 1},
         "draco": {2: 12, 3: 11, 5: 16, 10: 18, 25: 16, 50: 15, 100: 12},
     },
+    # ── CORVUS TAIL VARIANTS (Aug 7 2026) ────────────────────────────────────
+    # `spread` is the SHIPPED table. Measured on the converged pool, corvus has
+    # no distribution between 2,500x and its 9,000x ceiling: 8,295 books in
+    # 2,500-5,000, 142 in 5,000-8,100, and ONE book in 8,100-9,000 out of 1e6.
+    # So its published max win is unreachable (1 in 2,000,003 delivered, against
+    # a market norm of 1 in 400-4,000) and contributes 0.1% of the mode's
+    # variance. No optimizer dress can fix that -- the books do not exist.
+    #
+    # Corvus's star table stops at 25x where ursa reaches 50x and draco 100x, so
+    # its collected multiplier cannot get large enough to produce that band.
+    # These three add a high rung and pay for it out of the 5x/10x middle, which
+    # keeps the mean star BELOW ursa's 4.65 so the price ladder survives.
+    # ursa and draco are held at `spread` so the corvus effect is isolated --
+    # the same technique as `draco+` above.
+    "corvus+50": {
+        "corvus": {2: 56, 3: 25, 5: 12, 10: 5, 25: 1, 50: 1},          # star 3.72
+        "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
+        "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
+    },
+    "corvus+100": {
+        "corvus": {2: 56, 3: 25, 5: 12, 10: 5, 25: 1, 100: 0.4},       # star 3.64
+        "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
+        "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
+    },
+    "corvus+both": {
+        "corvus": {2: 57, 3: 25, 5: 11, 10: 5, 25: 1, 50: 0.7, 100: 0.3},  # star 3.84
+        "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
+        "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
+    },
 }
 
 DENSITIES = [1, 2]
@@ -145,6 +175,12 @@ def summarise(mode, cost, rtp):
     pays.sort()
     mean = statistics.fmean(pays)
     median = statistics.median(pays)
+    n = len(pays)
+    # ⚠ TAIL SUPPLY, added Aug 7 2026, and it is the point of the corvus variants.
+    # The optimizer can only weight books that EXIST, so what matters for a
+    # reachable max win is how many the engine produces up there -- not how the
+    # weights are later arranged. Wincap is stripped on this run (-no-wincap), so
+    # `max` is the NATURAL ceiling and these counts are natural supply.
     return {
         "mean": mean, "median": median,
         "ratio": mean / median if median else float("inf"),
@@ -152,6 +188,9 @@ def summarise(mode, cost, rtp):
         "max": pays[-1],
         "beat": sum(1 for p in pays if p >= cost) / len(pays) * 100,
         "mult": statistics.fmean(mults) if mults else 0.0,
+        "t20": sum(1 for p in pays if p >= 20 * cost) / n * 100,
+        "t40": sum(1 for p in pays if p >= 40 * cost) / n * 100,
+        "t60": sum(1 for p in pays if p >= 60 * cost) / n * 100,
     }
 
 
@@ -187,18 +226,20 @@ if __name__ == "__main__":
     print("=" * 100)
     for density in DENSITIES:
         print(f"\n--- star density {density}x " + "-" * 74)
-        print(f"{'variant':10s}{'mode':12s}{'star':>6s}{'mult':>7s}{'price':>8s}"
-              f"{'target':>8s}{'vs':>7s}{'m/med':>7s}{'max':>9s}{'beat':>7s}   ladder?")
+        print(f"{'variant':11s}{'mode':12s}{'star':>6s}{'mult':>7s}{'price':>8s}"
+              f"{'vs':>7s}{'m/med':>7s}{'max':>9s}{'beat':>7s}"
+              f"{'>=20x':>8s}{'>=40x':>8s}{'>=60x':>8s}   ladder?")
         for name in VARIANTS:
             got = [r for r in rows if r["variant"] == name and r["density"] == density]
             prices = {r["mode"]: r["price"] for r in got}
             ok = prices.get("buy_corvus", 0) < prices.get("buy_ursa", 0) < prices.get("buy_draco", 0)
             for i, r in enumerate(got):
                 mark = ("  ORDERED" if ok else "  INVERTED") if i == 0 else ""
-                print(f"{name if i == 0 else '':10s}{r['mode']:12s}{r['star']:>6.1f}"
-                      f"{r['mult']:>6.0f}x{r['price']:>7.0f}x{r['target']:>7.0f}x"
+                print(f"{name if i == 0 else '':11s}{r['mode']:12s}{r['star']:>6.1f}"
+                      f"{r['mult']:>6.0f}x{r['price']:>7.0f}x"
                       f"{r['price']/r['target']:>6.2f}x{r['ratio']:>7.2f}"
-                      f"{r['max']:>8.0f}x{r['beat']:>6.1f}%{mark}")
+                      f"{r['max']:>8.0f}x{r['beat']:>6.1f}%"
+                      f"{r['t20']:>7.3f}%{r['t40']:>7.3f}%{r['t60']:>7.3f}%{mark}")
             print()
     print("reading it:")
     print("  star    mean value of one star for that tier -- the knob being swept")
@@ -207,3 +248,9 @@ if __name__ == "__main__":
     print("          a cheaper tier paying more than an expensive one is not a")
     print("          product, and it is what the shipped tables currently do.")
     print("  m/med   volatility. The ladder ran 1.72; act two shipped at 1.17.")
+    print("  >=20/40/60x  TAIL SUPPLY as multiples of that mode's OWN ticket, wincap")
+    print("          stripped. This is the column the corvus variants exist for: the")
+    print("          shipped table produces almost nothing above ~20x ticket on corvus,")
+    print("          which is why its 75x-ticket max win is unreachable. Weights cannot")
+    print("          create books, so if supply does not move here, nothing downstream")
+    print("          can fix the max win.")

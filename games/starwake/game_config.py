@@ -527,6 +527,57 @@ class GameConfig(Config):
         #
         # ⚠ RAISING DRACO IS THE LEVER, NOT LOWERING URSA. "Draco's stars are worth
         # a fortune" is an identity; "ursa's stars are junk" is only a nerf.
+        # ⚠⚠ A 50x CORVUS RUNG WAS BUILT AND REVERTED Aug 7 2026. READ THIS BEFORE
+        # TRYING IT AGAIN -- the sweep says it works and the product says it does not.
+        #
+        # THE PROBLEM IT WAS AIMED AT, and the problem is real: corvus produces NOTHING
+        # between 2,500x and its 9,000x ceiling. Measured on the converged pool, 8,295
+        # books in 2,500-5,000, 142 in 5,000-8,100, and ONE book in 8,100-9,000 out of
+        # 1e6. Its published max win is therefore unreachable (1 in 2,000,003 delivered,
+        # against a market norm of 1 in 400-4,000 measured off Meta Gaming's three
+        # titles) and contributes 0.1% of the mode's variance. No optimizer dress can
+        # fix that -- weights cannot create books the engine never produces.
+        #
+        # SWEPT (reels/sweep_star_values.py, variants corvus+50 / +100 / +both, n=20k,
+        # 1x density, ursa and draco held at `spread` so the corvus effect is isolated):
+        #   variant      star  natural max  >=20x tkt  >=40x tkt  >=60x tkt   beat
+        #   spread        3.4       6,247x     0.920%     0.010%     0.000%  63.6%
+        #   corvus+50     3.7       8,804x     2.055%     0.210%     0.020%  63.5%
+        #   corvus+100    3.6       6,247x     0.820%     0.010%     0.000%  63.3%
+        #   corvus+both   3.8       6,247x     0.805%     0.010%     0.000%  63.2%
+        #
+        # ⚠ KEEP THIS LESSON, IT GENERALISES: FREQUENCY BEATS MAGNITUDE. A 50x rung at
+        # weight 1.0 beat a 100x rung at weight 0.4 AND beat both together -- the two
+        # 100x variants returned a natural max of exactly 6,247x, identical to shipped,
+        # because at 0.4% weight across ~5.5 collected stars you hit one only ~2.2% of
+        # the time and still need lines through the block to cash it. To build a tail,
+        # add a rung you will actually HIT, not the biggest rung you can imagine, and
+        # concentrate the weight rather than splitting it across two high rungs.
+        #
+        # ⚠⚠ WHY IT WAS REVERTED ANYWAY. Built at 1e6 across all four affected modes,
+        # the tail worked exactly as swept -- >=5,000x went 1 in 151,016 -> 1 in 11,679,
+        # and a real ladder appeared under the ceiling. BUT THE BODY PAID FOR IT:
+        #     under 0.25x ticket   41.6% -> 60.4%      median  0.294x -> 0.166x
+        #     beat the ticket      17.2% -> 14.2%      std/c     2.09 -> 2.56
+        # Corvus became the HARSHEST and MOST VOLATILE buy in the menu, at the cheapest
+        # price -- inverting the whole ladder.
+        # ⚠ AND THE TAIL WAS NEVER WHAT COST THAT. Everything above 2,500x is only 4.0x
+        # of a 116x mean = 3.5% of RTP. What happened is that richer supply let the
+        # optimizer move ~15x of RTP into 500x+ (the 500-2,000 band went 1 in 15 -> 1
+        # in 13) and it hollowed out 5x-50x to pay: >=10x fell 86.4% -> 65.1%,
+        # >=25x fell 65.1% -> 44.6%.
+        # Rebuilding the body afterwards does not rescue it: moving 15 points of weight
+        # from ~10x books to ~200x books ADDS 28.5x of RTP, a quarter of the whole
+        # budget, which then has to come back out of the 500-2,000 band.
+        # => CORVUS CANNOT BE BOTH THE SAFE ENTRY TIER AND CARRY A REAL 9,000x. The
+        #    honest resolution is a LOWER PUBLISHED CEILING, not a bigger star: on the
+        #    reverted table P(>=2,500x) is 1 in 2,417, so publishing 2,500x would make
+        #    corvus's max win the MOST reachable in the menu and market-normal, at the
+        #    cost of ceiling-per-cost dropping 75x -> 20.8x. NOT YET DONE.
+        #
+        # ⚠ THIS TABLE IS SHARED. Every mode that can roll a corvus-tier feature uses
+        # it: base, ante_starfall, buy_corvus AND buy_mystery. Changing it re-simulates
+        # and re-converges four of six modes, not one.
         self.constellation_star_symbol = "M"
         self.constellation_star_values = {
             "corvus": {2: 55, 3: 25, 5: 13, 10: 6, 25: 1},

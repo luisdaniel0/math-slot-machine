@@ -173,6 +173,67 @@ RUN-TO-RUN NOISE, the exact thing commit 5e9c59c is named for. Every delta BETWE
 two band settings (2.1 pts body, 3.8 pts beat, 0.97M cap) sits inside this mode's
 documented spread: ~8 points on the body, and cap-rate draws measured from 1 in 3.1M to
 1 in 14.5M on IDENTICAL configs. n=1 per setting cannot separate them.
+### ▶▶ CORVUS'S TAIL WAS BUILT AND REVERTED (Aug 7 2026). THE CLIFF IS REAL, THE FIX ISN'T
+POOL IS BACK TO ITS PRE-CHANGE STATE, verified number-for-number and re-gated (3-Star 0
+failed classes, ETL40 0.558). Nothing shipped. Read this before anyone retries it.
+
+THE DEFECT, and it is real and still open: CORVUS PRODUCES NOTHING BETWEEN 2,500x AND ITS
+9,000x CEILING. Measured on the shipped pool: 8,295 books in 2,500-5,000, 142 in
+5,000-8,100, and **ONE BOOK** in 8,100-9,000 out of 1e6. Consequences:
+  - its published max win is delivered at 1 in 2,000,003, against a MARKET NORM OF
+    1 in 400-4,000 (Meta Gaming's three titles, see BENCHMARKS.md)
+  - the 9,000x max win contributes 0.1% OF CORVUS'S VARIANCE. Strip it entirely and std
+    dev moves 250.906 -> 250.825. It is decoration.
+  - the maxwin_boost dress on (8100, 9000) is boosting exactly ONE book, i.e. inert
+⚠ NO OPTIMIZER DRESS CAN FIX THIS. Weights cannot create books the engine never makes.
+Raising corvus_cap_rtp alone would bolt a spike onto a distribution that dies at 2,500x
+and CREATE a win-range gap where we currently pass.
+
+THE ATTEMPT: corvus's star table stops at 25x where ursa reaches 50x and draco 100x, so
+its collected multiplier cannot get large enough. Swept +50 / +100 / +both
+(reels/sweep_star_values.py, now carries these variants and a >=20x/40x/60x TAIL SUPPLY
+column). Built corvus+50 at 1e6 across ALL FOUR AFFECTED MODES -- base, ante_starfall,
+buy_corvus and buy_mystery all roll corvus-tier features and share the table.
+
+  IT WORKED ON THE TAIL, exactly as swept:
+    >=2,500x   1 in 2,417 -> 1 in 888        >=5,000x  1 in 151,016 -> 1 in 11,679
+    a real ladder appeared under the ceiling: 2.5-4k 1 in 1,078 | 4-5k 1 in 8,861 |
+    5-6.5k 1 in 17,458 | 6.5-8k 1 in 66,279 | 8-9k 1 in 78,396
+  AND THE BODY PAID FOR IT:
+    under 0.25x ticket  41.6% -> 60.4%       median   0.294x -> 0.166x
+    beat the ticket     17.2% -> 14.2%       std/c      2.09 -> 2.56
+  Corvus became the HARSHEST AND MOST VOLATILE buy in the menu, at the cheapest price.
+
+⚠⚠ THE TAIL WAS NEVER WHAT COST THE BODY, AND THIS IS THE PART WORTH REMEMBERING.
+Everything above 2,500x is 4.0x of a 116x mean = 3.5% of RTP. What actually happened is
+that richer supply let the OPTIMIZER move ~15x of RTP into 500x+ (the 500-2,000 band went
+1 in 15 -> 1 in 13) and it hollowed out the middle to pay: >=10x fell 86.4% -> 65.1%,
+>=25x fell 65.1% -> 44.6%. Rebuilding the body afterwards does not rescue it -- moving 15
+points of weight from ~10x books to ~200x books ADDS 28.5x of RTP, a quarter of the whole
+budget, which has to come straight back out of the 500-2,000 band.
+=> CORVUS CANNOT BE BOTH THE SAFE ENTRY TIER AND CARRY A REAL 9,000x.
+
+⚠ THE HONEST FIX IS A LOWER CEILING, NOT A BIGGER STAR. NOT DONE, still open:
+On the reverted table P(>=2,500x) is 1 in 2,417. PUBLISHING 2,500x AS CORVUS'S MAX WIN
+would make it market-normal AND the most reachable ceiling in the menu -- which suits the
+cheapest tier. Cost: ceiling-per-cost 75.0x -> 20.8x, which looks weak on a spec sheet.
+It needs a re-sim (BetMode.max_win is the engine clamp) but no retune.
+
+⚠ KEEP THIS LESSON REGARDLESS -- IT GENERALISES TO EVERY FUTURE GAME:
+**FREQUENCY BEATS MAGNITUDE WHEN BUILDING A TAIL.** A 50x star rung at weight 1.0 beat a
+100x rung at weight 0.4 AND beat both together. The two 100x variants returned a natural
+max of exactly 6,247x -- IDENTICAL to shipped, i.e. no effect at all -- because at 0.4%
+weight across ~5.5 collected stars you hit one only ~2.2% of the time and still need
+lines through the block to cash it. Add a rung you will actually HIT, and concentrate the
+weight rather than splitting it across two high rungs.
+
+⚠ METHOD NOTE: the star table is SHARED. base, ante_starfall, buy_corvus and buy_mystery
+all roll corvus-tier features, so touching it re-simulates and re-converges FOUR of six
+modes. And the revert was cheap ONLY because the engine is deterministic: re-simming with
+the old config reproduced byte-identical books, which made the backed-up optimized LUTs
+valid again and skipped ~12 minutes of re-optimizing. VERIFY THAT rather than assume it --
+compare the restored LUT's payout column against the freshly regenerated raw table.
+
 ### ▶▶ HOW THE FEATURE ACTUALLY PLAYS (Aug 6 2026). ACT TWO WORKS. FULL DESIGN AUDIT.
 Measured off the SHIPPED pool, LUT-WEIGHTED (not the raw pool -- the two disagree badly,
 see below). Harnesses: /tmp/acts_weighted.py, /tmp/mystery_mix.py, /tmp/cap_by_tier.py.
