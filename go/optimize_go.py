@@ -13,7 +13,6 @@ pointed at, so pointing it at the real one would overwrite shipped lookup tables
     env/bin/python go/optimize_go.py base
     env/bin/python go/optimize_go.py base ante_starfall buy_corvus ...
 """
-import json
 import os
 import shutil
 import subprocess
@@ -21,11 +20,18 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "games", "starwake"))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import toml  # noqa: E402
 
 from game_config import GameConfig  # noqa: E402
 from game_optimization import OptimizationSetup  # noqa: E402
+from src.write_data.write_configs import make_temp_math_config  # noqa: E402
+
+# The shadow-tree OutputFiles and the minimal gamestate the config writers need
+# both already exist for the publish step; sharing them keeps the two Go entry
+# points from drifting apart, which is the exact disease this file just caught.
+from publish_go import GameStateShim, GoOutputFiles  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 GO_OUT = os.path.join(REPO, "go", "out", "library")
@@ -41,21 +47,7 @@ def stage(mode: str, config) -> None:
     for sub in ("configs", "forces", "lookup_tables", "optimization_files", "publish_files"):
         os.makedirs(os.path.join(SHADOW, sub), exist_ok=True)
 
-    # The math config is the optimizer's fence/dress definition. It is generated
-    # from game_config.opt_params and is identical for both engines, so it is
-    # copied from the real game rather than regenerated.
-    #
-    # ⚠ BUT IT ALSO CARRIES bet_modes[].cost AND .max_win, AND THOSE ARE WHERE THE
-    # OPTIMIZER READS THEM -- NOT game_config.py. That copied file is only as fresh
-    # as the last Python publish, so a cost or ceiling changed in game_config.py
-    # would be silently ignored here and every mode would converge to the OLD
-    # target. Found the hard way: a re-price test produced three "different" runs
-    # that were the same LUT, because only the report's divisor had changed.
-    # So the bet-mode block is overwritten from the LIVE config every time.
-    src_cfg = os.path.join(REPO, "games", "starwake", "library", "configs", "math_config.json")
-    dst_cfg = os.path.join(SHADOW, "configs", "math_config.json")
-    shutil.copy2(src_cfg, dst_cfg)
-    _sync_bet_modes(dst_cfg, config)
+    write_math_config(config)
 
     for sub, name in (
         ("forces", f"force_record_{mode}.json"),
@@ -75,37 +67,27 @@ def stage(mode: str, config) -> None:
             shutil.copy2(src, dst)
 
 
-def _sync_bet_modes(path: str, config) -> None:
-    """Overwrite the math config's cost/rtp/max_win from the live GameConfig.
+def write_math_config(config) -> None:
+    """Generate the optimizer's math config from the LIVE game config.
 
-    Only the bet-mode block. The fences come from opt_params and are not touched,
-    but a drift there is checked below rather than silently tolerated -- a stale
-    fence would converge the mode against the wrong RTP split, which looks like a
-    plausible pool right up to the compliance gates.
+    ⚠ THIS USED TO COPY games/starwake/library/configs/math_config.json AND THEN
+    OVERWRITE ONLY bet_modes[].{cost,rtp,max_win} FROM THE LIVE CONFIG. `fences`
+    and `dresses` rode along unchecked from whenever the Python side last
+    published. On Aug 6 2026 that was found to have cost buy_corvus its three
+    consolation bands (commit 5e9c59c) -- written, committed, and then silently
+    discarded, because the copied Jul 31 file predated them. NOTHING LOOKED
+    WRONG: the synced block still read cost 120 / max_win 9,000, so the shadow
+    config appeared fresh while its dress list was six days stale.
+
+    make_temp_math_config derives bet modes, fences AND dresses from
+    config.opt_params in one pass -- the same source the copy was approximating.
+    Generating removes the staleness class instead of patching one instance of it.
+
+    ⚠ USE THE CALLER'S CONFIG, NEVER A FRESH GameConfig(). Constructing a second
+    one here silently emptied config.opt_params in the caller, and write_setup
+    then failed with "no opt_params for mode buy_corvus".
     """
-    # ⚠ USE THE CALLER'S CONFIG, NEVER A FRESH GameConfig(). Constructing a
-    # second one here silently emptied config.opt_params in the caller, and
-    # write_setup then failed with "no opt_params for mode buy_corvus".
-    live = {bm.get_name(): bm for bm in config.bet_modes}
-    with open(path, encoding="UTF-8") as f:
-        cfg = json.load(f)
-
-    changed = []
-    for entry in cfg.get("bet_modes", []):
-        bm = live.get(entry["bet_mode"])
-        if bm is None:
-            continue
-        for key, want in (("cost", bm.get_cost()),
-                          ("rtp", bm.get_rtp()),
-                          ("max_win", bm.get_wincap())):
-            if entry.get(key) != want:
-                changed.append(f"{entry['bet_mode']}.{key} {entry.get(key)} -> {want}")
-                entry[key] = want
-
-    if changed:
-        print("  math_config refreshed from game_config: " + "; ".join(changed))
-        with open(path, "w", encoding="UTF-8") as f:
-            json.dump(cfg, f, indent=2)
+    make_temp_math_config(GameStateShim(config, GoOutputFiles(config, SHADOW)))
 
 
 def write_setup(config, mode: str, threads: int) -> None:
