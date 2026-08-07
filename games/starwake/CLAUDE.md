@@ -17,6 +17,10 @@ history of decisions that cost a sim run to re-derive. Read order if you are new
      instruction. Where an older section disagrees with a newer one, THE NEWER WINS
      and the older one says so explicitly.
 Repo-wide rules (remotes, what never to commit) live in the ROOT `CLAUDE.md`.
+**`BENCHMARKS.md`** (this directory) holds the competitor-comparison sheet: our measured
+numbers, the fixed CrowdSim config that makes session stats comparable, and the traps in
+reading them. Use it when comparing Starwake to another game; use THIS file for why the
+math is the way it is.
 
 ### ▶▶ WHERE WE ARE (Aug 5 2026)
 MATH: DONE. Act Two built, converged and gated — see "THE MATH IS DONE" below for
