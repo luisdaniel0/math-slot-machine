@@ -296,7 +296,34 @@ class OptimizationSetup:
                        # is an attempt to rebuild the shoulder between "near-total loss"
                        # and "money back" -- the part a coin-flip tier needs most.
                        {"criteria": "ursa", "scale_factor": 1.6,
-                        "win_range": (67, 134), "probability": 1.0}]
+                        "win_range": (67, 134), "probability": 1.0},
+                       # ⚠ THE 50% COMPLETION PUSH (Aug 6 2026). Measured on the shipped
+                       # pool, ursa completes 62.6% in the RAW pool but only 34.7% once
+                       # weighted -- because the optimizer removes the pool's ~2x surplus
+                       # by piling weight onto near-worthless books: the 0-50x band goes
+                       # 12.5% raw -> 49.3% WEIGHTED. Half of ursa's probability mass pays
+                       # under 0.19x the ticket. That single fact causes BOTH the collapsed
+                       # completion rate and ursa being the harshest buy in the game, which
+                       # the two dresses above were added to fight from the other side.
+                       # NOT the m2m band: ursa sits at 5.67 inside (3,10), so that
+                       # constraint is not binding and moving it does nothing.
+                       # Above 268x the split is CLEAN -- non-completed books essentially
+                       # never pay a full ticket -- so a payout-range dress can target
+                       # completions directly. Suppress the dead band, lift the clean one.
+                       # ⚠ FIRST ATTEMPT USED (1, 50) AND LEAKED. Books paying under 1x
+                       # base bet fell outside the range, so the optimizer dumped the
+                       # displaced weight there instead: 0-25x went 29.93% -> 39.49% while
+                       # 25-50x fell, and completion moved only 34.7% -> 37.9%. Range the
+                       # suppression from 0 or it is not a suppression, it is a funnel.
+                       {"criteria": "ursa", "scale_factor": 0.5,
+                        "win_range": (0, 50), "probability": 1.0},
+                       # Target the arithmetic: 50% completion at RTP 0.9662 needs the
+                       # completed set to average ~484x, which is the 268-800 band. The
+                       # extreme tail is what eats the budget that band needs.
+                       {"criteria": "ursa", "scale_factor": 2.2,
+                        "win_range": (268, 800), "probability": 1.0},
+                       {"criteria": "ursa", "scale_factor": 0.5,
+                        "win_range": (1200, 25000), "probability": 1.0}]
                 ).return_dict(),
                 "parameters": run_params(3, 10, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ursa"], [(5.0, 20.0)], [0.3]).return_dict(),

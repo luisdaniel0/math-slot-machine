@@ -22,12 +22,16 @@ Repo-wide rules (remotes, what never to commit) live in the ROOT `CLAUDE.md`.
 MATH: DONE. Act Two built, converged and gated — see "THE MATH IS DONE" below for
 the numbers and the pool location. All seven critical tests pass and 3-Star carries
 zero failed classes.
-⚠ AMENDED Aug 6: ONE MATH ITEM REOPENED. buy_corvus shipped WITHOUT the consolation
-bands from 5e9c59c — optimize_go.py copies a Jul 31 dress block and only syncs
-cost/rtp/max_win, so the bands never reached the optimizer. Gates all still pass; the
-entry-tier buy is simply harsher than the signed-off design (52.2% under a quarter
-ticket vs 42.3% intended). Fix stage(), re-optimize corvus, re-measure. Details in
-"THE PUBLISH LAYER WENT STALE" below.
+⚠ AMENDED Aug 6, ALL RESOLVED, POOL REBUILT. Four things landed that day and every one is
+measured, gated and published — gates never moved off 3-Star 0 failed classes / 2-Star 1:
+  1. THE PUBLISH LAYER WAS 36 HOURS STALE. index.json/config.json shipped corvus at cost
+     240 and maxWin 10,000 (B1). Root cause was optimize_go.py copying a hand-aged math
+     config; stage() now GENERATES it. Corvus also shipped without its consolation bands.
+  2. buy_corvus HAS A WINCAP SLICE. Its max-win rate was an optimizer draw ranging 1 in
+     2.9M-11.2M with 1 of 8 draws missing the gate; it is now 1 in 2,000,003, every run.
+  3. ASCENDANT OWNS THE MAX WIN (1 in 115, was 1 in 939); draco is second at 1 in 642.
+  4. URSA IS A 48.2% COIN FLIP (was 34.7%), which makes draco's completion premium over
+     it +51.5% instead of +7.5%, and drops ursa from harshest buy to second-kindest.
 NEXT IS THE FRONTEND, and it is the larger half of the remaining work. It is also
 what decides the STAR RATING, which is a human quality review of art, animation,
 sound, performance and depth — the math cannot earn a third star, only fail to lose
@@ -51,8 +55,9 @@ not publish. See "THE PUBLISH LAYER WENT STALE" (Aug 6) for the 36-hour drift th
 carries 75-93% of payback in every tier (the design works). It also records that the
 84/62/32 completion ladder quoted all over this file is a RAW-POOL number — delivered is
 90/35/30 — and the conservation law that decides every "can we have both" question.
-ONE DESIGN ITEM PROPOSED AND NOT DONE: take ursa to 50% completion, which turns draco's
-+7.5% completion premium over ursa into +51% without touching draco.
+⚠ THE DELIVERED LADDER MOVED TWICE ON Aug 6 — the numbers above are the OLD ones. Current
+delivered completion is corvus 89.7 / URSA 48.2 / draco 29.9 / mystery 75.3, and ascendant
+now owns the max win. Use "URSA IS A COIN FLIP NOW" and "ASCENDANT NOW OWNS THE MAX WIN".
 
 ### ▶▶ THE PUBLISH LAYER WENT STALE AND NOTHING NOTICED (Aug 6 2026)
 FOUND BY AN OUTSIDE TOOL, not by us: mnemoo/tools (community LUT explorer,
@@ -199,9 +204,51 @@ Everything is pinned except how you split it. You can have OFTEN-BUT-SMALLER or
 RARELY-BUT-BIGGER; "often and bigger" does not exist. Worked example: ursa is
 0.347*675 + 0.653*37.8 = 259. Forcing 50% completion gives C = 480x, i.e. completing
 would pay 1.79x the ticket instead of 2.51x.
-=> PROPOSED, NOT DONE: take ursa to 50% completion (its stated design brief). Its payoff
-   falls 2.52 -> 1.79x, which makes DRACO's untouched 2.71x a +51% premium over ursa
-   instead of +7.5%. Fixes the flat top rung by changing ursa, touching nothing on draco.
+=> DONE Aug 6 2026, and the arithmetic above predicted the outcome to within 2%.
+   See "URSA IS A COIN FLIP NOW" below. Completion 34.7 -> 48.2%, payoff 2.52 -> 1.83x
+   (predicted 1.79x), and DRACO'S UNTOUCHED 2.71x IS NOW A +51.5% PREMIUM over ursa
+   (predicted +51%). The flat top rung is fixed by changing ursa; draco was not touched.
+
+### ▶▶ URSA IS A COIN FLIP NOW (Aug 6 2026). 48.2% completion, draco premium +51.5%
+NO RE-SIM WAS NEEDED — the raw pool never changed. This is entirely an opt_params reshape,
+so each trial was one `optimize_go.py buy_ursa` (~5 min) plus a measurement.
+
+  metric                     before     after     note
+  completion (weighted)       34.7%     48.2%    raw pool is 62.6% and did not move
+  pays when completed         2.52x     1.83x    of the 268x ticket
+  under 0.25x ticket          60.2%     43.1%    was the harshest buy; draco is 53.1%
+  beat the ticket             21.4%     32.3%
+  carpet (non-completed)     37.8x     45.20x
+  RTP                        0.9662    0.9662    gates: 3-Star 0 fails, 2-Star 1 (CVaR)
+  ursa p5k                 5.29e-04  4.70e-04    tail improved, not degraded
+
+⚠⚠ THE MECHANISM, because it explains ursa's harshness AND its low completion as ONE
+defect. The raw pool is ~2x too rich, so the optimizer must dump half the value, and the
+cheapest way to dump value is TO PILE WEIGHT ONTO NEAR-WORTHLESS BOOKS. Measured before:
+the 0-50x band held 12.5% of raw books and **49.3% of delivered weight**. Half of ursa's
+probability mass paid under 0.19x the ticket. That single fact caused both symptoms, and
+the two consolation dresses added earlier were fighting it from the wrong end.
+
+⚠ IT IS NOT THE m2m BAND. Ursa sat at m2m 5.67 inside a (3,10) band, so the constraint
+was NOT BINDING and moving it would have done nothing. This was checked before acting on
+it; the completion/m2m correlation across tiers (corvus 1.5-5 -> 89.7%, draco 5-20 ->
+29.9%) is real but it is a symptom, not the lever.
+
+THE LEVER IS DRESSES, and the payout split makes them targetable: ABOVE 268x THE
+SEPARATION IS CLEAN — non-completed ursa books essentially never pay a full ticket, so a
+win_range dress can address completions specifically. Final set added to the ursa scaling:
+    (0, 50)         x0.5    kill the dump zone
+    (268, 800)      x2.2    50% completion at this RTP needs completions to average
+                            ~484x; that is this band. Measured result 489.12x.
+    (1200, 25000)   x0.5    the extreme tail was eating the budget that band needed
+⚠ FIRST ATTEMPT USED (1, 50) AND LEAKED — books paying under 1x base bet fell outside the
+range, the optimizer dumped displaced weight there instead (0-25x went 29.93% -> 39.49%),
+and completion moved only 34.7% -> 37.9%. RANGE SUPPRESSIONS FROM 0, or it is a funnel.
+
+⚠ URSA IS NO LONGER THE HARSHEST BUY. 43.1% under a quarter ticket against draco's 53.1%
+restores the intended identity (draco is the lottery, ursa the coin flip) that the
+wincap-0.030 note further down was written about. Ordering by harshness is now
+mystery 32.7 < ursa 43.1 < corvus ~41.6 < draco 53.1.
 
 ⚠ A TIER IS NOT THE SAME PRODUCT IN EVERY MODE. Completion inside buy_mystery vs bought
 standalone: corvus 99.5 vs 89.7, ursa 63.7 vs 34.7 (+29 POINTS), draco 45.6 vs 29.9,
