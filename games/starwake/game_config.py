@@ -689,6 +689,32 @@ class GameConfig(Config):
         ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
 
+        # ASCENDANT'S OWN WINCAP, added Aug 6 2026 so buy_mystery's forced cap books are
+        # ASCENDANT rolls rather than draco ones. NOT _wincap_condition(6): that helper
+        # draws BR0 for the basegame, where six scatters succeed ~20% of the time against
+        # ~92% on ASC (see ascendant_condition above). Everything else mirrors the helper.
+        #
+        # WHY: measured on the shipped pool, max-win rate per roll INSIDE buy_mystery was
+        # draco 1 in 317 vs ascendant 1 in 939 -- backwards. Every forced cap book in the
+        # mode was a draco roll, so draco got all the help and ascendant only kept its
+        # organic leftovers. Ascendant is the tier that cannot be bought and carries 46%
+        # of the mode's payback on 10% of its rolls; it should own the max win.
+        # ⚠ THIS IS A RELABELLING, NOT A REBALANCE. The slice quota, the total cap weight
+        # and mystery_cap_rtp are all unchanged, and every cap book pays exactly 25,000x
+        # whichever tier produced it -- so the mode's payout distribution, p5k, p10k, CVaR
+        # and ETL are untouched. Only the constellation on screen when it lands changes.
+        ascendant_wincap_condition = {
+            "reel_weights": {
+                self.basegame_type: {"ASC": 1},
+                self.freegame_type: {"FR0": 1, "WCAP": 5},
+                "roam": dict(roam_wincap_weights),
+            },
+            "scatter_triggers": {6: 1},
+            "mult_values": fg_mult,
+            "force_wincap": True,
+            "force_freegame": True,
+        }
+
         # Non-triggering base spins (draw_board redraws these to <3 stars). "0" is the
         # forced-loss slice; "basegame" is the paying base slice (funds the hit floor).
         basegame_condition = {
@@ -895,7 +921,13 @@ class GameConfig(Config):
                 name="buy_mystery", cost=563.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
-                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),
+                    # Forced caps are ASCENDANT rolls (was draco until Aug 6 2026 -- see
+                    # ascendant_wincap_condition for the measurement that prompted it).
+                    # The single "wincap" opt fence searches payout == 25,000 and so still
+                    # matches these; no opt_params change is needed, and fence order still
+                    # puts wincap ahead of the kind=6 ascendant body fence, which is what
+                    # keeps the forced books out of the body slice.
+                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ascendant_wincap_condition),
                     Distribution(criteria="ascendant", quota=0.100, conditions=ascendant_condition),
                     Distribution(criteria="draco", quota=0.250, conditions=draco_condition),
                     Distribution(criteria="ursa", quota=0.295, conditions=ursa_condition),

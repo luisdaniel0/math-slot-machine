@@ -47,6 +47,12 @@ identical runs at 1 in 3.1M to 6.6M, with one outlier at 1 in 14.5M, against a
 1-in-10M gate. This is a permanent per-pool check, not a one-off.
 ⚠ AND RE-RUN `go/publish_go.py` AFTER ANY game_config.py CHANGE — the Go pipeline does
 not publish. See "THE PUBLISH LAYER WENT STALE" (Aug 6) for the 36-hour drift this cost.
+⚠ READ "HOW THE FEATURE ACTUALLY PLAYS" (Aug 6) BEFORE ANY FEATURE-ECONOMY CHANGE. Act 2
+carries 75-93% of payback in every tier (the design works). It also records that the
+84/62/32 completion ladder quoted all over this file is a RAW-POOL number — delivered is
+90/35/30 — and the conservation law that decides every "can we have both" question.
+ONE DESIGN ITEM PROPOSED AND NOT DONE: take ursa to 50% completion, which turns draco's
++7.5% completion premium over ursa into +51% without touching draco.
 
 ### ▶▶ THE PUBLISH LAYER WENT STALE AND NOTHING NOTICED (Aug 6 2026)
 FOUND BY AN OUTSIDE TOOL, not by us: mnemoo/tools (community LUT explorer,
@@ -158,6 +164,89 @@ RUN-TO-RUN NOISE, the exact thing commit 5e9c59c is named for. Every delta BETWE
 two band settings (2.1 pts body, 3.8 pts beat, 0.97M cap) sits inside this mode's
 documented spread: ~8 points on the body, and cap-rate draws measured from 1 in 3.1M to
 1 in 14.5M on IDENTICAL configs. n=1 per setting cannot separate them.
+### ▶▶ HOW THE FEATURE ACTUALLY PLAYS (Aug 6 2026). ACT TWO WORKS. FULL DESIGN AUDIT.
+Measured off the SHIPPED pool, LUT-WEIGHTED (not the raw pool -- the two disagree badly,
+see below). Harnesses: /tmp/acts_weighted.py, /tmp/mystery_mix.py, /tmp/cap_by_tier.py.
+
+**THE HEADLINE: ACT 2 CARRIES THE GAME, IN EVERY TIER.** The design doc's open risk
+("can act 2 carry the money?") is answered yes and it is not close.
+
+  tier      completion   act1      act2     ACT2 SHARE   act2 share (completed only)
+  corvus       89.7%    8.29x   107.69x       92.9%              93.3%
+  ursa         34.7%   41.02x   216.60x       84.1%              92.5%
+  draco        29.9%  121.94x   371.05x       75.3%              88.1%
+  mystery      75.3%   87.29x   451.86x       83.8%              90.8%
+Per PAYING SPIN act 2 pays 34-63x more than act 1 (corvus 2.34 -> 146.97, ursa 6.39 ->
+219.12, draco 17.52 -> 762.05). Forming the constellation pays nearly nothing; the 2x2
+roam is the whole economy. NO TIER IS BUILT BACKWARDS.
+
+⚠⚠ THE 84/62/32 COMPLETION LADDER QUOTED THROUGHOUT THIS FILE IS A **RAW POOL** NUMBER.
+Players get something different, because the optimizer reweights completed features:
+     raw pool   84 / 62 / 32          delivered   90 / 35 / 30  (+ mystery 75)
+Ursa is the casualty: 62.4% raw -> 34.7% delivered. Its "coin flip" is a 1 in 3. ALWAYS
+say which one you mean; the raw figure is what a sim prints and it is not the product.
+
+**THE PAYOFF LADDER ASCENDS, WHICH IS THE DESIGN INTENT WORKING** (total when completed,
+as a multiple of the ticket):   corvus 1.07x -> ursa 2.52x -> draco 2.71x
+Rarer completion buys a bigger payoff, exactly as intended. ⚠ BUT THE TOP RUNG IS FLAT:
+corvus->ursa is +123% price for +135% payoff, ursa->draco is +94% price for +7.5%.
+Draco's premium is really a MAX-WIN play (1 in 642 vs ursa's 1 in 3,589), not a
+completion play -- write the buy-menu copy accordingly.
+
+⚠ THE CONSERVATION LAW, and it settles most "can we have both" questions:
+      completion_rate * completion_payoff + (1-rate) * consolation == RTP * cost
+Everything is pinned except how you split it. You can have OFTEN-BUT-SMALLER or
+RARELY-BUT-BIGGER; "often and bigger" does not exist. Worked example: ursa is
+0.347*675 + 0.653*37.8 = 259. Forcing 50% completion gives C = 480x, i.e. completing
+would pay 1.79x the ticket instead of 2.51x.
+=> PROPOSED, NOT DONE: take ursa to 50% completion (its stated design brief). Its payoff
+   falls 2.52 -> 1.79x, which makes DRACO's untouched 2.71x a +51% premium over ursa
+   instead of +7.5%. Fixes the flat top rung by changing ursa, touching nothing on draco.
+
+⚠ A TIER IS NOT THE SAME PRODUCT IN EVERY MODE. Completion inside buy_mystery vs bought
+standalone: corvus 99.5 vs 89.7, ursa 63.7 vs 34.7 (+29 POINTS), draco 45.6 vs 29.9,
+ascendant 99.0. Mystery's economics (563x ticket, ascendant carrying ~50% of payback)
+let it spend its tier budgets as "often but smaller" where the standalone buys spend the
+same tiers as "rarely but bigger". FRONTEND MUST NOT IMPLY ROLLING URSA == BUYING URSA.
+
+⚠ RETRACTED: "the mystery odds are stale". THEY WERE NEVER STALE. Measured delivered mix
+35.144 / 29.622 / 25.105 / 10.129 against a published 35.16 / 29.64 / 25.15 / 10.06 --
+every tier within 0.07pp. Payback split 14.28 / 13.52 / 22.34 / 49.86 against a
+14.9/14.1/23.2/47.8 design. These numbers are VERIFIED against the shipped pool and can
+go straight into the frontend copy. That closes the last math-side publishing item.
+
+⚠ ETL40'S WORST CASE IS **base** (0.558), NOT A BUY. The per-mode table reads base 0.558
+/ ante 0.529 / corvus 0.000 / ursa 0.027 / draco 0.079 / mystery 0.043. So buy-mode
+changes do NOT threaten the tightest 3-Star gate -- an earlier note in this file implying
+they do was wrong. What buy changes DO threaten is Tail Probability: p5k/p10k worst case
+is draco (5.01e-03 / 2.24e-03), and a second failed class costs the $50 bet template.
+
+### ▶▶ ASCENDANT NOW OWNS THE MAX WIN (Aug 6 2026)
+MEASURED FIRST, and it was backwards: max-win rate per roll INSIDE buy_mystery was draco
+1 in 317, ascendant 1 in 939. Every forced cap book in the mode used
+draco_wincap_condition, so draco got all the help and ascendant kept only organic
+leftovers -- on the tier that cannot be bought and carries ~50% of the mode's payback.
+
+FIX: mystery's wincap Distribution now uses a new ascendant_wincap_condition (scatter 6,
+ASC basegame strip -- NOT _wincap_condition(6), which draws BR0 where six scatters land
+~20% of the time against ~92% on ASC). Quota, mystery_cap_rtp and total cap weight are
+ALL UNCHANGED; no opt_params edit was needed, because the single "wincap" fence searches
+payout == 25,000 and still matches, and fence order still puts it ahead of the kind=6
+ascendant body fence.
+
+  RESULT      ascendant  1 in 939 -> **1 in 115**      draco-in-mystery  317 -> 11,860
+  ORDERING    ascendant 1 in 115 > buy_draco 1 in 642 > buy_ursa 1 in 3,589
+              > draco-in-mystery 1 in 11,860 > buy_corvus 1 in 2,000,003
+  Forcing is CHEAP: 1.02 redraws/book (draco's ~117, corvus's 2.74). No hang risk.
+  Gates: 3-Star 0 failed classes, 2-Star 1 (absolute CVaR). Unchanged.
+
+⚠ IT WAS NOT THE PURE RELABELLING IT WAS PREDICTED TO BE. Every cap book still pays
+exactly 25,000x, but the optimizer re-solved the whole mode and mystery's tail IMPROVED:
+p5k 4.67e-03 -> 3.45e-03, p10k 2.10e-03 -> 1.81e-03, ETL10k 0.073 -> 0.065. Draco's
+payback share inside mystery fell 25.89% -> 22.34% and ascendant's rose 46.31% -> 49.86%
+(closer to the 10%-of-rolls / ~52%-of-payback Rage Bait shape this mode is modelled on).
+Displayed mix moved <0.08pp and still rounds to the published figures.
+
 ### ▶▶ CORVUS HAS A WINCAP SLICE (Aug 6 2026). RATE CONTROL WORKS; BODY COST UNRESOLVED
 BUILT: corvus_wincap_condition = _wincap_condition(3, {"ROAM":1,"ROAMCAP":40}) + a
 Distribution(criteria="wincap", quota=0.002, win_criteria=corvus_cap) on buy_corvus, and

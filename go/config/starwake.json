@@ -1567,7 +1567,7 @@
             "forceFreegame": true,
             "reelWeights": {
               "basegame": {
-                "BR0": 1
+                "ASC": 1
               },
               "freegame": {
                 "FR0": 1,
@@ -1580,7 +1580,7 @@
             },
             "scatterTriggers": [
               {
-                "scatters": 5,
+                "scatters": 6,
                 "weight": 1
               }
             ],
