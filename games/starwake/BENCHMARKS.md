@@ -215,6 +215,73 @@ read available on whether their game is genuinely comparable to ours.
   (c) HOW OFTEN DOES A BUY REACH ITS FEATURE CLIMAX? Ours: 90 / 48 / 30 / 75%.
   (d) MAX-WIN RATE PER MODE. Ours spans 1 in 642 (draco) to 1 in 2M (corvus).
 
+## 3b. COMPETITOR: Rage Bait (Meta Gaming, v11) — measured Aug 7 2026
+
+SOURCES, and they are cheap to re-pull:
+  stakestats.net/api/games/<slug>  -- ONE GET, returns every mode as JSON (rtp, std dev,
+    hit, bust, maxMultiplier, events, volatility rank vs 26,470 modes). No screenshots,
+    no clicking "Load Stats". curl it from WSL and parse.
+  stakecruncher.com/slots-tracker/stats/<slug>/<ver>/<mode> -- per-mode page carrying the
+    numbers stakestats does NOT have: MAX WIN CHANCE, median win, top-heavy RTP,
+    money-back-on-a-win, dry-streak percentiles.
+
+⚠ THE TWO SITES DEFINE "HIT" DIFFERENTLY AND BOTH ARE INTERNALLY CONSISTENT:
+    StakeCruncher HIT = P(any win)      -- base 37.5%, and HIT + BUST = 100
+    stakestats hitFrequency = P(>= 1x)  -- base 16.08%
+    BUST agrees on both (62.5%). Always state which one a number is.
+
+  mode                    cost      RTP   std dev   bust   any win   >=1x    max win   MAX-WIN RATE
+  base                      1x   96.70%    33.435  62.5%    37.5%   16.08%   25,000x   (not shown)
+  ante                      3x   96.70%    20.020  58.0%    42.0%   10.47%    8,333x   1 in 319,430
+  bonus_fs_super          250x   96.70%     2.576   0.0%   100.0%   27.94%      100x   1 in 3,998
+  rage_spins              350x   96.70%     3.963   5.9%    94.1%   14.72%     71.4x   1 in 1,377
+  bonus_fs_mystery        500x   96.70%     2.684   0.0%   100.0%   23.35%       50x   1 in 981
+  bonus_fs_mystery_ante   500x   96.70%     3.323  46.5%    53.5%   20.11%       50x   1 in 395
+  events/mode 1.23M-1.98M. maxMultiplier is COST-NORMALISED, so cost = 25,000/maxMult --
+  that is how the prices above were derived, and it confirms every mode reaches 25,000x.
+
+### THE FINDINGS THAT MATTER
+
+⚠⚠ 1. OUR BASE IS FLATTER AND DRIER, AND THE 35-48 BENCHMARK BAND WAS ROUGHLY RIGHT.
+  std dev      Rage Bait 33.435   Starwake 25.357   (we are 24% below; their base ranks
+                                                     1483/26,470 = 94.4th percentile)
+  pays nothing         62.5%              70.75%
+  any win              37.5%              29.25%
+  pays >= 1x          16.08%               8.00%
+  partial (0-1x)      21.42%              21.25%   <- IDENTICAL to 0.2 points
+=> THE PARTIAL BAND IS THE SAME IN BOTH GAMES. THE ENTIRE DIFFERENCE IS THAT RAGE BAIT
+   CONVERTS 8 POINTS OF DEAD SPINS INTO MONEY-BACK-OR-BETTER. And it does that while
+   being 32% MORE volatile on the same 25,000x cap and the same RTP -- more frequent
+   break-evens AND a heavier tail, which is the hard combination.
+
+⚠⚠ 2. CORVUS'S MAX-WIN RATE IS A 500x OUTLIER AGAINST THE MARKET.
+  Rage Bait's buys:  1 in 395 / 981 / 1,377 / 3,998
+  Starwake's buys:   draco 1 in 642, mystery 1 in 1,110, ursa 1 in 3,589  <- all normal
+                     CORVUS 1 in 2,000,003                               <- 500x rarer
+  Set Aug 6 for a 5x margin under the 1-in-10M obtainability gate. Legal, and nothing
+  like how a competitor prices a buy's headline: a Rage Bait buyer reaches their ceiling
+  every few hundred to few thousand buys; a corvus buyer effectively never does.
+  TO FIX: corvus_cap_rtp 0.0000375 -> ~0.019 gives ~1 in 4,000. Corvus caps at 9,000x so
+  p10k is untouched; p5k goes to ~2.5e-4 against a 0.010 limit. Legal but it costs ~1.9%
+  of the mode's RTP out of the body, where the current setting costs 0.004%. NOT DECIDED.
+
+⚠ 3. WE ARE MORE GENEROUS ON MEDIAN, THEY ARE FAR MORE TOP-HEAVY.
+  median win / ticket   theirs 0.05-0.22x     ours 0.235-0.327x   WE WIN
+  RTP from 100x+ wins   theirs 62% (ante), 92-99% (bonuses)   ours 31.3% (base)
+  StakeCruncher labels EVERY Rage Bait mode "Psychotic -- most of the RTP is locked
+  behind the tail, dry for ages, then you either hit big or go home." We are the
+  opposite shape: more middle, less tail.
+
+⚠ 4. THEIR SIX MODES ARE ALL EXACTLY 96.7000%. Zero spread. We run 96.50-96.65% and
+  buy_draco is 0.20 points under the cap -- free player-facing RTP we are not giving.
+
+⚠ 5. CEILING-PER-COST FALLS WITH PRICE FOR THEM TOO: 100x (250 cost) -> 71.4x (350) ->
+  50x (500). CONFIRMS this is structural under a shared cap and NOT a defect of ours.
+  Ours is only non-monotonic because corvus carries a 9,000x cap instead of 25,000x.
+
+⚠ 6. REPLAY URL FORMAT, useful for the mandatory replay work:
+  https://fair.stake-engine.com/replay/<publisher>/<game>/<version>/<mode>/{event}
+
 ## 4. Compliance position (for context, not comparison)
 
 3-Star: 0 failed classes -> $500 bet template. 2-Star: 1 (absolute CVaR 25,000 vs 20,000).
