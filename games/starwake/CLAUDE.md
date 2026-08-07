@@ -239,8 +239,26 @@ corvus's own +/-10 point body noise. Corvus sits THIRD of four on harshness (mys
 < ursa 43.1 < corvus 48.9 < draco 53.1) rather than becoming the worst, which is what the
 star-table attempt did. The mid-tail actually IMPROVED: >=500x 6.92% -> 7.53%, >=1,000x
 1.88% -> 2.22%.
-⚠ RTP LANDED AT 0.9661, not 0.9665 -- an optimizer draw, inside the 0.5% band and fine,
-but corvus now sits 0.04% under its siblings. Re-optimizing would likely recover it.
+⚠⚠ RTP LANDED AT 0.9661 AND RE-OPTIMIZING DOES NOT FIX IT -- IT IS STRUCTURAL, NOT A
+DRAW. Two runs both returned 0.966114 to six figures. Diagnosed by splitting the delivered
+RTP per fence: THE WINCAP FENCE HITS ITS TARGET (0.008330 vs 0.008333) AND THE BODY FENCE
+UNDERSHOOTS (0.957784 vs 0.958167, short 0.000383).
+=> AND IT IS NOT A CORVUS PROBLEM. THE PATTERN IS FENCE COUNT:
+     base / ante / mystery   6 fences each   0.9665 EXACT
+     corvus / ursa / draco   2 fences each   0.9661 / 0.9662 / 0.9650
+   Every TWO-fence mode undershoots; every multi-fence mode lands exactly. DRACO HAS THE
+   SAME DEFECT FOUR TIMES WORSE (0.9650 = 0.15% under) and it has been accepted as normal
+   since it was first converged.
+⚠ THE OBVIOUS HACK DOES NOT WORK: padding the body fence's target to compensate breaks
+verify_optimization_input, which asserts the rtp splits sum to the mode rtp at 5dp.
+=> ACCEPTED FOR NOW at 0.9661 -- 0.04%, band spread 0.151% against a 0.5% limit, every
+   mode under the 96.70% cap. But UNDERSTANDING THE TWO-FENCE CONVERGENCE BEHAVIOUR IS A
+   REAL OPEN ITEM, because the prize is draco's 0.15%, not corvus's 0.04%.
+
+⚠ AND WATCH WHICH DRAW YOU KEEP. The re-optimize returned identical RTP but a WORSE body
+(beat 14.64% vs 16.81%, median 0.246x vs 0.256x, under-0.25x 50.5% vs 48.9%) -- corvus's
++/-10 point body variance again. The better draw was restored. Any corvus re-run needs the
+body measured before it is published, not just the RTP.
 
 ⚠ TWO DRESSES WERE REMOVED WITH THE CEILING and should stay removed:
   tail_scaling("corvus") -- damps (1000,2000) at 0.8 and lifts (3000,4000) at 1.2. Above
