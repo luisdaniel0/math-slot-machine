@@ -112,6 +112,87 @@ Players see more symbols land AND longer runs of not getting ahead. No per-spin 
 shows this; it only appears in session data. Relevant to how ante is presented, and worth
 checking on any competitor ante/bonus-buy-lite mode.
 
+## 2c. Session experience — ALL SIX MODES, identical config
+
+  metric                     BASE      ANTE    CORVUS      URSA     DRACO   MYSTERY
+  probability of profit     36.3%     35.5%     38.3%     30.3%     34.7%     35.9%
+  sim RTP                  94.31%    91.97%    96.61%    96.83%    95.88%    96.59%
+  deviation (sigma)          0.71      1.59      0.11      0.75      1.89      0.22
+  cost-adjusted volatility  26.24     22.76      2.09      2.16      2.54      2.11
+  busted                    35.5%     32.0%      0.5%      0.1%      0.7%      0.1%
+  danger zone affected      56.9%     53.6%      1.3%      0.1%      2.0%      0.5%
+  median final balance      49.07     49.90     87.98     84.49     82.93     85.29
+  mean final balance        82.94     75.92     89.82     90.48     87.63     89.78
+  avg max drawdown         103.8%     99.1%     32.8%     29.3%     38.1%     31.6%
+  P5 / P95              -97/362   -92/310    33/150    43/169    24/166    36/154
+  break-even rate            8.0%      3.2%     17.2%     32.4%     21.7%     22.1%
+  avg / max lose streak  61.4/192  87.8/244   23.5/60   12.5/29   19.1/46   18.5/39
+  avg / max win streak      1.6/5     1.3/3     3.0/7    4.7/11     3.5/8     3.5/8
+  big-win hit rate          99.0%     99.3%     97.0%     74.3%     74.0%     60.9%
+  avg spins to a big win       63        61        78       113       122       128
+  never hit a big win        1.0%      0.7%      3.0%     25.6%     26.1%     39.1%
+
+⚠ "BIG WIN 10x" IS RELATIVE TO COST, so these are different events per mode: base 10x
+absolute, corvus 1,200x, ursa 2,680x, draco 5,200x, mystery 5,630x. The buy columns are
+NOT comparable to the base ones and barely to each other -- mystery's "worst" hit rate is
+against the highest bar in the game. What IS readable, and is a real product fact:
+39.1% OF MYSTERY PLAYERS AND ~26% OF URSA/DRACO PLAYERS NEVER SEE 10x THEIR TICKET in 300
+buys, against 3% on corvus.
+
+⚠⚠ THE STREAK-vs-BREAK-EVEN RELATIONSHIP IS CONFIRMED ACROSS ALL SIX MODES AND IS
+PERFECTLY MONOTONIC. This settles what CrowdSim's "streak" counts: SPINS THAT DID NOT PUT
+YOU AHEAD, not spins that paid nothing.
+    B/E   3.2%   8.0%  17.2%  21.7%  22.1%  32.4%
+    lose  87.8   61.4   23.5   19.1   18.5   12.5  (ante, base, corvus, draco, mystery, ursa)
+Predicted longest run ln(300*p_win)/ln(1/p_loss) fits the buys almost exactly (ursa 11.7
+predicted vs 12.5 observed, mystery 16.8 vs 18.5, draco 17.1 vs 19.1, corvus 20.9 vs 23.5)
+and runs ~1.3-1.6x loose on base/ante, whose large zero mass changes the shape.
+=> NEVER COMPARE A STREAK NUMBER WITHOUT THE BREAK-EVEN RATE BESIDE IT.
+
+⚠⚠ URSA HAS THE LOWEST PROBABILITY OF PROFIT OF ANY MODE (30.3%) DESPITE HAVING THE
+HIGHEST BREAK-EVEN RATE (32.4%). That is not a contradiction, it is the SIGNATURE OF THE
+Aug 6 RESHAPE. Ursa now clusters hard just below break-even: 27.6% of players end in
+50-75 and 32.6% in 75-100, so 60.2% FINISH BETWEEN HALF AND ALL OF THEIR BANKROLL. It has
+the shortest losing streaks, the longest winning streaks (avg 4.7, max 11), the lowest
+bust rate (0.1%) and the smallest drawdown (29.3%) -- and the fewest players who actually
+end ahead. The trade was "rare and big" for "often and nearly", and over a long session
+"nearly" resolves as a small reliable loss.
+=> THIS IS THE COST OF THE 48.2% COMPLETION CHANGE and it was not visible in any per-spin
+   statistic. Whether it is the right trade is a design call, not a defect: ursa is now
+   the smoothest, safest, least-frustrating buy AND the least likely to send anyone home
+   up. Check what competitors' mid-tier buys do here before deciding.
+
+⚠ SIM RTP TRACKED VOLATILITY EXACTLY AS PREDICTED, across a 12x range of it: standard
+error is (cost-adj std dev)/sqrt(600,000), giving +/-3.27pp on base and +/-0.27pp on
+corvus. Every mode landed inside 1.9 sigma. THE TOOL IS SAMPLING OUR LUTS CORRECTLY.
+
+⚠ THE DANGER ZONE PANEL IS VARIANCE, NOT A DEFECT, and corvus proves it: 1.3% affected
+against base's 56.9% on the identical config, because corvus's cost-adjusted volatility
+is 2.09 against 26.24 and it never pays zero.
+⚠⚠ AND ITS "TOTAL EVENTS" / "AVG PER PLAYER" FIGURES ARE INFLATED AND SHOULD NOT BE
+QUOTED. The sim does NOT stop at zero (base min balance -149.89), so a player who runs out
+at spin 150 contributes another 150 danger events. Base's 108,902 events are dominated by
+post-ruin spins. "Avg per player 54.5" is also divided by ALL 2,000 players, not the 1,137
+affected. ONLY "PLAYERS AFFECTED" IS READABLE.
+=> Base's 56.9% is the arithmetically expected result of a thin bankroll, not harshness:
+   per-spin std dev 25.36 over 300 spins gives a session std dev of 25.36*sqrt(300) = 439
+   against a 100-unit bankroll. THE NOISE IS 4.4x THE BANKROLL, so where you finish is
+   almost independent of where you started. Expected loss over the session is only ~10.
+
+⚠ SIM RTP CONVERGENCE IS A VARIANCE DIAGNOSTIC — USE IT ON COMPETITORS. Standard error is
+(per-spin std dev)/sqrt(spins), so base lands +/-3.27pp and corvus +/-0.27pp on the same
+600k spins. Base read 0.71 sigma, ante 1.59, corvus 0.11 — all normal. IF A COMPETITOR'S
+SIM RTP CONVERGES TIGHTLY, THEIR VARIANCE IS FAR BELOW OURS. That is the single fastest
+read available on whether their game is genuinely comparable to ours.
+
+⚠ TWO THINGS THAT ARE NOT COMPARABLE ACROSS MODES:
+  (a) "BIG WIN 10x" IS RELATIVE TO COST. For corvus that is 1,200x absolute, for base 10x.
+      Corvus's 97.0% hit rate is a vastly bigger event than base's 99.0%. Never put those
+      two columns side by side without saying so.
+  (b) 300 SPINS OF A BUY IS NOT A SESSION. 300 corvus buys is 36,000x of turnover. Buy-mode
+      session stats are for CROSS-GAME COMPARISON at a fixed config, not for predicting
+      real player behaviour.
+
 ## 3. Buy menu — structure, and where we are unusual
 
   mode        cost   RTP      max win   ceil/cost  median/c  beat    <0.25x tkt  max-win rate
