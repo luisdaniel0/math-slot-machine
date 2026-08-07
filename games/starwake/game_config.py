@@ -642,11 +642,22 @@ class GameConfig(Config):
         # beast is 2x2 now, and the 100k confirmation run measured ursa reaching the cap
         # NATURALLY (once in 99,960, before any forcing). The exclusion was a measurement
         # gap, not a structural fact.
-        # CORVUS STAYS OUT, and that is a choice rather than a limit: the sweep showed it
-        # can reach the cap with ladder top 800 (~1 in 2,500, easily forceable), but only
-        # by trading away the best body in the game (>cost 25.1% -> 14.5%, under the ~22%
-        # market norm) and flattening its ladder for five of nine rungs against a pitch
-        # that says the multiplier climbs every spin. It publishes an honest 10,000x.
+        # CORVUS JOINED THEM Aug 6 2026, AT ITS OWN 9,000x CEILING -- the "stays out"
+        # note that lived here is superseded and its two premises are both gone:
+        #  1. It was written when corvus advertised 25,000x and targeted an act-ONE
+        #     ladder top of 800. Corvus now publishes 9,000x, a figure it reaches
+        #     organically, so the slice manufactures a plausible round rather than an
+        #     out-of-reach one.
+        #  2. The ">cost 25.1% -> 14.5%" body cost was a SINGLE-DRAW measurement. An
+        #     n=8 variance run (Aug 6) put corvus's body spread at 26 POINTS run to run,
+        #     so that number never distinguished a real cost from noise. The slice's
+        #     actual RTP price is arithmetic and tiny: rate * cap / cost
+        #     = (1/2,000,000) * 9,000 / 120 = 0.00375% of the mode's RTP.
+        # WHAT IT BUYS: corvus's cap rate stops being an optimizer draw. Measured over 8
+        # identical runs it ranged 1 in 2.9M to 1 in 11.2M, and ONE OF THE EIGHT missed
+        # the ~1-in-10M obtainability guideline outright. A slice makes the rate a number
+        # we set. It also removes the tail as a free variable, which is why the body
+        # wandered 26 points while RTP converged to 0.9665 every single time.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
         def _wincap_condition(star_count, roam_mix=None):
@@ -664,6 +675,17 @@ class GameConfig(Config):
                 "force_freegame": True,
             }
 
+        # CORVUS'S MIX IS THE HEAVIEST OF THE THREE, and for a different reason than
+        # ursa's. Ursa needs ROAMCAP 20 because 25,000x is far above its comfortable
+        # range. Corvus's target is only 9,000x -- but that sits at the very TOP of what
+        # corvus can organically produce (natural max measured 9,158x on a 1e6 pool, so
+        # >=9,000x is ~1 in 2.5M unforced). A forced slice therefore has to manufacture a
+        # near-best-case round every time, which is exactly the condition the LOOPS
+        # FOREVER warning above is about. 40 is a FIRST GUESS -- measure redraws per
+        # wincap book on a small run before trusting it at 1e6. Draco's is ~117.
+        corvus_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 40}
+
+        corvus_wincap_condition = _wincap_condition(3, corvus_roam_wincap_weights)
         ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
 
@@ -797,7 +819,16 @@ class GameConfig(Config):
                 name="buy_corvus", cost=120.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
-                    Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
+                    # ⚠ win_criteria is corvus_cap (9,000), NOT the global cap. This mode
+                    # clamps at 9,000 via BetMode.max_win, so a slice searching for
+                    # 25,000 would hunt a book that cannot exist and hang forever.
+                    # Quota is deliberately smaller than ursa's 0.005: the optimizer
+                    # weights these down to 1 in 2M regardless, so the quota only has to
+                    # supply ENOUGH DISTINCT BOOKS that every max win is not the same
+                    # replay -- and each one costs a redraw loop to manufacture.
+                    Distribution(criteria="wincap", quota=0.002, win_criteria=corvus_cap,
+                                 conditions=corvus_wincap_condition),
+                    Distribution(criteria="corvus", quota=0.998, conditions=corvus_condition),
                 ],
             ),
             # buy_ursa: pin the coin-flip tier -- now ALSO a 25,000x product, at a

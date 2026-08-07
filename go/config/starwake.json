@@ -1273,8 +1273,51 @@
       "isBuyBonus": true,
       "distributions": [
         {
+          "criteria": "wincap",
+          "quota": 0.002,
+          "fixedAmt": null,
+          "winCriteria": 9000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 40
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
           "criteria": "corvus",
-          "quota": 1.0,
+          "quota": 0.998,
           "fixedAmt": null,
           "winCriteria": null,
           "conditions": {

@@ -161,6 +161,14 @@ class OptimizationSetup:
         #              (verify_optimization_input asserts round(...,5) equality)
         # Deriving them means a change to the cap share can no longer silently break
         # either one -- the failure mode both times was arithmetic, not design.
+        # buy_corvus's cap share. Three orders of magnitude below every other mode's
+        # because corvus's ceiling is 9,000x, not 25,000x, and is targeted rare: it buys
+        # RATE CERTAINTY, not payback. At 1 in 2M it is 0.00375% of the mode's RTP --
+        # small enough that the body cannot measurably notice losing it, which is the
+        # whole reason the old "a slice trades away the best body" objection does not
+        # survive contact with the arithmetic.
+        corvus_cap_rtp = 0.0000375
+
         mystery_cap_rtp = 0.040
         mystery_roll_mix = {"corvus": 0.350, "ursa": 0.295, "draco": 0.250, "ascendant": 0.100}
         mystery_payback = {"corvus": 0.149, "ursa": 0.141, "draco": 0.232, "ascendant": 0.478}
@@ -230,16 +238,29 @@ class OptimizationSetup:
             # weight moved into the body comes straight out of an unprotected tail --
             # measured 1 in 6.76M with these three bands, but it MUST be re-measured
             # on whatever pool ships rather than assumed. See maxwin_boost above.
+            # ⚠ WINCAP FENCE ADDED Aug 6 2026. It must come FIRST -- fences are assigned
+            # in order and consume what they match, so the body fence would otherwise
+            # swallow the cap books. slice_rtp sets the rate exactly: the relation
+            # rate = slice_rtp * cost / cap is not an approximation, it reproduces every
+            # other mode's measured cap frequency to within one part in a million
+            # (base 0.02 -> 1 in 1,250,000 measured 1,250,001; ursa 0.026 -> 3,588 vs
+            # 3,589; draco 0.075 -> 641 vs 642). 3.75e-05 * 120 / 9,000 = 1 in 2,000,000,
+            # a 5x margin under the ~1-in-10M obtainability guideline -- chosen for margin
+            # because corvus's UNSLICED rate drew anywhere from 1 in 2.9M to 1 in 11.2M
+            # across 8 identical runs.
             "buy_corvus": {
-                "conditions": {"corvus": feature_cond(rtp, hr=1)},
+                "conditions": {
+                    "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
+                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1),
+                },
                 "scaling": ConstructScaling(
                     tail_scaling("corvus")
                     + maxwin_boost("corvus", wincaps["buy_corvus"], 4.0)
-                    + [{"criteria": "corvus", "scale_factor": 1.4,
+                    + [{"criteria": "corvus", "scale_factor": 1.25,
                         "win_range": (30, 60), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 2.0,
+                       {"criteria": "corvus", "scale_factor": 1.6,
                         "win_range": (60, 120), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 1.5,
+                       {"criteria": "corvus", "scale_factor": 1.3,
                         "win_range": (120, 240), "probability": 1.0}]
                 ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
