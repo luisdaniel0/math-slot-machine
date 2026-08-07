@@ -161,13 +161,19 @@ class OptimizationSetup:
         #              (verify_optimization_input asserts round(...,5) equality)
         # Deriving them means a change to the cap share can no longer silently break
         # either one -- the failure mode both times was arithmetic, not design.
-        # buy_corvus's cap share. Three orders of magnitude below every other mode's
-        # because corvus's ceiling is 9,000x, not 25,000x, and is targeted rare: it buys
-        # RATE CERTAINTY, not payback. At 1 in 2M it is 0.00375% of the mode's RTP --
-        # small enough that the body cannot measurably notice losing it, which is the
-        # whole reason the old "a slice trades away the best body" objection does not
-        # survive contact with the arithmetic.
-        corvus_cap_rtp = 0.0000375
+        # buy_corvus's cap share. RE-DERIVED Aug 7 2026 when the ceiling was cut
+        # 9,000x -> 2,500x to make it reachable (see game_config's corvus_cap note).
+        # rate = slice_rtp * cost / cap, so 0.008333 * 120 / 2500 = 1 in 2,500 --
+        # essentially the rate corvus already produces unforced (P(>=2,500x) measured
+        # 1 in 2,417), so the slice PINS what the engine naturally does rather than
+        # manufacturing something it does not. That is the point: without a slice the
+        # delivered rate is an optimizer draw, and corvus's was measured across eight
+        # identical runs at 1 in 2.9M to 11.2M with one of the eight missing its gate.
+        # ⚠ IT IS NO LONGER FREE. At 9,000x/1-in-2M the slice cost 0.00375% of the
+        # mode's RTP; at 2,500x/1-in-2,500 it costs 0.83%. Still the smallest cap share
+        # in the game (draco 7.5%, mystery 4.0%, ursa 2.6%, base 2.0%) and appropriate
+        # for the cheapest tier with the smallest ceiling.
+        corvus_cap_rtp = 0.008333
 
         mystery_cap_rtp = 0.040
         mystery_roll_mix = {"corvus": 0.350, "ursa": 0.295, "draco": 0.250, "ascendant": 0.100}
@@ -253,10 +259,22 @@ class OptimizationSetup:
                     "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
                     "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1),
                 },
+                # ⚠ tail_scaling AND maxwin_boost BOTH REMOVED Aug 7 2026 with the
+                # 2,500x ceiling, because both had become wrong or redundant:
+                #  - tail_scaling damps (1000,2000) at 0.8 and lifts (3000,4000) at 1.2.
+                #    Above a 2,500x cap the second band CANNOT EXIST, and the first is
+                #    no longer "mid tail" -- it is the shoulder right below the ceiling,
+                #    which is the last thing corvus should be suppressing.
+                #  - maxwin_boost exists (see its docstring) ONLY for modes with no
+                #    forced wincap slice, to nudge an organic ceiling over the
+                #    obtainability gate. corvus GAINED a slice on Aug 6, so the boost
+                #    has been redundant since then and would now fight it: the slice
+                #    sets the rate exactly, a search hint only biases toward one.
+                # What remains is the three consolation bands, which are what actually
+                # protect corvus's body -- and protecting the body is the whole reason
+                # the 9,000x tail-build was reverted.
                 "scaling": ConstructScaling(
-                    tail_scaling("corvus")
-                    + maxwin_boost("corvus", wincaps["buy_corvus"], 4.0)
-                    + [{"criteria": "corvus", "scale_factor": 1.25,
+                    [{"criteria": "corvus", "scale_factor": 1.25,
                         "win_range": (30, 60), "probability": 1.0},
                        {"criteria": "corvus", "scale_factor": 1.6,
                         "win_range": (60, 120), "probability": 1.0},

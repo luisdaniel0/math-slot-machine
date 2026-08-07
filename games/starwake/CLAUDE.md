@@ -213,11 +213,43 @@ points of weight from ~10x books to ~200x books ADDS 28.5x of RTP, a quarter of 
 budget, which has to come straight back out of the 500-2,000 band.
 => CORVUS CANNOT BE BOTH THE SAFE ENTRY TIER AND CARRY A REAL 9,000x.
 
-⚠ THE HONEST FIX IS A LOWER CEILING, NOT A BIGGER STAR. NOT DONE, still open:
-On the reverted table P(>=2,500x) is 1 in 2,417. PUBLISHING 2,500x AS CORVUS'S MAX WIN
-would make it market-normal AND the most reachable ceiling in the menu -- which suits the
-cheapest tier. Cost: ceiling-per-cost 75.0x -> 20.8x, which looks weak on a spec sheet.
-It needs a re-sim (BetMode.max_win is the engine clamp) but no retune.
+=> FIXED Aug 7 2026 BY CUTTING THE CEILING, NOT BY BUILDING TAIL. corvus_cap
+9,000x -> 2,500x, which is where corvus's distribution actually lives (P(>=2,500x) was
+1 in 2,417 unforced), and corvus_cap_rtp 0.0000375 -> 0.008333 to pin the rate.
+
+  metric              9,000x        2,500x
+  max win rate   1 in 2,000,003   1 in 2,501     <- THE POINT
+  ceiling/cost           75.0x         20.8x
+  median                0.294x        0.256x
+  beat                   17.2%         16.8%
+  under 0.25x            41.6%         48.9%
+  RTP                   0.9665        0.9661
+  Gates: 3-Star 0 failed classes, RTP spread 0.151%. Corvus is now BENIGN on risk --
+  p5k, p10k and ETL40 all read 0.000 because a 2,500x ceiling is under every threshold.
+
+⚠⚠ THE WHOLE BUY MENU IS NOW MARKET-NORMAL ON MAX-WIN REACHABILITY:
+  draco 1 in 642 | mystery 1 in 1,110 | CORVUS 1 in 2,501 | ursa 1 in 3,589
+All four inside the 1-in-400-to-4,000 band measured off Meta Gaming (BENCHMARKS.md).
+Corvus was the lone outlier at 1 in 2,000,003. It is now THIRD most reachable, not first
+-- draco and mystery are more frequent, which suits the expensive tiers.
+
+WHAT IT COST, and it is much less than the tail-build cost: the 5x-25x band funded the
+bigger cap slice (>=10x fell 86.4% -> 77.3%, >=25x 65.1% -> 55.9%), some of which is
+corvus's own +/-10 point body noise. Corvus sits THIRD of four on harshness (mystery 41.2
+< ursa 43.1 < corvus 48.9 < draco 53.1) rather than becoming the worst, which is what the
+star-table attempt did. The mid-tail actually IMPROVED: >=500x 6.92% -> 7.53%, >=1,000x
+1.88% -> 2.22%.
+⚠ RTP LANDED AT 0.9661, not 0.9665 -- an optimizer draw, inside the 0.5% band and fine,
+but corvus now sits 0.04% under its siblings. Re-optimizing would likely recover it.
+
+⚠ TWO DRESSES WERE REMOVED WITH THE CEILING and should stay removed:
+  tail_scaling("corvus") -- damps (1000,2000) at 0.8 and lifts (3000,4000) at 1.2. Above
+    a 2,500x cap the second band CANNOT EXIST, and the first is no longer "mid tail" but
+    the shoulder right below the ceiling, which corvus should not be suppressing.
+  maxwin_boost("corvus", ...) -- its own docstring says it is ONLY for modes with NO
+    forced wincap slice. Corvus gained one on Aug 6, so it had been redundant since then
+    and would now fight the slice: a slice sets the rate exactly, a scaling hint only
+    biases toward it.
 
 ⚠ KEEP THIS LESSON REGARDLESS -- IT GENERALISES TO EVERY FUTURE GAME:
 **FREQUENCY BEATS MAGNITUDE WHEN BUILDING A TAIL.** A 50x star rung at weight 1.0 beat a

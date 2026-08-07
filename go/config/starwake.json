@@ -1267,7 +1267,7 @@
       "name": "buy_corvus",
       "cost": 120.0,
       "rtp": 0.9665,
-      "maxWin": 9000.0,
+      "maxWin": 2500.0,
       "autoCloseDisabled": false,
       "isFeature": false,
       "isBuyBonus": true,
@@ -1276,7 +1276,7 @@
           "criteria": "wincap",
           "quota": 0.002,
           "fixedAmt": null,
-          "winCriteria": 9000.0,
+          "winCriteria": 2500.0,
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,

@@ -830,7 +830,23 @@ class GameConfig(Config):
         # maximum, and publishing at the observed max leaves 1.7% of margin against
         # a number that moves whenever anything is retuned. At 9,000x the rate is
         # 1 in 2.48M against a ~1-in-10M guideline, with room to spare.
-        corvus_cap = 9000.0
+        # ⚠⚠ 9,000x UNTIL Aug 7 2026, WHEN IT WAS CUT TO 2,500x TO MAKE IT REACHABLE.
+        # 9,000x was honest (the engine could produce it) and useless: delivered at
+        # 1 in 2,000,003 against a MARKET NORM OF 1 in 400-4,000, contributing 0.1% of
+        # corvus's variance. The cause is a supply cliff -- corvus made 8,295 books in
+        # 2,500-5,000, 142 in 5,000-8,100 and ONE in 8,100-9,000 per 1e6.
+        # Building the missing tail was tried and REVERTED (see CLAUDE.md, Aug 7): a
+        # 50x star rung produced the tail exactly as swept, but the optimizer paid for
+        # it out of the middle and corvus became the harshest, most volatile buy in the
+        # menu at the cheapest price. Corvus cannot be the safe entry tier AND carry a
+        # real 9,000x.
+        # 2,500x is where corvus's distribution actually lives: P(>=2,500x) measures
+        # 1 in 2,417 unforced, so the ceiling becomes the MOST REACHABLE in the menu,
+        # which is right for the cheapest tier. Cost is ceiling-per-cost 75.0x -> 20.8x
+        # -- weak on a spec sheet, real in play.
+        # ⚠ BetMode.max_win is BOTH the published figure AND the engine clamp, so this
+        # needs a RE-SIM, not an optimizer-only run: books above 2,500x now clamp to it.
+        corvus_cap = 2500.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that
