@@ -348,6 +348,61 @@ STAKECRUNCHER'S QUALITATIVE LABELS, worth knowing since a reviewer may think thi
                   then you either hit big or go home."
   C&C base dry streaks: median 2, bad day 4, rough 8, nightmare 13 consecutive 0x spins.
 
+## 3d. COMPETITOR: Mushroom Madness (Meta Gaming, v26) — their newest, Aug 7 2026
+
+  mode              cost      RTP   std dev    bust   any win   >=1x   maxMult     events
+  base                1x   96.70%    59.669  80.00%    20.00%   6.82%  50,000x  4,402,733
+  ante                3x   96.70%    37.150  90.00%    10.00%   3.54%  16,667x  6,015,822
+  super_spins        10x   96.70%    31.768  95.00%     5.00%   2.10%   5,000x  5,826,120
+  super_bonus       250x   96.70%     4.094   0.00%   100.00%  26.60%     200x    116,517
+  mystery_madness   500x   96.70%     4.021  55.00%    45.00%  20.23%     100x  1,069,293
+  wild_coin       1,000x   96.70%     3.427  58.11%    41.89%  17.89%      50x  5,406,878
+  base volatility rank 434/26,470 = 98.4th percentile.
+
+⚠ THEIR BUST RATES ARE EXACT ROUND NUMBERS -- 80.00 / 90.00 / 95.00 / 55.00 -- and
+wild_coin's 58.11% proves that is not rounding. Meta Gaming PINS BUST RATE TO A DESIGNED
+QUOTA. Worth copying as a technique; we let ours fall out of the strips.
+⚠ THEIR EXPENSIVE BUYS PAY ZERO. mystery_madness (500x) busts 55%, wild_coin (1,000x --
+the 2-Star max cost limit) busts 58.11%. EVERY Starwake buy pays something 100% of the
+time. That is a real philosophical split and it is how they fund their tails.
+⚠ THEIR OUTCOME COUNTS ARE WILDLY UNEVEN: 116,517 on super_bonus vs 6,015,822 on ante.
+We run a flat 1M. Note ante at 6.0M is 60% of the 10M cap.
+
+## 3e. VERDICT ACROSS THREE COMPETITORS (all Meta Gaming)
+
+⚠⚠ THE DRYNESS QUESTION IS CLOSED. WE ARE MID-RANGE AND NOT DRY.
+  base            RAGE BAIT v11   C&C v13   MUSHROOM v26   STARWAKE
+  pays nothing            62.5%     69.8%          80.0%     70.75%
+  any win                 37.5%     30.2%          20.0%     29.25%
+  pays >= 1x             16.08%     8.53%          6.82%      8.00%
+Their trajectory is straight downward across versions and THEIR NEWEST GAME PAYS NOTHING
+ON FOUR SPINS IN FIVE. We beat it on >=1x (8.00% vs 6.82%). Do not "fix" base hit rate.
+
+⚠⚠ WHAT IS REAL: OUR TAIL IS THIN, AND IT IS ONE OUTCOME DEEP.
+Variance decomposition of Starwake base (contribution to E[X^2]):
+    10-100x            20.4    3.2%   1 in 75
+    100-500x           47.5    7.4%   1 in 681
+    500-2,000x         28.0    4.3%   1 in 36,918
+    2,000-10,000x      40.0    6.2%   1 in 261,281
+    10,000-26,000x    507.6   78.8%   1 in 1,191,705
+  THE 25,000x CAP ALONE IS 77.7% OF E[X^2]. STRIP IT AND OUR BASE STD DEV FALLS
+  25.357 -> 11.957.
+  Same treatment on C&C: their 50,000x cap at 1 in 1,983,481 contributes ~1,261 of
+  ~3,585 = 35%. STRIP IT AND THEY ARE STILL AT ~48.
+=> EXCLUDING THE MAX WIN, THEIR BASE IS 4x MORE VOLATILE THAN OURS. Our volatility is
+   ONE LOTTERY TICKET; theirs is a populated tail. At 5,000x+ they are 9.9x more frequent
+   than us, on top of a 2x higher cap.
+=> THE GAP LIVES IN 500x-25,000x. We put 10.5% of E[X^2] there; C&C puts ~25% into
+   5,000-25,000x alone.
+
+⚠ IF THIS IS EVER ACTED ON, THE CONSTRAINT IS ETL40, NOT THE TAIL PROBABILITIES. Base's
+p5k is 1.07e-06 against a 0.050 limit -- effectively unlimited room. But ETL40 is 0.558
+against 0.9 (1.61x, our tightest gate) and enriching 500x+ raises it directly. p5k/p10k
+worst case is driven by buy_draco, not base, so base tail work does not threaten them.
+
+⚠ ALSO NOTE THEY DO NOT ALL SIT ON THE RTP CAP: Rage Bait and Mushroom Madness run
+96.70%, Coins and Cauldrons runs 96.01%. Our 96.50-96.65% is unremarkable.
+
 ## 4. Compliance position (for context, not comparison)
 
 3-Star: 0 failed classes -> $500 bet template. 2-Star: 1 (absolute CVaR 25,000 vs 20,000).
