@@ -591,6 +591,8 @@ This is the "1-2 bets before losing interest" shape the ratings page names.
 
 STILL OPEN AFTER THIS RUN: corvus's ceiling (B1, below), base dryness (Q1), base std
 24.77 vs a 35-48 market band, the whole frontend, and the 10M-events question.
+[Aug 7: the 10M question is CLOSED — it counts OUTCOMES, we use 10% of the cap. See
+"THE 10,000,000 LIMIT IS OUTCOMES" below. B1 and corvus's ceiling are closed too.]
 
 ### ▶▶ DECIDED Aug 4 2026: TARGET 3-STAR, HOLD THE MAX WIN AT 25,000x
 TARGET RATING IS 3-STAR. Measured on the converged pool, Starwake ALREADY passes every
@@ -700,18 +702,34 @@ Re-measure any time: `env/bin/python games/starwake/check_risk_gates.py [lut_dir
 It now prints critical tests, both ratings, the failed-class tally and the resulting
 bet template, and takes a directory argument so the Go pool can be checked identically.
 
-⚠ OPEN QUESTION FOR THE RGS TEAM — THE 10,000,000 EVENT LIMIT. The docs say "no game
-mode can contain more than 10,000,000 events" alongside a 4.2 GB per-file cap. Measured
-events PER BOOK on the shipped pool (a book is a ROUND and holds many events):
-  base 10.9 | ante 15.5 | corvus 61.1 | ursa 87.0 | draco 85.3 | mystery 78.0
-At 999,964 books that is 10.9M to 87.0M events per mode — every mode over, buys 6-9x
-over. A limit that disqualifies a 10.9-event base game would disqualify most feature
-slots, so the reading is probably not "total events in the file". But the same doc says
-"run 100,000-1,000,000 simulations", and at 100k books ursa is 8.7M = under. The two
-rules together may simply mean feature-heavy games belong at the LOW end of that range.
-⚠ DO NOT GUESS — the two readings differ by a factor of a million, and if it is literal
-it sets the sim count for every future run. Also note CLAUDE.md's own warning that the
-basegame hit rate is SIM-COUNT DEPENDENT, so dropping to 100k is not a free knob.
+### ▶▶ CLOSED Aug 7 2026: THE 10,000,000 LIMIT IS **OUTCOMES**, NOT EVENTS. WE ARE FINE.
+ANSWERED BY THE STAKE ENGINE TEAM, not inferred. Happle (RGS), in a thread titled
+"10 mil outcomes per mode limit" (Jul 16 2026): "We have a new cap on outcomes per mode,
+modes must not exceed 10 million outcomes. If you have existing games on the platform
+they will need to be updated." Taylor (RGS) separately: "10m each mode / still has to be
+less than 3.14gb per file", alongside "1M on all base atleast / and then like 250k on
+bonuses" — a recommendation that is only coherent if the cap counts OUTCOMES.
+
+=> AT 1,000,000 OUTCOMES PER MODE WE USE 10% OF THE CAP. No rebuild, no sim-count change,
+   and the pool resolution every measurement in this file depends on is safe.
+
+⚠ THE DOC WORDING IS A TRAP AND IT COST A DAY OF ANALYSIS. The page says "No game mode
+can contain more than 10,000,000 events", and the SDK genuinely has a separate `events`
+concept (the array inside each book). Measured events per book here: base 10.7 | ante
+15.4 | corvus 61.1 | ursa 86.8 | draco 85.4 | mystery 78.0 — so read literally, every
+mode was 1.1x-8.7x "over" and the fix looked like an 8x cut to sim counts.
+THE TELL, AND IT WAS AVAILABLE THE WHOLE TIME: the same page recommends running
+"100,000-1,000,000 simulations". Base alone is 10.7 events/book, so the literal reading
+makes the doc's own recommended MAXIMUM breach the doc's own cap — for essentially every
+slot ever made. When a spec contradicts itself in adjacent sections, the reading is wrong,
+not the spec. "Events file" also refers to books_<mode>.jsonl.zst, whose LINES are books.
+
+⚠ THE CONSTRAINT THAT ACTUALLY BINDS IS FILE SIZE, and it is tighter than the docs say.
+Docs: 4.2 GB/file. Taylor: 3.14 GB. Use the stricter one. Current largest files:
+  buy_draco 2.7 GB (86% of 3.14) | buy_ursa 2.5 GB (80%) | buy_mystery 2.2 GB (70%)
+DRACO IS AT 86% OF THE CAP. Anything that adds events per book — a longer feature, a
+richer roam, another per-spin event — pushes it over, and THAT is the real reason to
+care about events per book. It is a file-size input, not a compliance limit.
 
 ## Design spec (the blueprint — build to this)
 
