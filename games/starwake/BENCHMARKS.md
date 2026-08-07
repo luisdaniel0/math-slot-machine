@@ -77,13 +77,40 @@ player will ever experience anything near the advertised figure. Expect the same
 comparably volatile competitor; if a competitor's sim RTP converges tightly, THAT is the
 signal — it means their variance is far lower than ours.
 
-⚠ DO NOT QUOTE CROWDSIM'S STREAK NUMBERS UNTIL THE DEFINITION IS CONFIRMED. It reported
-average lose streak 61.4 and maximum 192. Under the obvious reading (consecutive spins
-paying nothing) that is impossible: at a 29.25% hit rate the expected longest dead run in
-300 spins is ~13, and across 2,000 players it would top out near 30. The likely
-definition is "spins paying less than the bet" (92.2% of spins, predicting ~39), or
-possibly "time spent below the starting balance". These are the most quotable and most
-misreadable numbers on the page.
+⚠ CROWDSIM'S "STREAK" MEANS **payout < cost**, NOT "paid nothing". CONFIRMED by running
+base and ante and comparing. Ante has MORE hits than base (34.33% vs 29.25%) but LONGER
+losing streaks (avg 87.8 vs 61.4, max 244 vs 192) -- impossible under the dead-spin
+reading, immediate under the net-loss one, because ante's BREAK-EVEN rate is 3.2% against
+base's 8.0%. Predicted longest run ln(300*p_win)/ln(1/p_loss) is 38.8 (base) vs 69.5
+(ante), a 1.79x ratio against 1.43x observed. Right direction, right magnitude.
+=> When comparing to a competitor, ALWAYS pair a streak number with that mode's
+   break-even rate. A game with a cheaper effective ticket will look "streakier" purely
+   because its bar is lower, with no difference in how often symbols land.
+
+## 2b. Session experience — CrowdSim, ANTE_STARFALL, same config
+
+  metric                       BASE      ANTE       intent
+  zero rate                   70.75%    65.67%      smoother -- MET
+  hit rate                    29.25%    34.33%      more hits -- MET
+  cost-adjusted volatility     26.24     22.76      lower vol -- MET
+  busted                       35.5%     32.0%      MET
+  avg max drawdown            103.8%     99.1%      MET
+  players below 10%            56.9%     53.6%      MET
+  probability of profit         36.3%     35.5%      ~same
+  median final balance          49.07     49.90      ~same
+  avg / max losing streak    61.4/192  87.8/244     WORSE
+  avg / max winning streak      1.6/5     1.3/3     WORSE
+  players hitting a 10x+        99.0%     99.3%
+  avg spins to a 10x               63        61
+  actual RTP (sim)             94.31%    91.97%     0.71 and 1.59 sigma; both normal
+
+⚠⚠ ANTE IS STATISTICALLY SMOOTHER AND EXPERIENTIALLY STREAKIER AT THE SAME TIME, and this
+is the most interesting thing CrowdSim has surfaced. Variance per unit staked genuinely
+falls (22.76 vs 26.24 -- the MIKO-style ante works). But the break-even bar rises to 1.5x
+while wins do not scale with it, so NET-WINNING SPINS GET RARER: 3.2% vs base's 8.0%.
+Players see more symbols land AND longer runs of not getting ahead. No per-spin statistic
+shows this; it only appears in session data. Relevant to how ante is presented, and worth
+checking on any competitor ante/bonus-buy-lite mode.
 
 ## 3. Buy menu — structure, and where we are unusual
 
