@@ -309,7 +309,7 @@ class OptimizationSetup:
             "buy_corvus": {
                 "conditions": {
                     "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
-                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1),
+                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0004001),
                 },
                 # ⚠ tail_scaling AND maxwin_boost BOTH REMOVED Aug 7 2026 with the
                 # 2,500x ceiling, because both had become wrong or redundant:
@@ -368,7 +368,7 @@ class OptimizationSetup:
             "buy_ursa": {
                 "conditions": {
                     "wincap": wincap_cond("buy_ursa", 0.026),
-                    "ursa": feature_cond(round(rtp - 0.026, 5), hr=1),
+                    "ursa": feature_cond(round(rtp - 0.026, 5), hr=1.0002788),
                 },
                 "scaling": ConstructScaling(
                     tail_scaling("ursa")
@@ -452,7 +452,7 @@ class OptimizationSetup:
             "buy_draco": {
                 "conditions": {
                     "wincap": wincap_cond("buy_draco", 0.075),
-                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1),
+                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1.0015624),
                 },
                 "scaling": ConstructScaling(tail_scaling("draco")).return_dict(),
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),
