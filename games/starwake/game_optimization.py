@@ -175,6 +175,24 @@ class OptimizationSetup:
         # for the cheapest tier with the smallest ceiling.
         corvus_cap_rtp = 0.008333
 
+        # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
+        # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
+        #   ConstructConditions DOES turn a tuple search_conditions into
+        #   identity_condition.win_range_start/end, and write_configs writes the fence
+        #   name as a plain label -- the Rust matcher keys on identity_condition, not
+        #   the name. So banding a single-criteria mode LOOKS free. It is not:
+        #   1. FENCES MUST BE MUTUALLY EXCLUSIVE. Keeping the {"symbol":"scatter"}
+        #      catch-all beside a (60,240) range fence fails with "fence 'corvus'
+        #      matched 0 books after prior fences were assigned ... an earlier
+        #      overlapping fence may consume all matching book IDs." A catch-all
+        #      overlaps every range fence, so the whole mode has to be banded at once.
+        #   2. AND THEN verify_optimization_input REFUSES: "Distribution criteria must
+        #      match 'conditions' keys". Fence names are checked against the BetMode's
+        #      Distribution criteria, so three payout bands need three Distributions in
+        #      game_config -- which is a re-sim, not an optimizer-only run.
+        # => For shape work on a single-criteria buy, USE DRESSES. Fences are only free
+        #    where the mode already has one Distribution per outcome (base/ante/mystery).
+
         mystery_cap_rtp = 0.040
         mystery_roll_mix = {"corvus": 0.350, "ursa": 0.295, "draco": 0.250, "ascendant": 0.100}
         mystery_payback = {"corvus": 0.149, "ursa": 0.141, "draco": 0.232, "ascendant": 0.478}
@@ -254,6 +272,22 @@ class OptimizationSetup:
             # a 5x margin under the ~1-in-10M obtainability guideline -- chosen for margin
             # because corvus's UNSLICED rate drew anywhere from 1 in 2.9M to 1 in 11.2M
             # across 8 identical runs.
+            # ⚠ EXPERIMENT Aug 7 2026 -- PAYOUT-RANGE FENCE. ConstructConditions turns a
+            # TUPLE search_conditions into identity_condition.win_range_start/end, and
+            # write_configs writes fence_info["name"] as a plain label -- matching is by
+            # identity_condition, NOT by name. So a single-criteria mode can carry
+            # several fences split by PAYOUT BAND, each with its own rtp target.
+            # WHY IT MATTERS: corvus's missing middle is a WEIGHTING artifact, not a
+            # supply one -- 21.7% of its books pay 60-240x (0.5-2x ticket) and only 6.5%
+            # of delivered weight lands there, because the optimizer must strip ~73% of a
+            # 3.7x-surplus pool and dumps it into the cheapest band with supply (30-60x
+            # goes 5.2% raw -> 31.8% delivered). A dress only biases; a FENCE PINS the
+            # band's RTP outright.
+            # ⚠ FENCE ORDER IS LOAD-BEARING: fences consume the books they match, so the
+            # range fence MUST precede the {"symbol":"scatter"} catch-all, which matches
+            # every corvus book.
+            # ⚠ AND SHARES MUST STAY EXHAUSTIVE: sum(1/hr) + wincap weight == 1. The
+            # catch-all's hr is therefore 1/(1 - mid_share - wincap_weight), not 1.
             "buy_corvus": {
                 "conditions": {
                     "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
@@ -273,13 +307,27 @@ class OptimizationSetup:
                 # What remains is the three consolation bands, which are what actually
                 # protect corvus's body -- and protecting the body is the whole reason
                 # the 9,000x tail-build was reverted.
+                # ⚠ REBUILT Aug 7 2026 -- THE OLD DRESSES WERE BOOSTING THE DUMP ZONE.
+                # They ran 1.25 on (30,60), 1.6 on (60,120), 1.3 on (120,240), written
+                # when corvus cost 240x so those bands meant 0.125-1x of the ticket. At
+                # 120x they mean 0.25-2x, and (30,60) had become the band the optimizer
+                # already dumps into: raw supply there is 5.2% of books and it delivered
+                # 31.8% of weight -- a 6.1x up-weight, WITH a 1.25 dress on top of it.
+                # Meanwhile 60-240x holds 21.7% of raw books and delivered only 6.5%.
+                # So corvus had almost no "nearly got it back" or "small win" band and
+                # was the LEAST forgiving buy in the menu (19.3% return >=0.5x ticket
+                # against ursa's 39.0%) -- inverting the intended tier identity, since
+                # corvus is meant to be the safe entry tier.
+                # This is the treatment that moved ursa 60.2% -> 43.1% under a quarter
+                # ticket: suppress the dump zone FROM 0, boost the target band, and fund
+                # it out of the top rather than letting the optimizer pick.
                 "scaling": ConstructScaling(
-                    [{"criteria": "corvus", "scale_factor": 1.25,
-                        "win_range": (30, 60), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 1.6,
-                        "win_range": (60, 120), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 1.3,
-                        "win_range": (120, 240), "probability": 1.0}]
+                    [{"criteria": "corvus", "scale_factor": 0.4,
+                        "win_range": (0, 60), "probability": 1.0},
+                       {"criteria": "corvus", "scale_factor": 3.5,
+                        "win_range": (60, 240), "probability": 1.0},
+                       {"criteria": "corvus", "scale_factor": 0.55,
+                        "win_range": (600, 2500), "probability": 1.0}]
                 ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
