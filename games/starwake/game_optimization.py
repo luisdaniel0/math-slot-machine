@@ -75,10 +75,16 @@ class OptimizationSetup:
         rtp = game_config.rtp  # 0.9665 -- every mode converges here
 
         # -- small builders: keep the six entries DRY and the RTP split legible --
-        def run_params(min_m2m, max_m2m, test_spins, test_weights):
-            """Optimizer run config; the m2m band encodes the mode's vol identity."""
+        def run_params(min_m2m, max_m2m, test_spins, test_weights, per_fence=10000):
+            """Optimizer run config; the m2m band encodes the mode's vol identity.
+
+            ⚠ `per_fence` was parameterised Aug 7 2026 while hunting the RTP undershoot
+            on the two-fence modes (corvus 0.9661, ursa 0.9662, draco 0.9650, against
+            0.9665 exact on every six-fence mode). IT DID NOT HELP -- see the note on
+            buy_draco. Left as a knob because it is free, but do not expect it to move RTP.
+            """
             return ConstructParameters(
-                num_show=5000, num_per_fence=10000, min_m2m=min_m2m, max_m2m=max_m2m,
+                num_show=5000, num_per_fence=per_fence, min_m2m=min_m2m, max_m2m=max_m2m,
                 pmb_rtp=1.0, sim_trials=5000, test_spins=test_spins,
                 test_weights=test_weights, score_type="rtp",
             ).return_dict()
@@ -415,6 +421,34 @@ class OptimizationSetup:
             # market puts a 25,000x on a ~500x buy at roughly this rate.
             # COSTS 2.5% OF DRACO'S BODY: that RTP moves from mid-range wins to cap books,
             # so re-check the win-range holes (was 1.00x) and the median after the run.
+            # ⚠⚠ DRACO IS PINNED AT RTP 0.9650 AND FOUR FIXES HAVE BEEN TRIED AND FAILED
+            # (Aug 7 2026). Recording the negatives so nobody spends the afternoon again.
+            # The pattern that suggested a cause: every SIX-fence mode (base, ante,
+            # mystery) converges to 0.9665 exactly, and every TWO-fence mode undershoots
+            # -- corvus 0.9661, ursa 0.9662, draco 0.9650. Splitting delivered RTP per
+            # fence shows draco's wincap fence hitting target (1 in 642 vs 1 in 641) and
+            # its BODY fence short by 0.16%.
+            #   1. m2m FLOOR. draco delivers m2m 4.10 against a configured (5, 20) band --
+            #      the ONLY buy outside its band -- so the optimizer looked like it was
+            #      fighting an unsatisfiable constraint. Lowering the floor to 3.5:
+            #      NO CHANGE, still 0.9650.
+            #   2. SAMPLE SIZE. run_params fixes num_per_fence=10000, so a 6-fence mode
+            #      searches 60,000 books and a 2-fence mode only 20,000. Raising draco to
+            #      30,000 (1.7x the runtime): NO CHANGE, still 0.9650.
+            #   3. RTP SPLIT REALLOCATION -- the remedy this file's own header prescribes
+            #      ("a target a slice's books can't produce is a convergence failure ->
+            #      adjust the number HERE"). Moved the shortfall onto the wincap fence,
+            #      which hits its target exactly: 0.075 -> 0.0764 with the body absorbing
+            #      the delta. NO CHANGE, still 0.9650.
+            #   4. PAYOUT-RANGE FENCES, to give draco the fence count the converging modes
+            #      have. BLOCKED without a re-sim: verify_optimization_input asserts fence
+            #      names match Distribution criteria (see the note above buy_corvus).
+            # => THE CEILING IS STRUCTURAL TO DRACO'S BOOK POOL, not an optimizer setting.
+            #    A re-sim is the only remaining route AND NOBODY KNOWS WHAT TO CHANGE --
+            #    re-simming the same config reproduces the same books. Next step if it is
+            #    ever worth 0.15%: read optimization_program's Rust source for what
+            #    score_type="rtp" actually minimises. NOT a compliance issue: the spec
+            #    allows 0.5% cross-mode variation and the pool sits at 0.151%.
             "buy_draco": {
                 "conditions": {
                     "wincap": wincap_cond("buy_draco", 0.075),
