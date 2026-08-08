@@ -36,6 +36,11 @@ measured, gated and published — gates never moved off 3-Star 0 failed classes 
   3. ASCENDANT OWNS THE MAX WIN (1 in 115, was 1 in 939); draco is second at 1 in 642.
   4. URSA IS A 48.2% COIN FLIP (was 34.7%), which makes draco's completion premium over
      it +51.5% instead of +7.5%, and drops ursa from harshest buy to second-kindest.
+⚠ AMENDED Aug 8: RTP IS NOW 0.9669, NOT 0.9665, AND IDENTICAL ACROSS ALL SIX MODES to
+seven decimal places. Every RTP figure dated Aug 6 or earlier in this file reads 0.9665
+and is superseded — see "RTP RAISED TO 0.9669" below for the measurement and for why the
+target is not 0.967 exactly. The same entry records the 20-point body variance that a
+re-optimize inflicts on buy_corvus at an unchanged RTP.
 NEXT IS THE FRONTEND, and it is the larger half of the remaining work. It is also
 what decides the STAR RATING, which is a human quality review of art, animation,
 sound, performance and depth — the math cannot earn a third star, only fail to lose
@@ -62,6 +67,42 @@ carries 75-93% of payback in every tier (the design works). It also records that
 ⚠ THE DELIVERED LADDER MOVED TWICE ON Aug 6 — the numbers above are the OLD ones. Current
 delivered completion is corvus 89.7 / URSA 48.2 / draco 29.9 / mystery 75.3, and ascendant
 now owns the max win. Use "URSA IS A COIN FLIP NOW" and "ASCENDANT NOW OWNS THE MAX WIN".
+
+### ▶▶ RTP RAISED TO 0.9669 AND EQUALISED ACROSS ALL SIX MODES (Aug 8 2026)
+WHY THIS WAS POSSIBLE ONLY NOW: the buys used to UNDERSHOOT their target — the mode RTP
+was right in the optimizer's own report but the delivered LUT came in low, because the
+body fence's `hr` was not exhaustive (see game_optimization's feature_cond note). Any
+headroom under the 0.967 cap was therefore being eaten by a bug rather than spent on
+players. With that fixed, the headroom is real and can be handed back.
+
+MEASURED ON THE SHIPPED LUTs, exact rational arithmetic over id,weight,payout*100:
+  mode             exact RTP     vs target     headroom to 0.967
+  base             0.96689997    -3.10e-08     +0.000100
+  ante_starfall    0.96689997    -2.83e-08     +0.000100
+  buy_corvus       0.96689996    -4.37e-08     +0.000100
+  buy_ursa         0.96690000    +1.58e-09     +0.000100
+  buy_draco        0.96689996    -3.64e-08     +0.000100
+  buy_mystery      0.96690000    -4.08e-10     +0.000100
+ALL SIX AGREE TO SEVEN DECIMAL PLACES. That is the "same RTP across every mode" property
+Meta Gaming ships and it is now a real invariant here, not an approximation.
+
+⚠ WHY NOT 0.967 EXACTLY. buy_ursa lands 1.6e-09 ABOVE its target, so targeting the cap
+itself can produce 0.967000002 — over. The RTP band is a CRITICAL test: breaching it
+blocks submission outright, unlike a non-critical failure that only costs a bet-level
+cap. 0.9669 keeps 1e-04 of margin, ~60,000x the observed overshoot, and costs players
+0.01% RTP. 96.69% and 96.70% are indistinguishable in every player-facing surface.
+
+⚠ WHAT THE CHANGE BROKE ON THE WAY: base and ante had HARDCODED catch-all splits
+(0.6065 / 0.5415) that silently pinned those modes to 0.9665, so raising game_config.rtp
+tripped `verify_optimization_input`. Both now derive the catch-all from `rtp`. Any future
+RTP move is a one-line change again — if a split is ever hardcoded back, this breaks.
+
+⚠ RTP BEING RIGHT SAYS NOTHING ABOUT THE BODY. Re-optimizing re-rolls every mode's shape.
+The same 0.9669 run that fixed the RTP moved buy_corvus's under-0.25x rate from 32.1% to
+53.5% and its beat rate from 28.4% to 13.6% — a full 20 points of body variance at an
+identical, correct RTP. ALWAYS MEASURE THE BODY, NOT JUST THE RTP, BEFORE PUBLISHING;
+corvus is the mode this bites. Draco, ursa and mystery all came out BETTER on that run,
+which is the same coin landing the other way, not evidence the change helped them.
 
 ### ▶▶ THE PUBLISH LAYER WENT STALE AND NOTHING NOTICED (Aug 6 2026)
 FOUND BY AN OUTSIDE TOOL, not by us: mnemoo/tools (community LUT explorer,

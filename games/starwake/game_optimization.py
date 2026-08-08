@@ -242,7 +242,13 @@ class OptimizationSetup:
                     # condition -- a catch-all must come last or it eats the zero-win
                     # books that "0" (win_range 0,0) is supposed to hold.
                     "0": zero_cond,
-                    "basegame": base_cond(0.6065, hr=3.5),
+                    # ⚠ DERIVED, NOT HARDCODED (Aug 8 2026). This was a literal 0.6065,
+                    # which silently pinned base to a 0.9665 mode RTP: raising
+                    # game_config.rtp to 0.9669 tripped verify_optimization_input's
+                    # "Optimization RTP does not match betmode RTP". The catch-all is the
+                    # natural place to absorb the remainder, so the splits now follow the
+                    # mode RTP wherever it is set.
+                    "basegame": base_cond(round(rtp - 0.02 - 0.13 - 0.11 - 0.10, 5), hr=3.5),
                 },
                 "scaling": ConstructScaling(base_small_scaling + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(3, 10, [50, 100, 200], [0.3, 0.4, 0.3]),
@@ -257,7 +263,8 @@ class OptimizationSetup:
                     "ursa": feature_cond(0.13, hr=370, kind=4),
                     "corvus": feature_cond(0.12, hr=160, kind=3),
                     "0": zero_cond,                      # catch-all last -- see base
-                    "basegame": base_cond(0.5415, hr=3.0),
+                    # derived from the mode RTP, not hardcoded -- see base's note
+                    "basegame": base_cond(round(rtp - 0.025 - 0.15 - 0.13 - 0.12, 5), hr=3.0),
                 },
                 "scaling": ConstructScaling(base_small_scaling + tail_scaling("draco")).return_dict(),
                 "parameters": run_params(2, 6, [50, 100, 200], [0.3, 0.4, 0.3]),

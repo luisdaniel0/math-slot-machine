@@ -29,9 +29,19 @@ class GameConfig(Config):
         self.provider_name = "Uptown Games"
         self.wincap = 25000.0
         self.win_type = "lines"
-        # converge ~0.9665 so displayed RTP rounds to 96.7% while staying under
-        # the 0.967 Stake cap (see docs/ideas/starwake.md Benchmarks)
-        self.rtp = 0.9665
+        # 0.9669: as close to the 0.967 Stake cap as is SAFE. Raised from 0.9665
+        # Aug 8 2026, once the hr-exhaustiveness fix made every mode land on its target
+        # (see game_optimization's feature_cond note) -- before that the buys undershot
+        # and the headroom was being eaten by a bug rather than spent on players.
+        # ⚠ DO NOT TARGET 0.967 EXACTLY. Measured precision on the shipped pool is
+        # -4.4e-08 to +1.6e-09 of target, and buy_ursa ALREADY overshoots its own target
+        # by 1.6e-09. At a 0.967 target a run can land at 0.967000002, i.e. OVER the cap
+        # -- and the RTP band is a CRITICAL test, so breaching it blocks submission
+        # outright rather than costing a bet-level tier. 0.9669 keeps 1e-04 of margin,
+        # roughly 60,000x the observed overshoot, for 0.01% less player RTP.
+        # Meta Gaming ships exactly 96.70% across Rage Bait / Coins and Cauldrons /
+        # Mushroom Madness; 96.69% is indistinguishable to a player and cannot fail.
+        self.rtp = 0.9669
         self.construct_paths()
 
         # Game Dimensions
