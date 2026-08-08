@@ -121,8 +121,20 @@ class OptimizationSetup:
             ]
 
         # lift the frequent small base wins (the hit floor)
+        # ⚠ (2,5) ADDED Aug 7 2026 -- ITS ABSENCE WAS CREATING A HOLE. This list boosted
+        # (1,2) and (10,20) and left (2,5) alone, so the optimizer down-weighted the
+        # unboosted band between two boosted ones. Delivered odds ran 1 in 18 (1-2x),
+        # 1 in 273 (2-5x), 1 in 211 (5-10x), 1 in 182 (10-20x) -- a 15x rarity spike and
+        # back down, in a curve that is otherwise smooth. It is NOT a supply problem:
+        # 2-5x holds 4.79% of raw books, more than DOUBLE 5-10x's 2.30%, and was being
+        # down-weighted 13x against that band's 4.9x.
+        # Found by diffing our curve against Coins and Cauldrons, which runs 1 in 21
+        # smoothly through the same band (see BENCHMARKS.md). It passes the win-range-gap
+        # check either way -- no zero-weight range -- but it is exactly the kind of
+        # pothole a reviewer eyeballing a hit-rate table would query.
         base_small_scaling = [
             {"criteria": "basegame", "scale_factor": 1.2, "win_range": (1, 2), "probability": 1.0},
+            {"criteria": "basegame", "scale_factor": 2.0, "win_range": (2, 5), "probability": 1.0},
             {"criteria": "basegame", "scale_factor": 1.5, "win_range": (10, 20), "probability": 1.0},
         ]
 
