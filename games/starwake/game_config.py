@@ -911,7 +911,24 @@ class GameConfig(Config):
         # -- weak on a spec sheet, real in play.
         # ⚠ BetMode.max_win is BOTH the published figure AND the engine clamp, so this
         # needs a RE-SIM, not an optimizer-only run: books above 2,500x now clamp to it.
-        corvus_cap = 2500.0
+        # ⚠⚠ 25,000x SINCE Aug 8 2026 -- corvus joins every other mode at the game's
+        # headline ceiling, which ASCENSION is what makes possible (see the
+        # constellation_ascension note). Meta Gaming ships this as an invariant: 18
+        # modes across Rage Bait, Coins and Cauldrons and Mushroom Madness, and every
+        # single one reaches its game's cap. Corvus at 2,500x was our only violation,
+        # and it made the cheapest buy strictly dominated by ursa -- 4x the ceiling
+        # for 2.2x the price, so no one had a reason to press it.
+        # Ceiling-per-stake goes 20.8x -> 208x, the highest in the menu, which is the
+        # market pattern rather than a defect: their cheapest buy also carries the
+        # highest, and the expensive tiers earn their price on cap FREQUENCY instead
+        # (this file already commits to that at the ceilings note above).
+        # ⚠ REACHABILITY IS NOT FREE HERE. This number is the engine clamp as well as
+        # the advertised figure, and a forced slice hunting an unreachable ceiling
+        # redraws forever. Measured with ascension forced and the ROAMCAP roam mix,
+        # P(>=25,000x) is 1 in 2,874, so the slice fills its quota in ~2 minutes. It
+        # is 1 in 25 MILLION without ascension. Do not raise this again without
+        # re-measuring reach FIRST.
+        corvus_cap = 25000.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that

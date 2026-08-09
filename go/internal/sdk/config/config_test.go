@@ -144,7 +144,15 @@ func TestBetModes(t *testing.T) {
 		// cost of ceiling-per-cost dropping 75x -> 20.8x. This assertion sat stale
 		// and RED from that day until Aug 8, because the workflow runs pytest and
 		// the sims but not `go test ./...` -- run the Go suite after a config change.
-		{"buy_corvus", 120, 2500, true},
+		// ⚠⚠ 25,000x SINCE Aug 8 2026, once ASCENSION made it reachable. Every mode
+		// now reaches the game's headline ceiling, which is the invariant Meta
+		// Gaming holds across all 18 modes of their three games and the one corvus
+		// used to break. Ceiling-per-stake 20.8x -> 208x, highest in the menu, which
+		// is the market pattern: the cheapest buy carries the tallest ceiling and
+		// the expensive tiers earn their price on cap FREQUENCY (corvus 1 in 50,000
+		// against draco's 1 in 641). Reachability is measured, not assumed --
+		// P(>=25,000x) is 1 in 2,874 with ascension forced, 1 in 25M without.
+		{"buy_corvus", 120, 25000, true},
 		{"buy_ursa", 268, 25000, true},
 		{"buy_draco", 520, 25000, true},
 		{"buy_mystery", 563, 25000, true},

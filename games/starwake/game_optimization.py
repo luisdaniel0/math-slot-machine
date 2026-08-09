@@ -191,7 +191,19 @@ class OptimizationSetup:
         # mode's RTP; at 2,500x/1-in-2,500 it costs 0.83%. Still the smallest cap share
         # in the game (draco 7.5%, mystery 4.0%, ursa 2.6%, base 2.0%) and appropriate
         # for the cheapest tier with the smallest ceiling.
-        corvus_cap_rtp = 0.008333
+        # ⚠ RE-DERIVED Aug 8 2026 for the 25,000x ceiling. A slice's rtp share IS its
+        # frequency: rate = slice_rtp * cost / cap, so at cap 25,000 and cost 120,
+        # slice_rtp = rate * 208.333.
+        #     1 in 10,000  ->  0.020833      1 in 50,000  ->  0.0041667
+        #     1 in 20,000  ->  0.010417      1 in 100,000 ->  0.0020833
+        # 1 in 50,000 chosen: it must be the RAREST max win in the menu (draco 1 in
+        # 641, ursa 1 in 3,588) because corvus is the cheapest ticket AND has to be
+        # the least volatile mode. The cap's variance contribution is
+        # slice_rtp * cap/cost = rate * (cap/cost)^2, so a rarer cap costs
+        # QUADRATICALLY less variance -- 0.87 here against 2.17 at 1 in 20,000 and
+        # 4.34 at 1 in 10,000. That is the whole reason corvus can carry a 208x
+        # ceiling-per-stake and still sit below ursa's 1.96 std.
+        corvus_cap_rtp = 0.0041667
 
         # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
         # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
@@ -316,7 +328,17 @@ class OptimizationSetup:
             "buy_corvus": {
                 "conditions": {
                     "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
-                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0004001),
+                    # ⚠ hr IS DERIVED FROM THE CAP RATE, NOT TUNED. The invariant is
+                    # sum(1/hr) + wincap_weight == 1, so hr = 1 / (1 - cap_rate)
+                    # where cap_rate = cap_rtp * cost / cap. Leaving the old
+                    # 1.0004001 behind when the ceiling moved 2,500x -> 25,000x
+                    # reserved 0.0004 of weight for a cap that now needs 0.00002;
+                    # the shortfall renormalised every weight up by 1.00038 and put
+                    # the mode at RTP 0.9673 -- OVER Stake's 0.967 cap, which is a
+                    # CRITICAL test and blocks submission outright. Measured exactly
+                    # that on all four sweep variants before the cause was found.
+                    # Here: cap_rate = 0.0041667 * 120/25000 = 2.00002e-05.
+                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0000200),
                 },
                 # ⚠ tail_scaling AND maxwin_boost BOTH REMOVED Aug 7 2026 with the
                 # 2,500x ceiling, because both had become wrong or redundant:
