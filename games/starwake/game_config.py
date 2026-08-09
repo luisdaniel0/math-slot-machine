@@ -991,7 +991,7 @@ class GameConfig(Config):
             # The menu becomes 120 / 268 / 520 / 563: a ladder, where 240 and 268
             # were two names for the same rung.
             BetMode(
-                name="buy_corvus", cost=120.0, rtp=self.rtp, max_win=corvus_cap,
+                name="buy_corvus", cost=180.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     # ⚠ win_criteria is corvus_cap (9,000), NOT the global cap. This mode

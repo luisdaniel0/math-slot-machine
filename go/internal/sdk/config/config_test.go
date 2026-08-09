@@ -152,7 +152,18 @@ func TestBetModes(t *testing.T) {
 		// the expensive tiers earn their price on cap FREQUENCY (corvus 1 in 50,000
 		// against draco's 1 in 641). Reachability is measured, not assumed --
 		// P(>=25,000x) is 1 in 2,874 with ascension forced, 1 in 25M without.
-		{"buy_corvus", 120, 25000, true},
+		// ⚠ 180x SINCE Aug 8 2026, up from 120x, and it is a VOLATILITY fix rather
+		// than a pricing one. Measured n=8 optimize draws per price on ONE pool
+		// (cost changes the optimizer's target, not the books, so no re-sim):
+		//     std/cost   120x  mean 2.00 (1.74-2.16)   180x  mean 1.66 (1.43-1.94)
+		//     beat rate  120x  mean 21.6%              180x  mean 26.4%
+		// At 120x corvus was MORE volatile than ursa (2.00 vs 1.96), inverting the
+		// tier story; at 180x it is the least volatile mode in the game. The ranges
+		// barely overlap -- the 180x mean sits below the 120x minimum -- so this is
+		// signal, not one of the many corvus measurements that turned out to be draw
+		// noise. Body instability is NOT fixed by it (spread 27.7 -> 23.0 points),
+		// so best-of-N draws at publish remains mandatory.
+		{"buy_corvus", 180, 25000, true},
 		{"buy_ursa", 268, 25000, true},
 		{"buy_draco", 520, 25000, true},
 		{"buy_mystery", 563, 25000, true},

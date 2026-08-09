@@ -203,7 +203,7 @@ class OptimizationSetup:
         # QUADRATICALLY less variance -- 0.87 here against 2.17 at 1 in 20,000 and
         # 4.34 at 1 in 10,000. That is the whole reason corvus can carry a 208x
         # ceiling-per-stake and still sit below ursa's 1.96 std.
-        corvus_cap_rtp = 0.0041667
+        corvus_cap_rtp = 0.0027778
 
         # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
         # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
@@ -368,13 +368,38 @@ class OptimizationSetup:
                 # This is the treatment that moved ursa 60.2% -> 43.1% under a quarter
                 # ticket: suppress the dump zone FROM 0, boost the target band, and fund
                 # it out of the top rather than letting the optimizer pick.
+                # ⚠ MADE GAPLESS Aug 8 2026 TO STOP THE BODY BEING A LOTTERY. The
+                # three bands above left two ranges unconstrained -- (240,600) and,
+                # after the ceiling moved to 25,000x, the whole (2500,25000) tail.
+                # MEASURED over 3 optimize draws on IDENTICAL books (the sim is
+                # deterministic, so all three weighted the same pool): under-0.25x
+                # came out 29.6% / 51.2% / 30.3%, a 21.6-POINT SWING in what players
+                # actually experience, while RTP converged to 0.96690 every time.
+                # Corvus's raw pool is 3.74x richer than its price needs -- the
+                # widest mismatch in the game (ursa 2.57, draco 2.28, mystery 1.94)
+                # -- so the optimizer has enormous freedom in what to weight, and
+                # THAT FREEDOM IS THE VARIANCE. Ursa, whose body std is a tight 1.19
+                # against corvus's 1.67-2.30, is far more constrained.
+                # Every band carries a factor now, so no range is left to the
+                # optimizer's discretion. Ranges are in base-bet units; corvus costs
+                # 120x, so the ticket multiples are noted per line.
                 "scaling": ConstructScaling(
-                    [{"criteria": "corvus", "scale_factor": 0.4,
-                        "win_range": (0, 60), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 3.5,
-                        "win_range": (60, 240), "probability": 1.0},
-                       {"criteria": "corvus", "scale_factor": 0.55,
-                        "win_range": (600, 2500), "probability": 1.0}]
+                    [{"criteria": "corvus", "scale_factor": 0.25,
+                        "win_range": (0, 45), "probability": 1.0},        # <0.25x: the dump zone
+                       {"criteria": "corvus", "scale_factor": 0.6,
+                        "win_range": (45, 90), "probability": 1.0},       # 0.25-0.5x
+                       {"criteria": "corvus", "scale_factor": 3.0,
+                        "win_range": (90, 180), "probability": 1.0},      # 0.5-1x: nearly got it back
+                       {"criteria": "corvus", "scale_factor": 3.0,
+                        "win_range": (180, 360), "probability": 1.0},     # 1-2x: small win
+                       {"criteria": "corvus", "scale_factor": 1.2,
+                        "win_range": (360, 900), "probability": 1.0},     # 2-5x   (was a gap)
+                       {"criteria": "corvus", "scale_factor": 0.7,
+                        "win_range": (900, 1800), "probability": 1.0},    # 5-10x
+                       {"criteria": "corvus", "scale_factor": 0.5,
+                        "win_range": (1800, 3750), "probability": 1.0},   # 10-20.8x
+                       {"criteria": "corvus", "scale_factor": 0.5,
+                        "win_range": (3750, 25000), "probability": 1.0}]  # 20.8-208x (was a gap)
                 ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),

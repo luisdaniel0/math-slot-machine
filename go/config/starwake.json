@@ -1306,7 +1306,7 @@
     },
     {
       "name": "buy_corvus",
-      "cost": 120.0,
+      "cost": 180.0,
       "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
