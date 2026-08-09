@@ -36,6 +36,11 @@ measured, gated and published — gates never moved off 3-Star 0 failed classes 
   3. ASCENDANT OWNS THE MAX WIN (1 in 115, was 1 in 939); draco is second at 1 in 642.
   4. URSA IS A 48.2% COIN FLIP (was 34.7%), which makes draco's completion premium over
      it +51.5% instead of +7.5%, and drops ursa from harshest buy to second-kindest.
+⚠⚠ AMENDED Aug 8 (LATER): THE CORVUS REBUILD LANDED AND THE POOL IS REPUBLISHED.
+Corvus reaches 25,000x via the new ASCENSION mechanic, the buy menu is 200/300/500/600,
+and the tier identity finally reads correctly. Every price, ceiling and body figure
+dated before Aug 8 is superseded -- read "THE CORVUS REBUILD" below first, and note
+its warning that corvus's gentleness is a SELECTED draw, not a structural property.
 ⚠ AMENDED Aug 8: RTP IS NOW 0.9669, NOT 0.9665, AND IDENTICAL ACROSS ALL SIX MODES to
 seven decimal places. Every RTP figure dated Aug 6 or earlier in this file reads 0.9665
 and is superseded — see "RTP RAISED TO 0.9669" below for the measurement and for why the
@@ -67,6 +72,90 @@ carries 75-93% of payback in every tier (the design works). It also records that
 ⚠ THE DELIVERED LADDER MOVED TWICE ON Aug 6 — the numbers above are the OLD ones. Current
 delivered completion is corvus 89.7 / URSA 48.2 / draco 29.9 / mystery 75.3, and ascendant
 now owns the max win. Use "URSA IS A COIN FLIP NOW" and "ASCENDANT NOW OWNS THE MAX WIN".
+
+### ▶▶ THE CORVUS REBUILD: ASCENSION, 25,000x, AND A ROUND-NUMBER MENU (Aug 8 2026)
+THE POOL IS RE-SIMMED, RE-OPTIMIZED, GATED AND PUBLISHED. All seven CRITICAL tests
+pass, 3-Star carries 0 failed classes, cross-mode RTP spread is 0.000%.
+
+  mode              cost      RTP   std/c   <0.25x    beat   median      max win
+  base               1.0  0.96690   25.16    73.0%    7.5%   0.000x  1 in 1,250,001
+  ante_starfall      1.5  0.96690   22.90    70.3%    3.3%   0.000x    1 in 666,667
+  buy_corvus         200  0.96690    1.43    29.7%   31.1%   0.439x     1 in 50,000
+  buy_ursa           300  0.96690    1.88    39.6%   37.0%   0.369x      1 in 3,205
+  buy_draco          500  0.96690    2.57    38.9%   20.9%   0.317x        1 in 667
+  buy_mystery        600  0.96690    2.07    40.2%   20.9%   0.343x      1 in 1,041
+
+THE TIER IDENTITY FINALLY READS CORRECTLY: volatility corvus 1.43 < ursa 1.88 <
+mystery 2.07 < draco 2.57; corvus is gentlest (29.7% under-quarter-ticket, highest
+median 0.439x); ursa pays back most often (beat 37.0%); corvus's max win is the
+rarest in the menu and draco's the most frequent.
+
+⚠ THAT IDENTITY IS SELECTION, NOT STRUCTURE. Corvus's five draws ran 29.7-48.2% on
+under-0.25x and ursa's 39.5-46.1%; their MEANS are 41.5% and 42.1%, i.e. identical.
+We shipped a corvus draw near the top of its range. BEST-OF-N BEFORE ANY PUBLISH IS
+MANDATORY and the property does not re-derive on its own. An earlier single-draw
+reading had ursa looking KINDER than corvus -- that was a bad corvus draw, not an
+inversion, and both readings were selection effects.
+
+WHAT ASCENSION IS. A rare round switches corvus to a richer star table (values
+2/3/5/10/25/50 weighted 25/20/20/18/12/5, mean 9.40 against the ordinary 3.35).
+Rolled once at beast wake, sticky for the roam, config-gated per tier.
+  - WHY IT EXISTS: corvus tops out at 9,158x on the ordinary roam strip and 18,613x
+    on the densest. EIGHT strip density/richness variants were swept at 1e6 and NOT
+    ONE reached 25,000x -- the shipped ROAMCAP beat every one of them.
+  - READ THE RATE, NOT THE MAX. The tail is nearly vertical: >=10,000x is 1 in
+    12,195, >=12,000x 1 in 62,500, >=14,000x 1 in 500,000, >=25,000x extrapolates to
+    1 in 25 MILLION. A max-win reading makes the gap look like 1.34x; in RATE terms,
+    which is what a forced slice cares about, it is ~2,500x. That is 13 days of
+    redrawing -- the documented "hang".
+  - WHY 2.5x AND NOT DRACO'S 6x: at 6x corvus's ceiling would reach ~55,000x, so
+    natural ascensions would slam into the clamp and the ASCENSION RATE, not the
+    slice's rtp share, would set the max-win frequency. MEASURED: at 2.5x natural
+    ascensions cap at 1 in 1,000,000, i.e. never, so the slice keeps sole control.
+  - forceAscension pins it on for the wincap slice: P(>=25,000x) 1 in 25M -> 1 in
+    2,874, so the slice fills its quota in ~2 min. (ForceWincap is declared but has
+    NEVER been read by the Go engine; Go redraws until winCriteria matches.)
+  - VERIFIED LIVE: 2,053 ascensions in 1e6 corvus books = 2,000 forced + 53 natural,
+    a natural rate of 1 in 18,830 against a configured 1 in 20,000.
+  - IN BASE IT IS NOT A ROUTE TO THE CAP. 67,000 corvus features, 7 ascensions, top
+    ascended payout 1,331x. Base's board wins are too small for a 6x star table to
+    reach 25,000x, so base still reaches the cap only via its own wincap slice, and
+    base_std moved 24.80 -> 25.16 against a 60.0 limit. Nothing moved.
+
+⚠ hr IS DERIVED, NOT TUNED: hr = 1 / (1 - cap_rate), cap_rate = cap_rtp * cost / cap.
+The formula reproduces ursa's and draco's shipped values to 7 places. Leaving corvus's
+behind when the ceiling moved put the mode at RTP 0.9673 -- OVER Stake's 0.967 cap,
+a CRITICAL failure. EVERY ceiling or price change must re-derive it.
+
+THE MENU IS NOW 200 / 300 / 500 / 600. This SDK treats a price as an OUTPUT
+(cost = avg win / rtp), which is how it was 268/520/563 -- but the optimizer reweights
+to hit mean = rtp * cost, so COST IS A FREE PARAMETER AND REPRICING NEEDS NO RE-SIM.
+The binding constraint is RICHNESS, raw_mean/(rtp*cost); healthy modes sit 1.9-2.6 and
+the new ladder lands 2.50/2.29/2.37/1.82. Ceiling-per-stake 125/83/50/42 tracks Rage
+Bait's 100/71/50/50. A reprice moves THREE coupled values per mode (cost, cap_rtp, hr)
+plus any ticket-relative scaling bands, and a stale one shows up as a wrong RTP rather
+than an error.
+
+### ⚠ FOUR THINGS MEASURED AND FOUND NOT TO WORK (Aug 8 2026) -- do not re-derive
+1. A DENSER ROAM STRIP CANNOT REACH 25,000x. 8 variants of star density x premium
+   richness, 1e6 each. Best 18,196x; the shipped ROAMCAP hit 18,613x. Pushing density
+   PAST the optimum makes it worse (x2.5 and x3 both underperformed x2), confirming
+   generate_reels.py's own "IT IS NOT SIMPLY MORE STARS" warning.
+2. STRIP LAYOUT ALONE SWINGS THE MAX 44%. Same weights, same 130-row length, different
+   shuffle seed: 12,957x vs 18,613x. MAX WIN CANNOT RANK STRIPS -- use a tail RATE,
+   which counts thousands of books instead of one.
+3. THE ASCENSION RATE'S EFFECT ON THE BODY IS NOT ESTABLISHED. A single-draw sweep of
+   one_in over 2,000/10,000/20,000/50,000 appeared to rank them; repeating at n=3
+   showed the within-variant spread (21.6 points) is WIDER than the gap between
+   variants (12.5). one_in sits at 20,000 with no evidence it matters.
+4. CORVUS'S BODY INSTABILITY IS UNEXPLAINED. Hypothesis was that its pool being 3.74x
+   richer than its price needed gave the optimizer too much freedom. Two fixes tried:
+   GAPLESS SCALING BANDS (spread 21.6 -> 17.0, nothing) and REPRICING to cut richness
+   to 2.49 (spread 27.7 -> 23.0, nothing). The reprice was KEPT anyway because it
+   delivered std/cost 2.00 -> 1.66 and beat 21.6% -> 26.4%, both real at n=8 -- but
+   NOT for the reason it was attempted.
+⚠ n=8 IS THE MINIMUM SAMPLE for any corvus body question. Its draw-to-draw spread is
+~20-27 points on under-0.25x, so n=1 and n=3 answer nothing. ~22 min per arm.
 
 ### ▶▶ RTP RAISED TO 0.9669 AND EQUALISED ACROSS ALL SIX MODES (Aug 8 2026)
 WHY THIS WAS POSSIBLE ONLY NOW: the buys used to UNDERSHOOT their target — the mode RTP
