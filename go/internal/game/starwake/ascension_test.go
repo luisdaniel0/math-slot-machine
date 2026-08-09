@@ -100,6 +100,45 @@ func TestTierWithoutAscensionMakesNoExtraRngCall(t *testing.T) {
 	}
 }
 
+// A wincap slice pins ascension ON so 25,000x books are cheap to manufacture.
+// Measured: forcing it moves P(>=25,000x) from ~1 in 25,000,000 to 1 in 2,874, so
+// the slice's 2,000 cap books cost ~2 minutes instead of ~13 days.
+//
+// The force must NOT change how much rng wake consumes, or a forced slice and an
+// ordinary book drift apart within the same mode -- the kind of divergence that
+// only surfaces as a pool nobody can reproduce.
+func TestForceAscendPinsItOnWithoutChangingRngUse(t *testing.T) {
+	build := func(force bool) (bool, int) {
+		c, tier := actTwoTier(t, "corvus")
+		tier.StarDrops.Ascension = &Ascension{
+			OneIn: 1000000, Values: []WeightedInt{{Value: 100, Weight: 1}}}
+		cst, err := NewConstellation(tier, "corvus", c)
+		if err != nil {
+			t.Fatalf("deal: %v", err)
+		}
+		cst.ForceAscend = force
+		g := engine.NewRNG(4242)
+		cst.LightFromWins(cst.Targets())
+		if err := cst.Wake(g); err != nil {
+			t.Fatalf("wake: %v", err)
+		}
+		return cst.Ascended(), g.IntN(1_000_000)
+	}
+	// 1-in-a-million, so the unforced case is all but certain not to ascend.
+	if got, _ := build(false); got {
+		t.Fatal("unforced round ascended at oneIn=1e6; seed is unusable for this test")
+	}
+	forced, forcedNext := build(true)
+	if !forced {
+		t.Error("ForceAscend did not pin the ascension on")
+	}
+	_, plainNext := build(false)
+	if forcedNext != plainNext {
+		t.Error("forcing ascension consumed a different amount of rng; forced and " +
+			"ordinary books of the same mode would drift apart")
+	}
+}
+
 // The configured rate is the economy's only dial for what ascension costs in RTP
 // and variance, so it has to be the rate actually delivered.
 func TestAscensionFiresAtTheConfiguredRate(t *testing.T) {

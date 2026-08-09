@@ -52,6 +52,7 @@ KNOWN_CONDITION_KEYS = {
     "mult_values",
     "force_wincap",
     "force_freegame",
+    "force_ascension",
 }
 
 
@@ -100,6 +101,7 @@ def export_conditions(conditions: dict, criteria: str, mode_name: str) -> dict:
     out = {
         "forceWincap": bool(conditions.get("force_wincap", False)),
         "forceFreegame": bool(conditions.get("force_freegame", False)),
+        "forceAscension": bool(conditions.get("force_ascension", False)),
     }
 
     # reel_weights is required on every distribution (Distribution enforces it).
@@ -192,6 +194,21 @@ def export_constellation(config) -> dict:
                     for v, w in sorted(values.items())
                 ],
             }
+
+            # ASCENSION rides inside starDrops because it is meaningless without
+            # one -- it replaces that table for the rest of the roam. Emitted ONLY
+            # for tiers that declare it: a tier without the block makes no extra
+            # rng call in the engine, which is what keeps buy_ursa and buy_draco
+            # byte-identical to a pre-ascension pool and out of the re-sim.
+            asc = getattr(config, "constellation_ascension", {}).get(tier)
+            if asc:
+                tiers[tier]["starDrops"]["ascension"] = {
+                    "oneIn": int(asc["one_in"]),
+                    "values": [
+                        {"value": int(v), "weight": int(w)}
+                        for v, w in sorted(asc["values"].items())
+                    ],
+                }
 
     return {"minRoamSpins": config.min_roam_spins, "tiers": tiers}
 

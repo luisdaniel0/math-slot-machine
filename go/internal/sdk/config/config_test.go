@@ -45,8 +45,15 @@ func TestGameIdentity(t *testing.T) {
 	if c.Game.Wincap != 25000 {
 		t.Errorf("wincap = %v, want 25000", c.Game.Wincap)
 	}
-	if c.Game.RTP != 0.9665 {
-		t.Errorf("rtp = %v, want 0.9665", c.Game.RTP)
+	// 0.9669 since Aug 8 2026, and the ceiling matters more than the value: Stake
+	// caps RTP at 0.967 and the band is a CRITICAL test, so breaching it blocks
+	// submission outright. Assert the cap as well as the target, because a typo
+	// that reads 0.9679 is the one that must never reach a pool.
+	if c.Game.RTP != 0.9669 {
+		t.Errorf("rtp = %v, want 0.9669", c.Game.RTP)
+	}
+	if c.Game.RTP > 0.967 {
+		t.Errorf("rtp = %v is OVER Stake's 0.967 cap -- a critical-test failure", c.Game.RTP)
 	}
 }
 

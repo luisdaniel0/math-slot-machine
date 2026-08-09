@@ -185,6 +185,13 @@ func (g *Game) RunFreespin() error {
 		return err
 	}
 	g.Con = con
+	// Carried from the SLICE, not the tier: ascension's natural rate is a tier
+	// property, but a wincap slice needs it pinned on so cap books are cheap to
+	// manufacture. Read here at deal time because Wake has no view of the
+	// distribution it was dealt under.
+	if g.Dist != nil {
+		con.ForceAscend = g.Dist.Conditions.ForceAscension
+	}
 	// Resolved per deal, not once in NewGame: the star symbol lives in the TIER's
 	// starDrops block, and a tier without one runs the ladder and never looks it up.
 	g.star = 0

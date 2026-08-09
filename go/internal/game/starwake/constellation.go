@@ -77,8 +77,11 @@ type Constellation struct {
 
 	// ASCENSION. Rolled once at wake and sticky for the rest of the roam.
 	// AscendedThisSpin is the emitter's one-shot flag, mirroring WokeThisSpin.
+	// ForceAscend is set from the distribution's conditions so a wincap slice can
+	// pin the switch on; see config.Conditions.ForceAscension for why.
 	ascended         bool
 	AscendedThisSpin bool
+	ForceAscend      bool
 
 	// Per-spin scratch, consumed by the event emitters. Backed by a reusable
 	// array so a spin never allocates to report newly lit cells.
@@ -216,9 +219,21 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 		// buy_ursa and buy_draco stay byte-identical to a pre-ascension pool and
 		// need no re-sim. Move this call outside the nil check and every mode's
 		// books shift, silently and with plausible numbers.
-		if con.drops.Ascension != nil && g.IntN(con.drops.Ascension.OneIn) == 0 {
-			con.ascended = true
-			con.AscendedThisSpin = true
+		if con.drops.Ascension != nil {
+			// The roll is made UNCONDITIONALLY when the block exists, then ORed
+			// with the force. Rolling inside the `if !ForceAscend` would make a
+			// forced slice consume a different amount of rng than an ordinary
+			// book, so the two would drift apart for no reason -- and rng drift
+			// between slices of the same mode is the kind of thing that only
+			// shows up as an unreproducible pool months later.
+			ascend := g.IntN(con.drops.Ascension.OneIn) == 0
+			if con.ForceAscend {
+				ascend = true
+			}
+			if ascend {
+				con.ascended = true
+				con.AscendedThisSpin = true
+			}
 		}
 	} else {
 		con.rung = 0

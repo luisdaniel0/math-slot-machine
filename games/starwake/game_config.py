@@ -596,6 +596,49 @@ class GameConfig(Config):
         }
         self.constellation_star_values["ascendant"] = self.constellation_star_values["draco"]
 
+        # ---------------------------------------------------- CORVUS ASCENSION
+        # A rare round switches corvus to a richer star table. This is the ONLY
+        # route to a 25,000x corvus, and it exists because the tier is structurally
+        # short and the strip lever is exhausted. Measured with the clamp lifted
+        # (Aug 8 2026): corvus reaches 9,158x on the ordinary roam strip and
+        # 18,613x on the densest, and eight density/richness variants were swept at
+        # 1e6 with NOT ONE reaching 25,000x -- the shipped ROAMCAP beat every one.
+        #
+        # ⚠ READ THE RATE, NOT THE MAX. The tail is nearly vertical: >=10,000x is
+        # 1 in 12,195, >=12,000x is 1 in 62,500, >=14,000x is 1 in 500,000, and
+        # >=25,000x extrapolates to 1 in 25 MILLION. A max-win reading makes the gap
+        # look like 1.34x; in the rate terms a forced slice actually cares about it
+        # is ~2,500x, so the forced slice would redraw for ~13 days. Stretching one
+        # distribution cannot close that -- ascension adds a SECOND one.
+        #
+        # ⚠ WHY NOT DRACO'S TABLE (mean 20.19 vs corvus's 3.35). It would push
+        # corvus's ceiling to ~55,000x, so most NATURAL ascensions would slam into
+        # the 25,000x clamp and the ascension rate -- not the wincap slice's rtp
+        # share -- would become what sets corvus's max-win frequency. That costs the
+        # dial keeping corvus rarer than draco (1 in 641) and ursa (1 in 3,588)
+        # while staying the least volatile mode. At ~2.5x, natural ascensions land
+        # BELOW the clamp on the ordinary strip and populate the 3,000-18,000x band
+        # that corvus has nothing in today, while the slice -- which forces
+        # ascension AND draws the dense ROAMCAP strip -- still clears the ceiling.
+        # The two strips give the separation for free.
+        #
+        # Topping out at 50 is deliberate: corvus never otherwise shows a 50, so the
+        # ascension is legible ON THE BOARD rather than only in a banner. Draco's
+        # 100 would be louder and too rich; 50 is ursa's top, so it reads as corvus
+        # punching above its tier rather than becoming a different one.
+        #
+        # ⚠ one_in IS A PLACEHOLDER until the sweep lands. It sets both the RTP cost
+        # (linear) and the variance cost (QUADRATIC), so it is the single dial the
+        # whole economy hangs on. Tiers absent from this dict make no extra rng call
+        # at all -- verified byte-identical -- which is why buy_ursa and buy_draco
+        # need no re-sim.
+        self.constellation_ascension = {
+            "corvus": {
+                "one_in": 20000,
+                "values": {2: 25, 3: 20, 5: 20, 10: 18, 25: 12, 50: 5},
+            },
+        }
+
         # Reels. Kept on self so export_go_config reads THIS map rather than
         # restating it -- a strip added here and missed there would leave the Go
         # engine drawing the wrong reels with no error.
@@ -721,7 +764,7 @@ class GameConfig(Config):
         # wandered 26 points while RTP converged to 0.9665 every single time.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
-        def _wincap_condition(star_count, roam_mix=None):
+        def _wincap_condition(star_count, roam_mix=None, force_ascension=False):
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
@@ -734,6 +777,11 @@ class GameConfig(Config):
                 "mult_values": fg_mult,
                 "force_wincap": True,
                 "force_freegame": True,
+                # OFF unless a caller asks. Only corvus has an ascension block, so
+                # the flag is a no-op elsewhere -- but a slice that silently forced
+                # a mechanic the tier does not advertise is exactly the kind of
+                # thing that becomes load-bearing before anyone notices.
+                "force_ascension": bool(force_ascension),
             }
 
         # CORVUS'S MIX IS THE HEAVIEST OF THE THREE, and for a different reason than
@@ -746,7 +794,14 @@ class GameConfig(Config):
         # wincap book on a small run before trusting it at 1e6. Draco's is ~117.
         corvus_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 40}
 
-        corvus_wincap_condition = _wincap_condition(3, corvus_roam_wincap_weights)
+        # ⚠ force_ascension=True is what makes corvus's cap MANUFACTURABLE. 25,000x
+        # is only reachable in an ascended round, and ascension is rare by design,
+        # so an unforced slice would redraw through ~one_in ordinary rounds per
+        # candidate. Forcing it here leaves the NATURAL rate untouched, which keeps
+        # the advertised max-win frequency a number the slice's rtp share sets
+        # rather than a side effect of how often corvus happens to ascend.
+        corvus_wincap_condition = _wincap_condition(
+            3, corvus_roam_wincap_weights, force_ascension=True)
         ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
 

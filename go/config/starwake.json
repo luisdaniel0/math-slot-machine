@@ -7,7 +7,7 @@
     "provider": "Uptown Games",
     "providerNumber": 0,
     "winType": "lines",
-    "rtp": 0.9665,
+    "rtp": 0.9669,
     "wincap": 25000.0,
     "numReels": 5,
     "numRows": [
@@ -512,7 +512,36 @@
               "value": 25,
               "weight": 1
             }
-          ]
+          ],
+          "ascension": {
+            "oneIn": 20000,
+            "values": [
+              {
+                "value": 2,
+                "weight": 25
+              },
+              {
+                "value": 3,
+                "weight": 20
+              },
+              {
+                "value": 5,
+                "weight": 20
+              },
+              {
+                "value": 10,
+                "weight": 18
+              },
+              {
+                "value": 25,
+                "weight": 12
+              },
+              {
+                "value": 50,
+                "weight": 5
+              }
+            ]
+          }
         }
       },
       "ursa": {
@@ -820,7 +849,7 @@
     {
       "name": "base",
       "cost": 1.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": true,
@@ -834,6 +863,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -877,6 +907,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -918,6 +949,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -959,6 +991,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1000,6 +1033,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1023,6 +1057,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1043,7 +1078,7 @@
     {
       "name": "ante_starfall",
       "cost": 1.5,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": true,
@@ -1057,6 +1092,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1100,6 +1136,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1141,6 +1178,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1182,6 +1220,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1223,6 +1262,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1246,6 +1286,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1266,7 +1307,7 @@
     {
       "name": "buy_corvus",
       "cost": 120.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 2500.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1280,6 +1321,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": true,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1323,6 +1365,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1361,7 +1404,7 @@
     {
       "name": "buy_ursa",
       "cost": 268.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1375,6 +1418,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1418,6 +1462,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1456,7 +1501,7 @@
     {
       "name": "buy_draco",
       "cost": 520.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1470,6 +1515,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1513,6 +1559,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1551,7 +1598,7 @@
     {
       "name": "buy_mystery",
       "cost": 563.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1565,6 +1612,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "ASC": 1
@@ -1608,6 +1656,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "ASC": 1
@@ -1649,6 +1698,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1690,6 +1740,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1731,6 +1782,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
