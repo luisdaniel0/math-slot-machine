@@ -203,7 +203,7 @@ class OptimizationSetup:
         # QUADRATICALLY less variance -- 0.87 here against 2.17 at 1 in 20,000 and
         # 4.34 at 1 in 10,000. That is the whole reason corvus can carry a 208x
         # ceiling-per-stake and still sit below ursa's 1.96 std.
-        corvus_cap_rtp = 0.0027778
+        corvus_cap_rtp = 0.0025
 
         # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
         # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
@@ -385,21 +385,21 @@ class OptimizationSetup:
                 # 120x, so the ticket multiples are noted per line.
                 "scaling": ConstructScaling(
                     [{"criteria": "corvus", "scale_factor": 0.25,
-                        "win_range": (0, 45), "probability": 1.0},        # <0.25x: the dump zone
+                        "win_range": (0, 56), "probability": 1.0},        # <0.25x: the dump zone
                        {"criteria": "corvus", "scale_factor": 0.6,
-                        "win_range": (45, 90), "probability": 1.0},       # 0.25-0.5x
+                        "win_range": (50, 100), "probability": 1.0},       # 0.25-0.5x
                        {"criteria": "corvus", "scale_factor": 3.0,
-                        "win_range": (90, 180), "probability": 1.0},      # 0.5-1x: nearly got it back
+                        "win_range": (100, 200), "probability": 1.0},      # 0.5-1x: nearly got it back
                        {"criteria": "corvus", "scale_factor": 3.0,
-                        "win_range": (180, 360), "probability": 1.0},     # 1-2x: small win
+                        "win_range": (200, 400), "probability": 1.0},     # 1-2x: small win
                        {"criteria": "corvus", "scale_factor": 1.2,
-                        "win_range": (360, 900), "probability": 1.0},     # 2-5x   (was a gap)
+                        "win_range": (400, 1000), "probability": 1.0},     # 2-5x   (was a gap)
                        {"criteria": "corvus", "scale_factor": 0.7,
-                        "win_range": (900, 1800), "probability": 1.0},    # 5-10x
+                        "win_range": (1000, 2000), "probability": 1.0},    # 5-10x
                        {"criteria": "corvus", "scale_factor": 0.5,
-                        "win_range": (1800, 3750), "probability": 1.0},   # 10-20.8x
+                        "win_range": (2000, 4000), "probability": 1.0},   # 10-20.8x
                        {"criteria": "corvus", "scale_factor": 0.5,
-                        "win_range": (3750, 25000), "probability": 1.0}]  # 20.8-208x (was a gap)
+                        "win_range": (4000, 25000), "probability": 1.0}]  # 20.8-208x (was a gap)
                 ).return_dict(),
                 "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
@@ -422,7 +422,7 @@ class OptimizationSetup:
             "buy_ursa": {
                 "conditions": {
                     "wincap": wincap_cond("buy_ursa", 0.026),
-                    "ursa": feature_cond(round(rtp - 0.026, 5), hr=1.0002788),
+                    "ursa": feature_cond(round(rtp - 0.026, 5), hr=1.0003121),
                 },
                 "scaling": ConstructScaling(
                     tail_scaling("ursa")
@@ -454,14 +454,14 @@ class OptimizationSetup:
                        # 25-50x fell, and completion moved only 34.7% -> 37.9%. Range the
                        # suppression from 0 or it is not a suppression, it is a funnel.
                        {"criteria": "ursa", "scale_factor": 0.5,
-                        "win_range": (0, 50), "probability": 1.0},
+                        "win_range": (0, 56), "probability": 1.0},
                        # Target the arithmetic: 50% completion at RTP 0.9662 needs the
                        # completed set to average ~484x, which is the 268-800 band. The
                        # extreme tail is what eats the budget that band needs.
                        {"criteria": "ursa", "scale_factor": 2.2,
-                        "win_range": (268, 800), "probability": 1.0},
+                        "win_range": (300, 900), "probability": 1.0},
                        {"criteria": "ursa", "scale_factor": 0.5,
-                        "win_range": (1200, 25000), "probability": 1.0}]
+                        "win_range": (1350, 25000), "probability": 1.0}]
                 ).return_dict(),
                 "parameters": run_params(3, 10, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ursa"], [(5.0, 20.0)], [0.3]).return_dict(),
@@ -506,7 +506,7 @@ class OptimizationSetup:
             "buy_draco": {
                 "conditions": {
                     "wincap": wincap_cond("buy_draco", 0.075),
-                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1.0015624),
+                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1.0015023),
                 },
                 "scaling": ConstructScaling(tail_scaling("draco")).return_dict(),
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),

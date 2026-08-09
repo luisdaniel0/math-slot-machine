@@ -163,10 +163,20 @@ func TestBetModes(t *testing.T) {
 		// signal, not one of the many corvus measurements that turned out to be draw
 		// noise. Body instability is NOT fixed by it (spread 27.7 -> 23.0 points),
 		// so best-of-N draws at publish remains mandatory.
-		{"buy_corvus", 180, 25000, true},
-		{"buy_ursa", 268, 25000, true},
-		{"buy_draco", 520, 25000, true},
-		{"buy_mystery", 563, 25000, true},
+		// ⚠⚠ THE WHOLE MENU WAS REPRICED TO ROUND NUMBERS Aug 8 2026: 200/300/500/600.
+		// This SDK treats a price as an OUTPUT (cost = measured avg win / rtp), which
+		// is how the menu ended up at 268/520/563; but the optimizer reweights books
+		// to hit mean = rtp * cost, so cost is really a FREE PARAMETER and repricing
+		// needs NO re-sim. The binding constraint is RICHNESS, raw_mean/(rtp*cost):
+		// healthy shipped modes sit 1.9-2.6, and the new ladder lands 2.50/2.29/2.37/
+		// 1.82. Ceiling-per-stake 125/83/50/42 tracks Rage Bait's 100/71/50/50.
+		// Each mode's cap_rtp is held at its cap-value-per-stake (the documented
+		// ladder: base .020, ante .025, ursa .026, mystery .040, draco .075) and hr
+		// re-derived from the resulting rate -- see game_optimization.
+		{"buy_corvus", 200, 25000, true},
+		{"buy_ursa", 300, 25000, true},
+		{"buy_draco", 500, 25000, true},
+		{"buy_mystery", 600, 25000, true},
 	}
 	for _, tc := range cases {
 		m, err := c.Mode(tc.name)

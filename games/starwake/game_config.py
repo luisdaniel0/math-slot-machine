@@ -991,7 +991,7 @@ class GameConfig(Config):
             # The menu becomes 120 / 268 / 520 / 563: a ladder, where 240 and 268
             # were two names for the same rung.
             BetMode(
-                name="buy_corvus", cost=180.0, rtp=self.rtp, max_win=corvus_cap,
+                name="buy_corvus", cost=200.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     # ⚠ win_criteria is corvus_cap (9,000), NOT the global cap. This mode
@@ -1009,7 +1009,7 @@ class GameConfig(Config):
             # buy_ursa: pin the coin-flip tier -- now ALSO a 25,000x product, at a
             # deliberately rarer cap than draco (see the ceilings note above).
             BetMode(
-                name="buy_ursa", cost=268.0, rtp=self.rtp, max_win=cap,
+                name="buy_ursa", cost=300.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ursa_wincap_condition),
@@ -1019,7 +1019,7 @@ class GameConfig(Config):
             # buy_draco: pin the greedy tier -- the 25,000x product players pay for,
             # earning its price with ~4.5x ursa's cap rate rather than a taller ceiling.
             BetMode(
-                name="buy_draco", cost=520.0, rtp=self.rtp, max_win=cap,
+                name="buy_draco", cost=500.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
@@ -1067,7 +1067,7 @@ class GameConfig(Config):
             # rolling the cheap tier) but it inverts "draco is the cap play", so
             # re-measure cap-value-per-stake across the menu before shipping.
             BetMode(
-                name="buy_mystery", cost=563.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=600.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     # Forced caps are ASCENDANT rolls (was draco until Aug 6 2026 -- see
