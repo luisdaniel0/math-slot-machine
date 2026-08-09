@@ -131,7 +131,13 @@ func TestBetModes(t *testing.T) {
 		// And 120x rather than 240x because at 240x corvus was last on
 		// ceiling-per-cost behind a mode costing 12% more -- a rung nobody should
 		// pick is worse than no rung.
-		{"buy_corvus", 120, 9000, true},
+		// ⚠ 2,500x SINCE Aug 7 2026. 9,000x was honest and useless: delivered at 1
+		// in 2,000,003 against a market norm of 1 in 400-4,000. At 2,500x the
+		// ceiling is the most reachable in the menu (1 in 2,417 unforced), at the
+		// cost of ceiling-per-cost dropping 75x -> 20.8x. This assertion sat stale
+		// and RED from that day until Aug 8, because the workflow runs pytest and
+		// the sims but not `go test ./...` -- run the Go suite after a config change.
+		{"buy_corvus", 120, 2500, true},
 		{"buy_ursa", 268, 25000, true},
 		{"buy_draco", 520, 25000, true},
 		{"buy_mystery", 563, 25000, true},
@@ -167,12 +173,36 @@ func TestBetModes(t *testing.T) {
 		}
 	}
 
-	// buy_corvus is the one mode with no forced wincap slice; an unreachable
-	// forced slice does not error, it loops forever.
-	corvus, _ := c.Mode("buy_corvus")
-	for _, d := range corvus.Distributions {
-		if d.Conditions.ForceWincap {
-			t.Errorf("buy_corvus has a forced wincap slice (%s); its cap is unreachable", d.Criteria)
+	// EVERY forced wincap slice must hunt a ceiling the tier can actually produce.
+	// An unreachable one does not error -- it redraws with no retry cap, so the
+	// run hangs rather than fails, and the only symptom is a sim that never ends.
+	//
+	// ⚠ THIS ASSERTION USED TO READ "buy_corvus must have NO forced slice", which
+	// was right while corvus published 9,000x it could not reach. Corvus gained a
+	// slice on Aug 6 2026 once its ceiling came down to 2,500x, where the tier
+	// makes the cap unforced at 1 in 2,417 -- so the slice manufactures cap books
+	// cheaply instead of hunting. The check is now the GENERAL invariant rather
+	// than a corvus special case, since it is the property that actually matters.
+	//
+	// Reachability cannot be proven from config alone, so this pins the pairing it
+	// CAN see -- a slice must target its own mode's MaxWin, not the global cap.
+	// Measured reach with the clamp lifted (Aug 8 2026): corvus tops out at 9,158x
+	// on the ordinary roam strip and 18,613x on the densest, and >=25,000x
+	// extrapolates to 1 in 25 MILLION. Any future rise in corvus's ceiling needs a
+	// re-measure FIRST, or this slice becomes the hang it is here to prevent.
+	for _, m := range c.BetModes {
+		for _, d := range m.Distributions {
+			if !d.Conditions.ForceWincap {
+				continue
+			}
+			if d.WinCriteria == nil {
+				t.Errorf("%s: forced wincap slice (%s) has no winCriteria", m.Name, d.Criteria)
+				continue
+			}
+			if *d.WinCriteria != m.MaxWin {
+				t.Errorf("%s: forced slice (%s) hunts %v but the mode clamps at %v; "+
+					"it would redraw forever", m.Name, d.Criteria, *d.WinCriteria, m.MaxWin)
+			}
 		}
 	}
 

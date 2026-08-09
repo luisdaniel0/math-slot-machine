@@ -48,6 +48,44 @@ type StarDrops struct {
 	StarSymbol string `json:"starSymbol"`
 	// Values is each star's multiplier value, drawn independently per star.
 	Values []WeightedInt `json:"values"`
+	// Ascension, when set, gives this tier a rare richer star table. Optional:
+	// nil means the tier never ascends and -- importantly -- makes no extra RNG
+	// call, so tiers without it stay byte-identical to a pre-ascension pool.
+	Ascension *Ascension `json:"ascension,omitempty"`
+}
+
+// Ascension is a rare mid-feature switch to a richer star table.
+//
+// WHY IT EXISTS. A tier's ceiling is (symbol win) x (collected multiplier), and
+// corvus's is structurally short: measured with the clamp lifted it reaches 9,158x
+// on the ordinary roam strip and 18,613x on the densest one, against a 25,000x
+// headline. The strip lever is exhausted -- eight density/richness variants were
+// swept and none reached it, because the tail is nearly vertical (>=12,000x is 1
+// in 62,500 and >=25,000x extrapolates to 1 in 25 MILLION, which is a forced slice
+// redrawing for days rather than a slow run).
+//
+// ⚠ THE FIX IS A SECOND DISTRIBUTION, NOT A LONGER TAIL. Stretching the existing
+// one cannot work at that decay rate. Ascension instead gives a rare subset of
+// rounds a materially richer star table, so 25,000x sits INSIDE that subset's
+// normal range instead of at the end of everything's tail. Draco's table averages
+// 20.19 per star against corvus's 3.35, ~6x, which clears the ceiling with room to
+// spare -- so the table here is a tuning surface, not a copy of draco's.
+//
+// ⚠ COST IS SET BY RATE, NOT BY THE TABLE. A cap slice's RTP share is its
+// frequency (rate = slice_rtp * cost / cap), and the same logic governs this: a
+// rarer ascension costs proportionally less RTP and QUADRATICALLY less variance.
+// That is what lets corvus carry a 25,000x ceiling and still be the lowest-
+// volatility mode in the menu. Raising the star table globally was tried instead,
+// twice, and failed both times -- the optimizer paid for the fat tail out of the
+// body and corvus became the harshest buy at the cheapest price.
+type Ascension struct {
+	// OneIn is the odds denominator: the tier ascends with probability 1/OneIn,
+	// rolled once when the beast wakes. A plain reciprocal rather than a weight
+	// table because it is the number the economy is tuned on and it should read
+	// the same in config as it does in the design notes.
+	OneIn int `json:"oneIn"`
+	// Values replaces StarDrops.Values for the rest of the roam once ascended.
+	Values []WeightedInt `json:"values"`
 }
 
 // RoamStripKey is the reelWeights entry act two draws from.
@@ -183,7 +221,25 @@ func (sd *StarDrops) validate(tier string) error {
 	}
 	// A star worth x1 adds nothing and would animate a collect for no gain, so the
 	// floor is 2 -- the same floor Rage Bait's fish use.
-	return validWeights(tier, "starDrops.values", sd.Values, 2)
+	if err := validWeights(tier, "starDrops.values", sd.Values, 2); err != nil {
+		return err
+	}
+	if sd.Ascension != nil {
+		return sd.Ascension.validate(tier)
+	}
+	return nil
+}
+
+func (a *Ascension) validate(tier string) error {
+	// oneIn 0 would divide by zero in the roll; oneIn 1 would ascend EVERY round,
+	// which is not an ascension at all -- it is a silent global star-table swap,
+	// the exact change that failed twice before. Both are loud here rather than a
+	// plausible-looking pool nobody questions until the optimizer eats the body.
+	if a.OneIn < 2 {
+		return fmt.Errorf("tier %s: ascension.oneIn = %d; must be >= 2 "+
+			"(1 would ascend every round, which is a global table swap)", tier, a.OneIn)
+	}
+	return validWeights(tier, "starDrops.ascension.values", a.Values, 2)
 }
 
 // validateRoamWeights checks that every slice which can reach the feature also

@@ -75,6 +75,11 @@ type Constellation struct {
 	fallen    []Star
 	fallenBuf [engine.MaxReels * engine.MaxRows]Star
 
+	// ASCENSION. Rolled once at wake and sticky for the rest of the roam.
+	// AscendedThisSpin is the emitter's one-shot flag, mirroring WokeThisSpin.
+	ascended         bool
+	AscendedThisSpin bool
+
 	// Per-spin scratch, consumed by the event emitters. Backed by a reusable
 	// array so a spin never allocates to report newly lit cells.
 	newlyLit     []config.Cell
@@ -206,6 +211,15 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 		// is no dead x1 rung to sit through -- the first star IS the climb.
 		con.rung = -1
 		con.multiplier = 1
+		// ⚠ ROLLED ONLY WHEN THE TIER HAS AN ASCENSION BLOCK. That guard is what
+		// keeps a tier without one making the SAME rng calls it always did, so
+		// buy_ursa and buy_draco stay byte-identical to a pre-ascension pool and
+		// need no re-sim. Move this call outside the nil check and every mode's
+		// books shift, silently and with plausible numbers.
+		if con.drops.Ascension != nil && g.IntN(con.drops.Ascension.OneIn) == 0 {
+			con.ascended = true
+			con.AscendedThisSpin = true
+		}
 	} else {
 		con.rung = 0
 		con.multiplier = con.ladder[0]
@@ -277,7 +291,7 @@ func (con *Constellation) RollStarValues(b *engine.Board, star engine.SymID, g *
 			if b.At(reel, row).Sym != star {
 				continue
 			}
-			value := pickWeighted(con.drops.Values, g.IntN)
+			value := pickWeighted(con.starTable(), g.IntN)
 			b.Set(reel, row, engine.Cell{Sym: star, Mult: uint16(value)})
 			con.fallen = append(con.fallen, Star{
 				Cell:  config.Cell{Reel: reel, Row: row},
@@ -286,6 +300,20 @@ func (con *Constellation) RollStarValues(b *engine.Board, star engine.SymID, g *
 		}
 	}
 	return con.fallen
+}
+
+// Ascended reports whether this round switched to the richer star table.
+func (con *Constellation) Ascended() bool { return con.ascended }
+
+// starTable is the value table this spin's stars are drawn from -- the ascended
+// one once the round has ascended, the tier's ordinary one otherwise. Every star
+// value in the game goes through here, so it is the single seam the ascension
+// needs and the reason the feature is a table swap rather than a second code path.
+func (con *Constellation) starTable() []WeightedInt {
+	if con.ascended {
+		return con.drops.Ascension.Values
+	}
+	return con.drops.Values
 }
 
 // Collect takes every star the board dealt and adds it to the beast's multiplier.

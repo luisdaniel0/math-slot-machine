@@ -259,6 +259,10 @@ func (g *Game) RunFreespin() error {
 				return err
 			}
 			g.emitBeastWake()
+			if con.AscendedThisSpin {
+				g.emitConstellationAscend()
+				con.AscendedThisSpin = false
+			}
 			// Guarantee the roam window. An early completion already has the
 			// spins (tot_fs untouched -- "finish early = longer roam", the fat
 			// tail); only a LATE completion extends the feature, so "even a
@@ -345,6 +349,20 @@ func (g *Game) emitBeastWake() {
 		Tier:       con.Tier,
 		Beast:      con.BeastName,
 		BeastShape: &engine.Shape{Reels: tier.BeastShape[0], Rows: tier.BeastShape[1]},
+	})
+}
+
+// emitConstellationAscend reports the rare switch to the richer star table.
+//
+// Emitted immediately AFTER beastWake and before the first starsLanded, because
+// the roll happens at wake and is sticky for the whole roam. A frontend that saw
+// it later would already have animated ordinary stars at ascended values. Replay
+// must work from any point, so it carries the tier rather than referring back.
+func (g *Game) emitConstellationAscend() {
+	g.AddEvent(engine.Event{
+		Type:  "constellationAscend",
+		Tier:  g.Con.Tier,
+		Beast: g.Con.BeastName,
 	})
 }
 
