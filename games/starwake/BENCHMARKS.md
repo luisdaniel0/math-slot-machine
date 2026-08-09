@@ -256,10 +256,32 @@ exactly. Do not read a CrowdSim RTP as a cap breach.
   optimize draws ran 29.7-48.2% on under-0.25x and ursa's 39.5-46.1%; their MEANS
   are 41.5% and 42.1%, i.e. identical. Best-of-N before any publish is mandatory.
 
-  feature completion (delivered, LUT-weighted -- NOT the raw-pool figure):
-    corvus 89.7%  |  ursa 48.2%  |  draco 29.9%  |  mystery 75.3%
+  MEASURED Aug 8 2026 on the rebuilt pool (book_split.py, LUT-weighted -- NOT the
+  raw-pool figure, which differs by 5-10 points and describes nobody's experience):
+  feature completion (delivered):
+    corvus 92.3%  |  ursa 53.5%  |  draco 28.7%  |  mystery 71.0%
   payoff when the feature completes, as a multiple of the ticket:
-    corvus 1.07x  |  ursa 1.83x  |  draco 2.76x  |  mystery ~1.17x
+    corvus 1.04x  |  ursa 1.66x  |  draco 2.69x  |  mystery 1.25x
+  Act 2's share of each mode's total payback:
+    corvus 96.0%  |  ursa 88.9%  |  draco 87.4%  |  mystery 91.7%
+
+  ⚠ THE LADDER PASSES: 1.04 -> 1.66 -> 2.69 is monotonic, so each price step buys a
+  genuinely bigger payoff WHEN THE FEATURE LANDS. That is the check that matters more
+  than ceilings (see (b) below). Mystery's 1.25x is by design -- it is a lottery
+  weighted toward the cheaper tiers.
+
+  ⚠⚠ AND IT QUANTIFIES CORVUS'S FLATNESS FROM A SECOND DIRECTION. Completing a corvus
+  feature returns 1.04x the ticket: you get your stake back and change. It completes
+  ~92% of the time and 96% of its payback is in Act 2, so the MECHANIC works exactly
+  as designed -- the money simply lands ON the ticket rather than past it. This is the
+  same fact CrowdSim reports as "82.7% of corvus players never see a 10x", arriving
+  independently. Corvus is not broken, it is FLAT: three goals (least volatile,
+  kindest body, rarest max win at 1 in 50,000) each push mass toward the ticket, and
+  stacked they leave the entry buy with almost no upside texture.
+  CHEAPEST LEVER IF THAT IS TO CHANGE: the ascension rate. one_in sits at 20,000, which
+  makes ascension invisible in normal play, and its effect on the BODY was measured as
+  unestablished -- so lowering it toward 2,000 would add big-win moments at little cost
+  to the volatility ordering. ~20 minutes to test.
 
 ⚠ THINGS TO ASK OF A COMPETITOR'S BUY MENU, because these are where we made real choices:
   (a) CEILING-PER-COST FALLS WITH PRICE for anyone using a shared max win, since it is
