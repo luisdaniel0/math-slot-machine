@@ -4,7 +4,10 @@ Our measured numbers, and the protocol for producing the same numbers from anoth
 game so the comparison is like-for-like. Design history and reasoning live in
 `CLAUDE.md`; this file is only "what to compare and what we read".
 
-Pool measured: `games/starwake_go/library/publish_files`, 1e6 outcomes/mode, Aug 7 2026.
+Pool measured: `games/starwake_go/library/publish_files`, 1e6 outcomes/mode.
+⚠ REBUILT Aug 8 2026 -- corvus reaches 25,000x via ASCENSION and the buy menu was
+repriced to 200/300/500/600. Sections 2d and 3 carry the new numbers; section 2c is
+the Aug 7 menu, kept as the before-picture. Anything dated Aug 7 elsewhere is stale.
 Re-measure this whole sheet after any pool rebuild — every number below is pool-specific.
 
 ---
@@ -193,13 +196,65 @@ read available on whether their game is genuinely comparable to ours.
       session stats are for CROSS-GAME COMPARISON at a fixed config, not for predicting
       real player behaviour.
 
+## 2d. THE REBUILT BUY MENU — CrowdSim, Aug 8 2026, same config
+
+Pool: 200/300/500/600, corvus at 25,000x via ascension. Compare against 2c above,
+which is the Aug 7 menu (120/268/520/563, corvus capped at 2,500x).
+
+  metric                   CORVUS      URSA     DRACO   MYSTERY
+  cost                        200       300       500       600
+  probability of profit     31.4%     26.3%     37.6%     34.8%
+  sim RTP                  96.70%    96.77%    97.00%    96.86%
+  break-even rate           31.1%     37.0%     20.8%     20.9%
+  balance mean / median  90.11/89  90.31/84  91.01/86  90.57/87
+  balance std dev           24.78     33.52     44.28     36.79
+  P5 / P50 / P95         52/89/127 50/84/167 29/86/173 37/87/157
+  avg max drawdown          23.2%     25.7%     36.0%     31.4%
+  players below 50%          6.7%      7.3%     27.3%     19.2%
+  busted                     0.0%      0.0%      0.4%      0.1%
+  danger-zone events         none      none       992       202
+  BIG WIN (10x) hit rate    17.4%     24.9%     75.5%     65.4%
+  NEVER hit a 10x           82.7%     75.1%     24.6%     34.6%
+  avg / max lose streak   13.2/38   11.0/28   19.7/46   19.7/49
+  avg / max win streak     4.6/11    5.4/13     3.4/8     3.4/7
+
+WHAT MOVED vs Aug 7, and it is not what the headline numbers suggest:
+  corvus  profit 38.3% -> 31.4% (WORSE) but busted 0.5% -> 0.0%, drawdown
+          32.8% -> 23.2%, P5 33 -> 52, break-even 17.2% -> 31.1%.
+  ursa    profit 30.3% -> 26.3%, break-even 32.4% -> 37.0%.
+  draco   profit 34.7% -> 37.6%.   mystery  ~flat.
+=> CORVUS TRADED "SOMETIMES ENDS UP" FOR "RARELY GOES DOWN". Its mass moved onto
+the ticket: far fewer disasters, far more break-evens, fewer profitable sessions.
+That IS the low-volatility brief delivered, not a regression -- but read it as a
+shape change, not an improvement.
+
+⚠⚠ THE ONE FINDING TO ACT ON: 82.7% OF CORVUS PLAYERS NEVER SEE A BIG WIN in 300
+spins, against draco's 24.6%. Corvus has the HIGHEST ceiling-per-stake in the menu
+(125x) and the fewest memorable moments in it. That is the arithmetic consequence of
+"least volatile + kindest body + rarest max win (1 in 50,000)" -- three goals that
+all push mass toward the ticket. Nothing here is broken; the question is whether the
+CHEAPEST BUY should be the quietest, since a buy button is pressed for the moment
+rather than the median.
+
+⚠ CrowdSim's "actual RTP" is a SAMPLE estimate over 600,000 spins, not the LUT RTP.
+Draco reads 97.00% (+0.31%) purely from its variance -- the shipped LUT is 0.96690
+exactly. Do not read a CrowdSim RTP as a cap breach.
+
 ## 3. Buy menu — structure, and where we are unusual
 
+  REBUILT Aug 8 2026. Every mode now reaches the game headline ceiling -- the
+  invariant Meta Gaming holds across all 18 modes of their three games, and the one
+  corvus used to break.
   mode        cost   RTP      max win   ceil/cost  median/c  beat    <0.25x tkt  max-win rate
-  buy_corvus   120x  96.65%     9,000x      75.0x     0.294   17.2%      41.6%   1 in 2,000,003
-  buy_ursa     268x  96.62%    25,000x      93.3x     0.298   32.3%      43.1%   1 in 3,589
-  buy_draco    520x  96.50%    25,000x      48.1x     0.235   21.8%      53.1%   1 in 642
-  buy_mystery  563x  96.65%    25,000x      44.4x     0.327   22.1%      32.7%   1 in 1,110
+  buy_corvus   200x  96.69%    25,000x     125.0x     0.439   31.1%      29.7%   1 in 50,000
+  buy_ursa     300x  96.69%    25,000x      83.3x     0.369   37.0%      39.6%   1 in 3,205
+  buy_draco    500x  96.69%    25,000x      50.0x     0.317   20.9%      38.9%   1 in 667
+  buy_mystery  600x  96.69%    25,000x      41.7x     0.343   20.9%      40.2%   1 in 1,042
+
+  cost-adjusted volatility: corvus 1.43 < ursa 1.88 < mystery 2.07 < draco 2.57
+  ⚠ THAT ORDERING IS A SELECTED DRAW, NOT A STRUCTURAL PROPERTY. Corvus's five
+  optimize draws ran 29.7-48.2% on under-0.25x and ursa's 39.5-46.1%; their MEANS
+  are 41.5% and 42.1%, i.e. identical. Best-of-N before any publish is mandatory.
 
   feature completion (delivered, LUT-weighted -- NOT the raw-pool figure):
     corvus 89.7%  |  ursa 48.2%  |  draco 29.9%  |  mystery 75.3%
