@@ -136,6 +136,39 @@ Bait's 100/71/50/50. A reprice moves THREE coupled values per mode (cost, cap_rt
 plus any ticket-relative scaling bands, and a stale one shows up as a wrong RTP rather
 than an error.
 
+### ⚠⚠ THE OPTIMIZER DRAW CHOOSES CORVUS'S PERSONALITY (Aug 8 2026)
+THE SELECTION RULE IS A DESIGN DECISION, NOT HOUSEKEEPING. Measured over 2 draws at
+each of three ascension rates, on identical books:
+
+  one_in  draw  std/c  <0.25x   median   P(>=10x)   session big-win (1-exp(-300p))
+  20000     1    1.68   45.8%   0.302x   1 in 450         48.7%
+  20000     2    1.93   51.6%   0.209x   1 in 172         82.5%
+  2000      1    1.39   38.3%   0.426x   1 in 2,203       12.7%
+  2000      2    1.78   49.6%   0.263x   1 in 318         61.0%
+  500       1    1.71   43.6%   0.309x   1 in 361         56.4%
+  500       2    1.38   28.8%   0.425x   1 in 1,526       17.8%
+  SHIPPED        1.43   29.7%   0.439x   1 in 1,610       17.0%
+
+1. one_in HAS NO DETECTABLE EFFECT. Two draws at an unchanged 20,000 gave session
+   big-win 48.7% and 82.5%; the within-variant spread dwarfs everything between.
+2. THE DRAW MOVES BIG-WIN FREQUENCY ~10x (1 in 172 to 1 in 2,203) on IDENTICAL books.
+3. THE SHIPPED POOL IS ONE OF THE FLATTEST DRAWS OF ITS OWN CONFIG. Corvus is not
+   structurally flat -- WE SELECTED FLATNESS. The best-of-N rule was "lowest
+   under-0.25x, tie-break lowest std", and sorting the draws by std shows why that is
+   self-reinforcing: std 1.38 -> 17.8% session, 1.68 -> 48.7%, 1.93 -> 82.5%.
+=> VOLATILITY AND BIG-WIN FREQUENCY ARE THE SAME AXIS. Variance IS excitement. Asking
+   for the least volatile mode and then wanting big wins in it is incoherent; the
+   conservation law in book_split's output says the same thing.
+
+⚠ "LEAST VOLATILE" AND "KINDEST" ARE ~90% THE SAME MEASUREMENT (Spearman ~0.93 across
+these draws) BUT NOT IDENTICAL. std/c is squared and tail-driven, so one 100x outcome
+outweighs a thousand near-misses; under-0.25x is purely the LEFT side and ignores the
+tail entirely. They cross over: the std 1.39 draw has under-0.25x 38.3% against the
+std 1.43 draw's 29.7% -- lower volatility, materially worse to play. Track BOTH: the
+left-side number is what a player feels, std is what stakestats and a reviewer read.
+For corvus they currently select the same draw, so there is no live conflict; the real
+trade is (kind AND low-vol) vs EXCITING, and the shipped pool takes the first.
+
 ### ⚠ FOUR THINGS MEASURED AND FOUND NOT TO WORK (Aug 8 2026) -- do not re-derive
 1. A DENSER ROAM STRIP CANNOT REACH 25,000x. 8 variants of star density x premium
    richness, 1e6 each. Best 18,196x; the shipped ROAMCAP hit 18,613x. Pushing density
