@@ -136,6 +136,35 @@ Bait's 100/71/50/50. A reprice moves THREE coupled values per mode (cost, cap_rt
 plus any ticket-relative scaling bands, and a stale one shows up as a wrong RTP rather
 than an error.
 
+### ⚠⚠ STRIP THE CAP AND THE VOLATILITY ORDERING INVERTS (Aug 8 2026)
+std/cost is squared and tail-driven, so a mode's headline volatility is mostly a
+statement about its CAP -- and caps differ in both rate and height across the menu.
+Decomposed with payout_curve.py on the shipped pool:
+
+  mode          total std   cap share of E[X^2]   BODY std (cap stripped)
+  buy_ursa         1.88            48.5%                 1.167
+  buy_corvus       1.43            10.5%                 1.312
+  buy_mystery      2.07            31.8%                 1.622
+  buy_draco        2.57            49.7%                 1.690
+
+⚠ CORVUS IS NOT THE CALMEST MODE TO PLAY -- URSA IS. Corvus wins the headline only
+because its cap is 75x rarer (1 in 50,000 vs ursa's 1 in 3,205), contributing 10.5%
+of its E[X^2] against ursa's 48.5%. In the 99.998% of spins that are not a max win,
+ursa is the tighter distribution. "Corvus is least volatile" is TRUE OF THE SPEC
+SHEET and FALSE OF THE FELT EXPERIENCE. Decide which the tier brief means; if it
+means felt, the lever is corvus's CAP RATE, not its body.
+
+⚠ RETRACTED SAME DAY: "draco is an identity mismatch, very-high-vol on paper but the
+bottom of the market's buy range". THAT COMPARISON WAS INVALID -- it ranked raw std
+across modes with different ceiling-per-stake. Draco has the HIGHEST body volatility
+in the menu (1.690) and beats Rage Bait's comparable buy at every threshold it can
+reach: 5x+ ticket 3.96% vs 1.37%, 10x+ 0.475% vs 0.356%, session big-win 76.0% vs
+65.6%. Rage Bait's higher headline std (2.58) comes from a 100x ceiling-per-stake
+against draco's 50x -- four times the variance per unit probability -- which is a
+PRICING artifact, not excitement. Draco is behaving exactly as its brief describes.
+=> NEVER COMPARE std/cost ACROSS MODES WITH DIFFERENT cap/cost RATIOS. Compare the
+   cap-stripped body, or compare P(>=Nx ticket) directly.
+
 ### ⚠⚠ THE OPTIMIZER DRAW CHOOSES CORVUS'S PERSONALITY (Aug 8 2026)
 THE SELECTION RULE IS A DESIGN DECISION, NOT HOUSEKEEPING. Measured over 2 draws at
 each of three ascension rates, on identical books:
