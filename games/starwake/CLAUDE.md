@@ -529,14 +529,24 @@ wincap-0.030 note further down was written about. Ordering by harshness is now
 mystery 32.7 < ursa 43.1 < corvus ~41.6 < draco 53.1.
 
 ⚠ A TIER IS NOT THE SAME PRODUCT IN EVERY MODE. Completion inside buy_mystery vs bought
-standalone: corvus 99.5 vs 89.7, ursa 63.7 vs 34.7 (+29 POINTS), draco 45.6 vs 29.9,
-ascendant 99.0. Mystery's economics (563x ticket, ascendant carrying ~50% of payback)
+standalone, RE-MEASURED Aug 8 2026 on the rebuilt pool: corvus 99.5 vs 92.3, ursa 42.8
+vs 53.5, DRACO 53.0 vs 28.7 (+24 POINTS), ascendant 98.9. Ursa's inner completion FELL
+63.7 -> 42.8 and draco's ROSE 45.6 -> 53.0 across the rebuild; unlike the roll odds,
+these DO move. Max-win rate per roll: ascendant 1 in 108, draco 1 in 11,128, and corvus
+and ursa rolls NEVER reach 25,000x -- so mystery's ceiling lives entirely in 35% of its
+rolls. Mystery's economics (563x ticket, ascendant carrying ~50% of payback)
 let it spend its tier budgets as "often but smaller" where the standalone buys spend the
 same tiers as "rarely but bigger". FRONTEND MUST NOT IMPLY ROLLING URSA == BUYING URSA.
 
 ⚠ RETRACTED: "the mystery odds are stale". THEY WERE NEVER STALE. Measured delivered mix
 35.144 / 29.622 / 25.105 / 10.129 against a published 35.16 / 29.64 / 25.15 / 10.06 --
-every tier within 0.07pp. Payback split 14.28 / 13.52 / 22.34 / 49.86 against a
+every tier within 0.07pp.
+⚠⚠ RE-CONFIRMED Aug 8 2026 ON THE FULLY REBUILT POOL (reprice to 200/300/500/600,
+corvus to 25,000x, ascension live): 35.142 / 29.620 / 25.104 / 10.134. THE ODDS DID NOT
+MOVE -- they come from generation-time roll quotas that none of the rebuild touched, so
+a reprice or a ceiling change cannot shift them. The published figures stand.
+⚠ THE CLAIM WAS MADE AGAIN ANYWAY on Aug 8, four times, without reading this entry.
+That is what this file is for. Read it before calling anything stale. Payback split 14.28 / 13.52 / 22.34 / 49.86 against a
 14.9/14.1/23.2/47.8 design. These numbers are VERIFIED against the shipped pool and can
 go straight into the frontend copy. That closes the last math-side publishing item.
 
