@@ -136,6 +136,46 @@ Bait's 100/71/50/50. A reprice moves THREE coupled values per mode (cost, cap_rt
 plus any ticket-relative scaling bands, and a stale one shows up as a wrong RTP rather
 than an error.
 
+### ▶▶ MATH IS CLOSED FOR NOW -- FRONTEND IS THE WORK (Aug 8 2026)
+DECIDED: stop tuning. Further math work is refinement, not progress. The pool is
+gated, published and merged to main (78d9a8e). Fix things as they come up rather
+than pre-emptively.
+
+DISPLAYED MYSTERY ODDS: **35 / 30 / 25 / 10** (corvus / ursa / draco / ascendant).
+Delivered is 35.142 / 29.620 / 25.104 / 10.134, so the largest distortion is ursa,
+advertised 0.38pp high. Whole numbers sum to 100 and are what a player can hold in
+their head; the tighter one-decimal alternative was 35.2 / 29.6 / 25.1 / 10.1.
+⚠ THE GATE IS THAT DISPLAYED == DELIVERED, and no source in the SDK docs states a
+rounding tolerance -- the "rounding is fine" note in this file was a judgment call,
+not a citation. IF CERTAINTY IS NEEDED, ASK STAKE'S REVIEW TEAM before the copy is
+written. These odds may change later; they are cheap to re-read with
+tools/analysis/tier_mix.py.
+
+⚠⚠ ANY COPY CALLING CORVUS THE SAFE OR GENTLE TIER IS NOW WRONG. It is the cheap
+WILD one: 45.5% of buys return under a quarter ticket and 58.8% of sessions see a
+big win. URSA is the forgiving mode. This flipped on Aug 8 and matters more for the
+frontend than the odds rounding does.
+
+THE 16 EVENTS THE FRONTEND MUST RENDER (from event_config_<mode>.json, the actual
+published vocabulary -- this is also the animation brief for a hire):
+  reveal, setWin, setTotalWin, finalWin, winInfo   the ordinary spin cycle
+  freeSpinTrigger, updateFreeSpin, freeSpinEnd     feature entry/counter/exit
+  constellationDealt                               ACT 1: which tier was dealt
+  starLit                                          a cell lights from a winning line
+  beastWake                                        ACT 2 begins, the 2x2 spawns
+  beastRoam                                        the beast moves, carries the mult
+  starsLanded                                      stars appear on the reels
+  starsCollected                                   the beast takes them, mult climbs
+  constellationAscend                              THE RARE ONE -- richer stars
+  wincap                                           the 25,000x ceiling
+⚠ constellationAscend IS NEW AND HAS NO ART. It fires ~1 in 20,000 corvus rounds and
+is the moment the tier's whole ceiling depends on -- it must read as a visible change
+(the sky raining bigger stars), not a banner. multiplierClimb is DEAD; do not build
+for it.
+⚠ REPLAY MODE IS MANDATORY AND ENTIRELY ABSENT. Every event above must render from
+any starting point, which is why each one carries its full state rather than
+referring back to an earlier event.
+
 ### ▶▶ CORVUS IS THE CHEAP WILD TIER NOW; URSA IS THE SAFE ONE (Aug 8 2026)
 DECIDED AND SHIPPED. The tier labels swapped roles after measurement showed the old
 ones described the spec sheet rather than play.
