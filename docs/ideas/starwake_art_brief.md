@@ -36,9 +36,15 @@ The round is two acts, and the split matters for pacing:
 | Max win | 25,000× the bet, on every mode |
 | Platform | Stake Engine (web, desktop + mobile + popout) |
 
-**Open:** final resolution targets, atlas budgets and file formats follow from the frontend
-framework, which isn't built yet. Assume modern web (WebGL/Canvas), sprite sheets or
-skeletal animation, and design so assets scale down to phone screens.
+**Animation format.** Skeletal (Spine) is preferred over sprite sheets for the beasts —
+they move continuously and rigged animation keeps the atlas small. ⚠ **Confirm the runtime
+before starting:** the frontend needs a matching Spine runtime, and editor/runtime versions
+must agree (a 4.x export will not load in a 3.8 runtime). Deliverables should include the
+source `.spine` projects, not only exports.
+
+**Open:** final resolution targets and atlas budgets follow from the frontend framework,
+which isn't built yet. Design at a 1920×1080 reference and ensure everything reads on a
+375px-wide phone. Number of background variants across the six bet modes is also open.
 
 ---
 
@@ -79,17 +85,21 @@ don't design Corvus as cute and harmless; it should feel scrappy and dangerous.
 
 ## 4. Asset list
 
-**Symbols (11 + states)** — 4 high, 5 low, wild, scatter, plus the multiplier star **M**
-which displays a number (2, 3, 5, 10, 25, 50 or 100). Each needs: idle, land, win
-animation, and blur/motion state for spinning.
+**Symbols — 18 distinct artworks.** Ten paying symbols (H1–H4 high, L1–L5 low, plus the
+wild **W**), the scatter **S**, and the multiplier star **M** in **seven value states**
+(2, 3, 5, 10, 25, 50, 100) — the number is part of the art, and all seven appear in play.
+Each symbol needs: idle, land, win animation, and a blur/motion state for spinning.
 
 **Constellations (4)** — the star pattern itself, in unlit and lit states, plus the
 connecting lines that draw between stars as they light. The completed shape needs a
 "formed" moment.
 
-**Beasts (3 designs)** — crow, bear, dragon, each a **2×2 block** that occupies four grid
-cells. Needs: wake/spawn, idle, a walk cycle for moving between positions, a collect
-animation, and a reaction when it grows large.
+**Beasts — 3 designs, not 4.** Crow, bear and dragon, each a **2×2 block** occupying four
+grid cells. Ascendant reuses the dragon, so it is a state/reskin rather than a fourth
+creature. Each needs: wake/spawn, idle, a walk cycle for moving between positions, a
+collect/feed animation, and a reaction as the multiplier grows large.
+⚠ **The feed loop is the highest-value animation in the game.** It repeats several times
+per round and has to stay satisfying on the thirtieth viewing.
 
 **Backgrounds** — base game, plus a distinct Act 2 state. Ante and buy modes may want
 variants. **Open:** how many.
