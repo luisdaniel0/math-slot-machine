@@ -203,7 +203,22 @@ class OptimizationSetup:
         # QUADRATICALLY less variance -- 0.87 here against 2.17 at 1 in 20,000 and
         # 4.34 at 1 in 10,000. That is the whole reason corvus can carry a 208x
         # ceiling-per-stake and still sit below ursa's 1.96 std.
-        corvus_cap_rtp = 0.0025
+        # ⚠ 1 in 20,000 SINCE Aug 8 2026 (was 1 in 50,000, slice_rtp 0.0025).
+        # slice_rtp = rate * cap / cost = (1/20000) * 25000/200 = 0.00625.
+        # WHY IT MOVED: at 1 in 50,000 corvus's max win was 12.5x outside the market
+        # band (400-4,000), i.e. a ceiling that reads as unreachable to anyone
+        # comparing games. At 1 in 20,000 it is still the RAREST in this menu by 6.2x
+        # (ursa 1 in 3,205, draco 1 in 667) but stops looking like an outlier.
+        # WHAT IT DOES NOT BUY: session feel. The cap sits at 125x the ticket while a
+        # "big win" is 10x, so P(>=10x) barely moves (48.7% -> 49.0% of sessions).
+        # What it buys is max-win SIGHTINGS, 0.60% -> 1.49% of 300-spin sessions.
+        # ⚠ THE CEILING ON THIS IS CORVUS'S OWN TIER ORDERING, not compliance. Corvus
+        # must stay under ursa's 1.88 std, which binds at ~1 in 15,260; the cap-value
+        # ladder does not bind until 1 in 4,808 and the risk gates not at all (corvus
+        # p5k 2.5e-05 against a 0.05 limit). 20,000 leaves margin because the limit
+        # was computed with the body held constant, and moving rtp into the cap
+        # hardens the body.
+        corvus_cap_rtp = 0.00625
 
         # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
         # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
@@ -337,8 +352,9 @@ class OptimizationSetup:
                     # the mode at RTP 0.9673 -- OVER Stake's 0.967 cap, which is a
                     # CRITICAL test and blocks submission outright. Measured exactly
                     # that on all four sweep variants before the cause was found.
-                    # Here: cap_rate = 0.0041667 * 120/25000 = 2.00002e-05.
-                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0000200),
+                    # Here: cap_rate = 0.00625 * 200/25000 = 5.0e-05, so
+                    # hr = 1/(1 - 5.0e-05) = 1.0000500.
+                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0000500),
                 },
                 # ⚠ tail_scaling AND maxwin_boost BOTH REMOVED Aug 7 2026 with the
                 # 2,500x ceiling, because both had become wrong or redundant:

@@ -136,6 +136,42 @@ Bait's 100/71/50/50. A reprice moves THREE coupled values per mode (cost, cap_rt
 plus any ticket-relative scaling bands, and a stale one shows up as a wrong RTP rather
 than an error.
 
+### ▶▶ CORVUS IS THE CHEAP WILD TIER NOW; URSA IS THE SAFE ONE (Aug 8 2026)
+DECIDED AND SHIPPED. The tier labels swapped roles after measurement showed the old
+ones described the spec sheet rather than play.
+
+  mode          cost      RTP    std/c  body std  <0.25x   beat   median     max win
+  buy_corvus     200  0.96690   1.8454     1.620   45.5%  27.0%   0.309x  1 in 20,000
+  buy_ursa       300  0.96690   1.8787     1.167   39.6%  37.0%   0.369x   1 in 3,205
+  buy_draco      500  0.96690   2.5704     1.690   38.9%  20.9%   0.317x     1 in 667
+  buy_mystery    600  0.96690   2.0734     1.622   40.2%  20.9%   0.343x   1 in 1,041
+
+WHAT CHANGED AND WHY:
+  - corvus cap rate 1 in 50,000 -> 1 in 20,000 (cap_rtp 0.0025 -> 0.00625, hr
+    1.0000200 -> 1.0000500). At 1 in 50,000 its max win sat 12.5x outside the market
+    band of 400-4,000 and read as unreachable. It is still the RAREST here by 6.2x.
+  - the optimizer draw was selected for EXCITEMENT instead of calm: "highest session
+    big-win with std/cost < 1.85" rather than the old "lowest under-0.25x". Session
+    big-win 17.0% -> 58.8%. That single rule change is worth more than every
+    parameter we swept.
+
+⚠ URSA IS THE CALMEST MODE TO PLAY, NOT CORVUS, AND ALWAYS WAS. Corvus's lower
+std/cost is bought entirely by a rarer cap; strip the caps and corvus's body is 1.620
+against ursa's 1.167, and corvus is worse on EVERY felt metric -- busts more (45.5 vs
+39.6), pays back less often (27.0 vs 37.0), lower median (0.309 vs 0.369). The
+inversion existed in the previous pool too (1.312 vs 1.167); this widened it from 12%
+to 39%. THE LABELS NOW MATCH THE MEASUREMENTS: corvus = cheap and wild, ursa = safe.
+
+⚠ THE MENU'S HEADLINE ORDERING HOLDS BY 0.033 (1.8%) AND IS NOT ROBUST. corvus 1.8454
+< ursa 1.8787, but ursa's shipped 1.88 is the LOWEST of its own five draws (range
+1.88-2.08). Both modes sit at favourable ends of their ranges, so a future re-optimize
+will very likely break "corvus lowest std". That is a spec-sheet property only -- the
+felt ordering (ursa calmest) is the robust one and is what copy should describe.
+
+GATES RE-READ ON THIS POOL: all seven CRITICAL pass, 3-Star 0 failed classes, 2-Star 1
+(the pre-existing CVaR-absolute failure that any 25,000x game has). corvus p5k/p10k
+roughly doubled to 5.71e-05/5.01e-05 against limits of 0.05/0.01 -- no impact.
+
 ### ⚠⚠ STRIP THE CAP AND THE VOLATILITY ORDERING INVERTS (Aug 8 2026)
 std/cost is squared and tail-driven, so a mode's headline volatility is mostly a
 statement about its CAP -- and caps differ in both rate and height across the menu.
