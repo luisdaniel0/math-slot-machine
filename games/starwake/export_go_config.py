@@ -52,6 +52,7 @@ KNOWN_CONDITION_KEYS = {
     "mult_values",
     "force_wincap",
     "force_freegame",
+    "force_ascension",
 }
 
 
@@ -100,6 +101,7 @@ def export_conditions(conditions: dict, criteria: str, mode_name: str) -> dict:
     out = {
         "forceWincap": bool(conditions.get("force_wincap", False)),
         "forceFreegame": bool(conditions.get("force_freegame", False)),
+        "forceAscension": bool(conditions.get("force_ascension", False)),
     }
 
     # reel_weights is required on every distribution (Distribution enforces it).
@@ -177,6 +179,36 @@ def export_constellation(config) -> dict:
             "beastName": config.constellation_beast_names[tier],
             "featureSpins": config.num_feature_spins[tier],
         }
+
+        # ACT TWO. Present only for tiers given a star-value table; a tier without
+        # one runs the original climbing ladder, which is how the two mechanics are
+        # A/B swept. Values are emitted as an ORDERED LIST of {value, weight} pairs,
+        # never a map: Go randomises map iteration order and the engine's output has
+        # to stay byte-deterministic for the published sha256s to reproduce.
+        values = getattr(config, "constellation_star_values", {}).get(tier)
+        if values:
+            tiers[tier]["starDrops"] = {
+                "starSymbol": config.constellation_star_symbol,
+                "values": [
+                    {"value": int(v), "weight": int(w)}
+                    for v, w in sorted(values.items())
+                ],
+            }
+
+            # ASCENSION rides inside starDrops because it is meaningless without
+            # one -- it replaces that table for the rest of the roam. Emitted ONLY
+            # for tiers that declare it: a tier without the block makes no extra
+            # rng call in the engine, which is what keeps buy_ursa and buy_draco
+            # byte-identical to a pre-ascension pool and out of the re-sim.
+            asc = getattr(config, "constellation_ascension", {}).get(tier)
+            if asc:
+                tiers[tier]["starDrops"]["ascension"] = {
+                    "oneIn": int(asc["one_in"]),
+                    "values": [
+                        {"value": int(v), "weight": int(w)}
+                        for v, w in sorted(asc["values"].items())
+                    ],
+                }
 
     return {"minRoamSpins": config.min_roam_spins, "tiers": tiers}
 
@@ -261,7 +293,11 @@ def build_payload(config) -> dict:
         "paylines": export_paylines(config),
         "specialSymbols": {k: list(v) for k, v in config.special_symbols.items()},
         # Filenames only -- Go reads the CSVs so the strips keep one source of truth.
-        "reels": {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv", "ASC": "ASC.csv"},
+        # Mirrors game_config's own map rather than restating it, so a new strip
+        # cannot reach the Python config and silently miss the Go one -- the roam
+        # strip failing to export would leave act two drawing FR0, collecting
+        # nothing, and paying x1 all the way through while looking entirely normal.
+        "reels": dict(config.reel_files),
         "reelsDir": "games/starwake/reels",
         "anticipationTriggers": dict(config.anticipation_triggers),
         "freespinTriggers": {

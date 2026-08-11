@@ -120,6 +120,25 @@ type Spin struct {
 	GameType          string
 	Fs, TotFs         int
 	GlobalMult        int
+
+	// StripKey selects which entry of the distribution's ReelWeights the next draw
+	// reads, instead of the current GameType. Empty means GameType, as normal.
+	//
+	// A game with more than two phases needs more than two reel sets, and reel
+	// weights are already the mechanism for "this slice draws from these strips
+	// with these odds" -- Starwake's wincap slices use it today to mix WCAP in at
+	// 5:1 so the ceiling stays reachable. Naming a KEY rather than pinning a STRIP
+	// keeps that: the roam phase reads reelWeights["roam"] and still gets a
+	// weighted pick, so a wincap slice can weight a juiced roam strip the same way.
+	//
+	// ⚠ AN EARLIER VERSION PINNED A SINGLE STRIP PER TIER. That silently made the
+	// published ceiling unreachable -- the roam phase drew the ordinary strip even
+	// in a forced-wincap book, so the sim hunted a book that could not exist and
+	// hung. Pin keys, not strips.
+	//
+	// The game is responsible for clearing it; ResetBook does not, because a book
+	// may legitimately end mid-phase.
+	StripKey string
 	WincapTriggered   bool
 	TriggeredFreegame bool
 	Repeat            bool
@@ -265,10 +284,14 @@ func (s *Spin) DrawBoard(emitReveal bool) error {
 }
 
 func (s *Spin) pickStrip() (Strip, string, error) {
-	weights, ok := s.Dist.Conditions.ReelWeights[s.GameType]
+	key := s.GameType
+	if s.StripKey != "" {
+		key = s.StripKey
+	}
+	weights, ok := s.Dist.Conditions.ReelWeights[key]
 	if !ok {
-		return nil, "", fmt.Errorf("%s/%s: no reel weights for gametype %q",
-			s.Mode.Name, s.Criteria, s.GameType)
+		return nil, "", fmt.Errorf("%s/%s: no reel weights for %q",
+			s.Mode.Name, s.Criteria, key)
 	}
 	id := pickWeightedString(weights, s.RNG)
 	strip, err := s.Reels.Strip(id)

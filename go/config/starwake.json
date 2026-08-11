@@ -7,7 +7,7 @@
     "provider": "Uptown Games",
     "providerNumber": 0,
     "winType": "lines",
-    "rtp": 0.9665,
+    "rtp": 0.9669,
     "wincap": 25000.0,
     "numReels": 5,
     "numRows": [
@@ -374,13 +374,18 @@
     ],
     "multiplier": [
       "W"
+    ],
+    "multiplier_star": [
+      "M"
     ]
   },
   "reels": {
     "BR0": "BR0.csv",
     "FR0": "FR0.csv",
     "WCAP": "FRWCAP.csv",
-    "ASC": "ASC.csv"
+    "ASC": "ASC.csv",
+    "ROAM": "FRROAM.csv",
+    "ROAMCAP": "FRROAMCAP.csv"
   },
   "reelsDir": "games/starwake/reels",
   "anticipationTriggers": {
@@ -483,7 +488,61 @@
         "ladderRungs": 9,
         "prelitCells": [],
         "beastName": "corvus",
-        "featureSpins": 10
+        "featureSpins": 10,
+        "starDrops": {
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 55
+            },
+            {
+              "value": 3,
+              "weight": 25
+            },
+            {
+              "value": 5,
+              "weight": 13
+            },
+            {
+              "value": 10,
+              "weight": 6
+            },
+            {
+              "value": 25,
+              "weight": 1
+            }
+          ],
+          "ascension": {
+            "oneIn": 20000,
+            "values": [
+              {
+                "value": 2,
+                "weight": 25
+              },
+              {
+                "value": 3,
+                "weight": 20
+              },
+              {
+                "value": 5,
+                "weight": 20
+              },
+              {
+                "value": 10,
+                "weight": 18
+              },
+              {
+                "value": 25,
+                "weight": 12
+              },
+              {
+                "value": 50,
+                "weight": 5
+              }
+            ]
+          }
+        }
       },
       "ursa": {
         "cells": [
@@ -538,7 +597,36 @@
         "ladderRungs": 13,
         "prelitCells": [],
         "beastName": "ursa",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 45
+            },
+            {
+              "value": 3,
+              "weight": 25
+            },
+            {
+              "value": 5,
+              "weight": 17
+            },
+            {
+              "value": 10,
+              "weight": 9
+            },
+            {
+              "value": 25,
+              "weight": 3
+            },
+            {
+              "value": 50,
+              "weight": 1
+            }
+          ]
+        }
       },
       "draco": {
         "cells": [
@@ -608,7 +696,40 @@
         "ladderRungs": 12,
         "prelitCells": [],
         "beastName": "draco",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 16
+            },
+            {
+              "value": 3,
+              "weight": 14
+            },
+            {
+              "value": 5,
+              "weight": 18
+            },
+            {
+              "value": 10,
+              "weight": 18
+            },
+            {
+              "value": 25,
+              "weight": 15
+            },
+            {
+              "value": 50,
+              "weight": 12
+            },
+            {
+              "value": 100,
+              "weight": 7
+            }
+          ]
+        }
       },
       "ascendant": {
         "cells": [
@@ -687,7 +808,40 @@
           ]
         ],
         "beastName": "draco",
-        "featureSpins": 15
+        "featureSpins": 15,
+        "starDrops": {
+          "starSymbol": "M",
+          "values": [
+            {
+              "value": 2,
+              "weight": 16
+            },
+            {
+              "value": 3,
+              "weight": 14
+            },
+            {
+              "value": 5,
+              "weight": 18
+            },
+            {
+              "value": 10,
+              "weight": 18
+            },
+            {
+              "value": 25,
+              "weight": 15
+            },
+            {
+              "value": 50,
+              "weight": 12
+            },
+            {
+              "value": 100,
+              "weight": 7
+            }
+          ]
+        }
       }
     }
   },
@@ -695,7 +849,7 @@
     {
       "name": "base",
       "cost": 1.0,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": true,
@@ -709,6 +863,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -716,6 +871,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -748,12 +907,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -786,12 +949,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -824,12 +991,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -862,6 +1033,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -885,6 +1057,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -905,7 +1078,7 @@
     {
       "name": "ante_starfall",
       "cost": 1.5,
-      "rtp": 0.9665,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": true,
@@ -919,6 +1092,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -926,6 +1100,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -958,12 +1136,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -996,12 +1178,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1034,12 +1220,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1072,6 +1262,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1095,6 +1286,7 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": false,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1114,27 +1306,75 @@
     },
     {
       "name": "buy_corvus",
-      "cost": 240.0,
-      "rtp": 0.9665,
-      "maxWin": 10000.0,
+      "cost": 200.0,
+      "rtp": 0.9669,
+      "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
       "isBuyBonus": true,
       "distributions": [
         {
+          "criteria": "wincap",
+          "quota": 0.002,
+          "fixedAmt": null,
+          "winCriteria": 25000.0,
+          "conditions": {
+            "forceWincap": true,
+            "forceFreegame": true,
+            "forceAscension": true,
+            "reelWeights": {
+              "basegame": {
+                "BR0": 1
+              },
+              "freegame": {
+                "FR0": 1,
+                "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 40
+              }
+            },
+            "scatterTriggers": [
+              {
+                "scatters": 3,
+                "weight": 1
+              }
+            ],
+            "multValues": {
+              "basegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ],
+              "freegame": [
+                {
+                  "value": 1,
+                  "weight": 1
+                }
+              ]
+            }
+          }
+        },
+        {
           "criteria": "corvus",
-          "quota": 1.0,
+          "quota": 0.998,
           "fixedAmt": null,
           "winCriteria": null,
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1163,8 +1403,8 @@
     },
     {
       "name": "buy_ursa",
-      "cost": 268.0,
-      "rtp": 0.9665,
+      "cost": 300.0,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1178,6 +1418,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1185,6 +1426,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 20
               }
             },
             "scatterTriggers": [
@@ -1217,12 +1462,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1251,8 +1500,8 @@
     },
     {
       "name": "buy_draco",
-      "cost": 520.0,
-      "rtp": 0.9665,
+      "cost": 500.0,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1266,6 +1515,7 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
@@ -1273,6 +1523,10 @@
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
@@ -1305,12 +1559,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1339,8 +1597,8 @@
     },
     {
       "name": "buy_mystery",
-      "cost": 563.0,
-      "rtp": 0.9665,
+      "cost": 600.0,
+      "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
       "isFeature": false,
@@ -1354,18 +1612,23 @@
           "conditions": {
             "forceWincap": true,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
-                "BR0": 1
+                "ASC": 1
               },
               "freegame": {
                 "FR0": 1,
                 "WCAP": 5
+              },
+              "roam": {
+                "ROAM": 1,
+                "ROAMCAP": 5
               }
             },
             "scatterTriggers": [
               {
-                "scatters": 5,
+                "scatters": 6,
                 "weight": 1
               }
             ],
@@ -1393,12 +1656,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "ASC": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1431,12 +1698,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1469,12 +1740,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [
@@ -1507,12 +1782,16 @@
           "conditions": {
             "forceWincap": false,
             "forceFreegame": true,
+            "forceAscension": false,
             "reelWeights": {
               "basegame": {
                 "BR0": 1
               },
               "freegame": {
                 "FR0": 1
+              },
+              "roam": {
+                "ROAM": 1
               }
             },
             "scatterTriggers": [

@@ -45,8 +45,15 @@ func TestGameIdentity(t *testing.T) {
 	if c.Game.Wincap != 25000 {
 		t.Errorf("wincap = %v, want 25000", c.Game.Wincap)
 	}
-	if c.Game.RTP != 0.9665 {
-		t.Errorf("rtp = %v, want 0.9665", c.Game.RTP)
+	// 0.9669 since Aug 8 2026, and the ceiling matters more than the value: Stake
+	// caps RTP at 0.967 and the band is a CRITICAL test, so breaching it blocks
+	// submission outright. Assert the cap as well as the target, because a typo
+	// that reads 0.9679 is the one that must never reach a pool.
+	if c.Game.RTP != 0.9669 {
+		t.Errorf("rtp = %v, want 0.9669", c.Game.RTP)
+	}
+	if c.Game.RTP > 0.967 {
+		t.Errorf("rtp = %v is OVER Stake's 0.967 cap -- a critical-test failure", c.Game.RTP)
 	}
 }
 
@@ -123,12 +130,53 @@ func TestBetModes(t *testing.T) {
 	}{
 		{"base", 1.0, 25000, false},
 		{"ante_starfall", 1.5, 25000, false},
-		// buy_corvus publishes an HONEST 10,000x: it cannot reach the cap, and
-		// MaxWin is the engine clamp as well as the advertised ceiling.
-		{"buy_corvus", 240, 10000, true},
-		{"buy_ursa", 268, 25000, true},
-		{"buy_draco", 520, 25000, true},
-		{"buy_mystery", 563, 25000, true},
+		// buy_corvus publishes an HONEST ceiling below the global cap: it cannot
+		// reach 25,000x, and MaxWin is the engine clamp as well as the advertised
+		// number. 10,000x until act two removed the fully-wild-board route and a
+		// full 1e6 pool topped out at 9,158x, making the published figure a lie.
+		// 9,000x rather than 9,158x because 9,158 was one seed's observed maximum.
+		// And 120x rather than 240x because at 240x corvus was last on
+		// ceiling-per-cost behind a mode costing 12% more -- a rung nobody should
+		// pick is worse than no rung.
+		// ⚠ 2,500x SINCE Aug 7 2026. 9,000x was honest and useless: delivered at 1
+		// in 2,000,003 against a market norm of 1 in 400-4,000. At 2,500x the
+		// ceiling is the most reachable in the menu (1 in 2,417 unforced), at the
+		// cost of ceiling-per-cost dropping 75x -> 20.8x. This assertion sat stale
+		// and RED from that day until Aug 8, because the workflow runs pytest and
+		// the sims but not `go test ./...` -- run the Go suite after a config change.
+		// ⚠⚠ 25,000x SINCE Aug 8 2026, once ASCENSION made it reachable. Every mode
+		// now reaches the game's headline ceiling, which is the invariant Meta
+		// Gaming holds across all 18 modes of their three games and the one corvus
+		// used to break. Ceiling-per-stake 20.8x -> 208x, highest in the menu, which
+		// is the market pattern: the cheapest buy carries the tallest ceiling and
+		// the expensive tiers earn their price on cap FREQUENCY (corvus 1 in 50,000
+		// against draco's 1 in 641). Reachability is measured, not assumed --
+		// P(>=25,000x) is 1 in 2,874 with ascension forced, 1 in 25M without.
+		// ⚠ 180x SINCE Aug 8 2026, up from 120x, and it is a VOLATILITY fix rather
+		// than a pricing one. Measured n=8 optimize draws per price on ONE pool
+		// (cost changes the optimizer's target, not the books, so no re-sim):
+		//     std/cost   120x  mean 2.00 (1.74-2.16)   180x  mean 1.66 (1.43-1.94)
+		//     beat rate  120x  mean 21.6%              180x  mean 26.4%
+		// At 120x corvus was MORE volatile than ursa (2.00 vs 1.96), inverting the
+		// tier story; at 180x it is the least volatile mode in the game. The ranges
+		// barely overlap -- the 180x mean sits below the 120x minimum -- so this is
+		// signal, not one of the many corvus measurements that turned out to be draw
+		// noise. Body instability is NOT fixed by it (spread 27.7 -> 23.0 points),
+		// so best-of-N draws at publish remains mandatory.
+		// ⚠⚠ THE WHOLE MENU WAS REPRICED TO ROUND NUMBERS Aug 8 2026: 200/300/500/600.
+		// This SDK treats a price as an OUTPUT (cost = measured avg win / rtp), which
+		// is how the menu ended up at 268/520/563; but the optimizer reweights books
+		// to hit mean = rtp * cost, so cost is really a FREE PARAMETER and repricing
+		// needs NO re-sim. The binding constraint is RICHNESS, raw_mean/(rtp*cost):
+		// healthy shipped modes sit 1.9-2.6, and the new ladder lands 2.50/2.29/2.37/
+		// 1.82. Ceiling-per-stake 125/83/50/42 tracks Rage Bait's 100/71/50/50.
+		// Each mode's cap_rtp is held at its cap-value-per-stake (the documented
+		// ladder: base .020, ante .025, ursa .026, mystery .040, draco .075) and hr
+		// re-derived from the resulting rate -- see game_optimization.
+		{"buy_corvus", 200, 25000, true},
+		{"buy_ursa", 300, 25000, true},
+		{"buy_draco", 500, 25000, true},
+		{"buy_mystery", 600, 25000, true},
 	}
 	for _, tc := range cases {
 		m, err := c.Mode(tc.name)
@@ -161,12 +209,36 @@ func TestBetModes(t *testing.T) {
 		}
 	}
 
-	// buy_corvus is the one mode with no forced wincap slice; an unreachable
-	// forced slice does not error, it loops forever.
-	corvus, _ := c.Mode("buy_corvus")
-	for _, d := range corvus.Distributions {
-		if d.Conditions.ForceWincap {
-			t.Errorf("buy_corvus has a forced wincap slice (%s); its cap is unreachable", d.Criteria)
+	// EVERY forced wincap slice must hunt a ceiling the tier can actually produce.
+	// An unreachable one does not error -- it redraws with no retry cap, so the
+	// run hangs rather than fails, and the only symptom is a sim that never ends.
+	//
+	// ⚠ THIS ASSERTION USED TO READ "buy_corvus must have NO forced slice", which
+	// was right while corvus published 9,000x it could not reach. Corvus gained a
+	// slice on Aug 6 2026 once its ceiling came down to 2,500x, where the tier
+	// makes the cap unforced at 1 in 2,417 -- so the slice manufactures cap books
+	// cheaply instead of hunting. The check is now the GENERAL invariant rather
+	// than a corvus special case, since it is the property that actually matters.
+	//
+	// Reachability cannot be proven from config alone, so this pins the pairing it
+	// CAN see -- a slice must target its own mode's MaxWin, not the global cap.
+	// Measured reach with the clamp lifted (Aug 8 2026): corvus tops out at 9,158x
+	// on the ordinary roam strip and 18,613x on the densest, and >=25,000x
+	// extrapolates to 1 in 25 MILLION. Any future rise in corvus's ceiling needs a
+	// re-measure FIRST, or this slice becomes the hang it is here to prevent.
+	for _, m := range c.BetModes {
+		for _, d := range m.Distributions {
+			if !d.Conditions.ForceWincap {
+				continue
+			}
+			if d.WinCriteria == nil {
+				t.Errorf("%s: forced wincap slice (%s) has no winCriteria", m.Name, d.Criteria)
+				continue
+			}
+			if *d.WinCriteria != m.MaxWin {
+				t.Errorf("%s: forced slice (%s) hunts %v but the mode clamps at %v; "+
+					"it would redraw forever", m.Name, d.Criteria, *d.WinCriteria, m.MaxWin)
+			}
 		}
 	}
 

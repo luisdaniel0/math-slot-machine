@@ -29,9 +29,19 @@ class GameConfig(Config):
         self.provider_name = "Uptown Games"
         self.wincap = 25000.0
         self.win_type = "lines"
-        # converge ~0.9665 so displayed RTP rounds to 96.7% while staying under
-        # the 0.967 Stake cap (see docs/ideas/starwake.md Benchmarks)
-        self.rtp = 0.9665
+        # 0.9669: as close to the 0.967 Stake cap as is SAFE. Raised from 0.9665
+        # Aug 8 2026, once the hr-exhaustiveness fix made every mode land on its target
+        # (see game_optimization's feature_cond note) -- before that the buys undershot
+        # and the headroom was being eaten by a bug rather than spent on players.
+        # ⚠ DO NOT TARGET 0.967 EXACTLY. Measured precision on the shipped pool is
+        # -4.4e-08 to +1.6e-09 of target, and buy_ursa ALREADY overshoots its own target
+        # by 1.6e-09. At a 0.967 target a run can land at 0.967000002, i.e. OVER the cap
+        # -- and the RTP band is a CRITICAL test, so breaching it blocks submission
+        # outright rather than costing a bet-level tier. 0.9669 keeps 1e-04 of margin,
+        # roughly 60,000x the observed overshoot, for 0.01% less player RTP.
+        # Meta Gaming ships exactly 96.70% across Rage Bait / Coins and Cauldrons /
+        # Mushroom Madness; 96.69% is indistinguishable to a player and cannot fail.
+        self.rtp = 0.9669
         self.construct_paths()
 
         # Game Dimensions
@@ -117,7 +127,16 @@ class GameConfig(Config):
         self.include_padding = True
         # "S" is the Star: bonus trigger by count (3/4/5 -> Corvus/Ursa/Draco)
         # in base, and the constellation-cell filler inside the feature
-        self.special_symbols = {"wild": ["W"], "scatter": ["S"], "multiplier": ["W"]}
+        # "M" is ACT TWO's multiplier star: a real reel symbol, non-paying (absent
+        # from the paytable, so it breaks a payline the way a scatter does), living
+        # only on the roam strip. It is registered under its own key rather than
+        # under "multiplier" -- that key marks symbols whose Multiplier attribute the
+        # LINE EVALUATOR reads, and a star must never contribute its value to a win.
+        # Its value rides on the cell and is collected by the beast instead.
+        self.special_symbols = {
+            "wild": ["W"], "scatter": ["S"], "multiplier": ["W"],
+            "multiplier_star": ["M"],
+        }
 
         # Fixed-length feature, length PER TIER: corvus 10, ursa 15, draco 15.
         # This REVISES the original "scatter count scales the TIER, never the spin
@@ -440,11 +459,194 @@ class GameConfig(Config):
         # TOPS, never by putting the floor back.
         self.min_roam_spins = 2
 
-        # Reels
-        reels = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
-                 "ASC": "ASC.csv"}
+        # ---------------------------------------------------------- ACT TWO
+        # The beast stops climbing a fixed ladder and starts COLLECTING. At wake the
+        # sticky wilds are consumed (the board returns to normal symbols, the 2x2 is
+        # the only wild left), and each roam spin the roam strip deals multiplier
+        # stars which the block collects -- all of them, wherever they landed --
+        # accumulating a multiplier that pays any line crossing the block.
+        #
+        # WHY. Draco ended a feature with 9.9 of 20 cells lit and 11.2 wild once the
+        # beast was out: every line wins, so no win means anything -- fifteen winning
+        # lines that look like a jackpot and pay a third of the ticket. Meanwhile a
+        # COMPLETED draco roamed ~4.0 rungs of 12, so the ladder was a rounding error
+        # and the wild carpet was the entire mode. This moves the payout onto the
+        # multiplier and hands the board back to paying symbols.
+        #
+        # COLLECTION IS GLOBAL, APPLICATION IS POSITIONAL -- read off Rage Bait's own
+        # paytable ("whenever a Wild is on the board it collects every Fish... any
+        # winning line passing through the Wild is multiplied that much more"). The
+        # block does not have to land on a star, so there is no positional lottery;
+        # but WHERE it roams still decides which wins get paid at the new value.
+        # Their collect -> cascade -> collect chain does NOT transfer: we have no
+        # cascades, so it is one beat per spin.
+        #
+        # ⚠ SETTING A TIER'S VALUES IS WHAT SWITCHES IT TO ACT TWO. A tier absent
+        # from this dict runs the original ladder unchanged. Both paths exist ONLY to
+        # be A/B swept against each other -- once "can act two carry the money" is
+        # measured, the loser is deleted. Do not let this become a permanent fork.
+        #
+        # ⚠ DENSITY IS NOT HERE. How many stars land is the ROAM STRIP's density
+        # (reels/generate_reels.py, weighted to the right-hand reels because a
+        # non-paying symbol on reel 0 kills a win outright while one on reel 4 only
+        # shortens a 5-kind). Only the VALUE of each star is rolled from this table.
+        # The two trade against each other -- more stars means more multiplier but
+        # fewer paying cells -- so they sit on separate surfaces and must be swept
+        # together.
+        #
+        # ⚠ THE ROAM STRIP IS NOT NAMED HERE. It comes from each distribution's
+        # reel_weights["roam"] (see _tier_condition below), so a wincap slice can
+        # weight a juiced roam strip the way it already weights WCAP. Pinning one
+        # strip per tier is what made the published ceiling unreachable.
+        #
+        # ⚠ THE SPREAD BETWEEN THESE TABLES IS DOING ALL THE TIER SEPARATION, AND IT
+        # HAS TO BE FAR WIDER THAN IT LOOKS. Consuming the sticky wilds at wake also
+        # consumed the differentiation: draco used to out-pay ursa because its
+        # completed board carried 11 sticky wilds to ursa's 7, and after wake the
+        # cells do nothing. Both tiers now roam an identical bare board with an
+        # identical 2x2 block, so the star table and roam length are all that is
+        # left -- and roam length runs the WRONG WAY:
+        #     tier     completes   stars collected   completion x stars
+        #     corvus      83.9%          ~5.5              4.6
+        #     ursa        62.6%           5.7              3.6
+        #     draco       32.4%           4.6              1.5
+        # Draco completes half as often AND roams shorter, so on equal tables the
+        # prices order corvus > ursa > draco, backwards. The table must overcome a
+        # ~3x handicap.
+        #
+        # SWEPT (reels/sweep_star_values.py, n=20k, premium roam strip, 1x density).
+        # Mean star value per tier -> implied price, and whether the ladder holds:
+        #    3.8 / 5.3 /  8.2    506 / 621 /  505x   INVERTED (ursa above draco)
+        #    3.8 / 5.3 / 15.4    506 / 621 /  756x   ordered
+        #    3.4 / 4.7 / 20.2    451 / 556 /  922x   ordered   <- THIS ONE
+        #    3.1 / 4.2 / 26.7    423 / 511 / 1141x   ordered
+        # Chosen because its three tiers sit closest to PROPORTIONAL to the
+        # configured prices (1.88 / 2.08 / 1.77x of target, against the shipped
+        # tables' 2.11 / 2.32 / 0.97x). Similar surplus everywhere means the
+        # optimizer does similar work everywhere, so the menu shape survives
+        # convergence -- where a tier at 0.97x has no surplus to remove at all and
+        # would have to be repriced instead.
+        #
+        # ⚠ IT ALSO REPAIRS BUY_MYSTERY, WHICH IS NOT WHAT IT WAS CHOSEN FOR.
+        # Ascendant SHARES draco's table and completes ~90%, so it amplifies any
+        # change to draco. Measured payback split against the 14.9/14.1/23.2/47.8
+        # design: shipped tables give 27.1/27.1/19.4/26.4 -- ascendant's
+        # rare-and-huge identity gone and the mode flattened into four near-equal
+        # outcomes -- while spread gives 16.7/16.8/24.6/41.9. Two unrelated defects,
+        # one variant.
+        #
+        # ⚠ RAISING DRACO IS THE LEVER, NOT LOWERING URSA. "Draco's stars are worth
+        # a fortune" is an identity; "ursa's stars are junk" is only a nerf.
+        # ⚠⚠ A 50x CORVUS RUNG WAS BUILT AND REVERTED Aug 7 2026. READ THIS BEFORE
+        # TRYING IT AGAIN -- the sweep says it works and the product says it does not.
+        #
+        # THE PROBLEM IT WAS AIMED AT, and the problem is real: corvus produces NOTHING
+        # between 2,500x and its 9,000x ceiling. Measured on the converged pool, 8,295
+        # books in 2,500-5,000, 142 in 5,000-8,100, and ONE book in 8,100-9,000 out of
+        # 1e6. Its published max win is therefore unreachable (1 in 2,000,003 delivered,
+        # against a market norm of 1 in 400-4,000 measured off Meta Gaming's three
+        # titles) and contributes 0.1% of the mode's variance. No optimizer dress can
+        # fix that -- weights cannot create books the engine never produces.
+        #
+        # SWEPT (reels/sweep_star_values.py, variants corvus+50 / +100 / +both, n=20k,
+        # 1x density, ursa and draco held at `spread` so the corvus effect is isolated):
+        #   variant      star  natural max  >=20x tkt  >=40x tkt  >=60x tkt   beat
+        #   spread        3.4       6,247x     0.920%     0.010%     0.000%  63.6%
+        #   corvus+50     3.7       8,804x     2.055%     0.210%     0.020%  63.5%
+        #   corvus+100    3.6       6,247x     0.820%     0.010%     0.000%  63.3%
+        #   corvus+both   3.8       6,247x     0.805%     0.010%     0.000%  63.2%
+        #
+        # ⚠ KEEP THIS LESSON, IT GENERALISES: FREQUENCY BEATS MAGNITUDE. A 50x rung at
+        # weight 1.0 beat a 100x rung at weight 0.4 AND beat both together -- the two
+        # 100x variants returned a natural max of exactly 6,247x, identical to shipped,
+        # because at 0.4% weight across ~5.5 collected stars you hit one only ~2.2% of
+        # the time and still need lines through the block to cash it. To build a tail,
+        # add a rung you will actually HIT, not the biggest rung you can imagine, and
+        # concentrate the weight rather than splitting it across two high rungs.
+        #
+        # ⚠⚠ WHY IT WAS REVERTED ANYWAY. Built at 1e6 across all four affected modes,
+        # the tail worked exactly as swept -- >=5,000x went 1 in 151,016 -> 1 in 11,679,
+        # and a real ladder appeared under the ceiling. BUT THE BODY PAID FOR IT:
+        #     under 0.25x ticket   41.6% -> 60.4%      median  0.294x -> 0.166x
+        #     beat the ticket      17.2% -> 14.2%      std/c     2.09 -> 2.56
+        # Corvus became the HARSHEST and MOST VOLATILE buy in the menu, at the cheapest
+        # price -- inverting the whole ladder.
+        # ⚠ AND THE TAIL WAS NEVER WHAT COST THAT. Everything above 2,500x is only 4.0x
+        # of a 116x mean = 3.5% of RTP. What happened is that richer supply let the
+        # optimizer move ~15x of RTP into 500x+ (the 500-2,000 band went 1 in 15 -> 1
+        # in 13) and it hollowed out 5x-50x to pay: >=10x fell 86.4% -> 65.1%,
+        # >=25x fell 65.1% -> 44.6%.
+        # Rebuilding the body afterwards does not rescue it: moving 15 points of weight
+        # from ~10x books to ~200x books ADDS 28.5x of RTP, a quarter of the whole
+        # budget, which then has to come back out of the 500-2,000 band.
+        # => CORVUS CANNOT BE BOTH THE SAFE ENTRY TIER AND CARRY A REAL 9,000x. The
+        #    honest resolution is a LOWER PUBLISHED CEILING, not a bigger star: on the
+        #    reverted table P(>=2,500x) is 1 in 2,417, so publishing 2,500x would make
+        #    corvus's max win the MOST reachable in the menu and market-normal, at the
+        #    cost of ceiling-per-cost dropping 75x -> 20.8x. NOT YET DONE.
+        #
+        # ⚠ THIS TABLE IS SHARED. Every mode that can roll a corvus-tier feature uses
+        # it: base, ante_starfall, buy_corvus AND buy_mystery. Changing it re-simulates
+        # and re-converges four of six modes, not one.
+        self.constellation_star_symbol = "M"
+        self.constellation_star_values = {
+            "corvus": {2: 55, 3: 25, 5: 13, 10: 6, 25: 1},
+            "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
+            "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
+        }
+        self.constellation_star_values["ascendant"] = self.constellation_star_values["draco"]
+
+        # ---------------------------------------------------- CORVUS ASCENSION
+        # A rare round switches corvus to a richer star table. This is the ONLY
+        # route to a 25,000x corvus, and it exists because the tier is structurally
+        # short and the strip lever is exhausted. Measured with the clamp lifted
+        # (Aug 8 2026): corvus reaches 9,158x on the ordinary roam strip and
+        # 18,613x on the densest, and eight density/richness variants were swept at
+        # 1e6 with NOT ONE reaching 25,000x -- the shipped ROAMCAP beat every one.
+        #
+        # ⚠ READ THE RATE, NOT THE MAX. The tail is nearly vertical: >=10,000x is
+        # 1 in 12,195, >=12,000x is 1 in 62,500, >=14,000x is 1 in 500,000, and
+        # >=25,000x extrapolates to 1 in 25 MILLION. A max-win reading makes the gap
+        # look like 1.34x; in the rate terms a forced slice actually cares about it
+        # is ~2,500x, so the forced slice would redraw for ~13 days. Stretching one
+        # distribution cannot close that -- ascension adds a SECOND one.
+        #
+        # ⚠ WHY NOT DRACO'S TABLE (mean 20.19 vs corvus's 3.35). It would push
+        # corvus's ceiling to ~55,000x, so most NATURAL ascensions would slam into
+        # the 25,000x clamp and the ascension rate -- not the wincap slice's rtp
+        # share -- would become what sets corvus's max-win frequency. That costs the
+        # dial keeping corvus rarer than draco (1 in 641) and ursa (1 in 3,588)
+        # while staying the least volatile mode. At ~2.5x, natural ascensions land
+        # BELOW the clamp on the ordinary strip and populate the 3,000-18,000x band
+        # that corvus has nothing in today, while the slice -- which forces
+        # ascension AND draws the dense ROAMCAP strip -- still clears the ceiling.
+        # The two strips give the separation for free.
+        #
+        # Topping out at 50 is deliberate: corvus never otherwise shows a 50, so the
+        # ascension is legible ON THE BOARD rather than only in a banner. Draco's
+        # 100 would be louder and too rich; 50 is ursa's top, so it reads as corvus
+        # punching above its tier rather than becoming a different one.
+        #
+        # ⚠ one_in IS A PLACEHOLDER until the sweep lands. It sets both the RTP cost
+        # (linear) and the variance cost (QUADRATIC), so it is the single dial the
+        # whole economy hangs on. Tiers absent from this dict make no extra rng call
+        # at all -- verified byte-identical -- which is why buy_ursa and buy_draco
+        # need no re-sim.
+        self.constellation_ascension = {
+            "corvus": {
+                "one_in": 20000,
+                "values": {2: 25, 3: 20, 5: 20, 10: 18, 25: 12, 50: 5},
+            },
+        }
+
+        # Reels. Kept on self so export_go_config reads THIS map rather than
+        # restating it -- a strip added here and missed there would leave the Go
+        # engine drawing the wrong reels with no error.
+        self.reel_files = {"BR0": "BR0.csv", "FR0": "FR0.csv", "WCAP": "FRWCAP.csv",
+                           "ASC": "ASC.csv", "ROAM": "FRROAM.csv",
+                           "ROAMCAP": "FRROAMCAP.csv"}
         self.reels = {}
-        for r, f in reels.items():
+        for r, f in self.reel_files.items():
             self.reels[r] = self.read_reels_csv(os.path.join(self.reels_path, f))
 
         self.padding_reels[self.basegame_type] = self.reels["BR0"]
@@ -470,10 +672,38 @@ class GameConfig(Config):
         # freegame mult_values are {1:1}.
         fg_mult = {self.basegame_type: {1: 1}, self.freegame_type: {1: 1}}
 
+        # ACT TWO's reel set, keyed like any other. "roam" is a third reel-weights
+        # entry alongside basegame and freegame: act one draws freegame, and the
+        # moment the beast wakes the engine reads THIS instead.
+        #
+        # ⚠ IT IS A WEIGHTED PICK, NOT A PINNED STRIP, AND THAT IS THE WHOLE POINT.
+        # An earlier version named one roam strip per tier, which meant a forced
+        # wincap book still drew the ORDINARY roam strip -- so it hunted a 25,000x
+        # book that could not exist and HUNG, exactly as the wincap warning below
+        # predicts. Keying it lets a wincap slice mix in ROAMCAP at 5:1, the same
+        # trick that keeps the ceiling reachable on the freegame side with WCAP.
+        roam_weights = {"ROAM": 1}
+        # ⚠ URSA NEEDS A HEAVIER MIX THAN DRACO FOR THE SAME CEILING. Both must
+        # reach 25,000x, but ursa gets there from a weaker tier (7 cells, star table
+        # topping at 50x against draco's 100x), so its forced cap cost ~1,940
+        # redraws per wincap book against draco's ~117. That is not just slow: a
+        # forced slice has NO retry cap, so a rate that drifts to zero HANGS rather
+        # than failing, and 1-in-1,940 is one tuning change away from zero.
+        # Cost of the heavier mix is aesthetic only -- wincap books are forced to
+        # pay the ceiling either way, so this changes how FAST they are found, not
+        # the distribution. It does mean ursa's max-win replays all share the juiced
+        # strip's premium-heavy look, on top of FRWCAP already doing that to act one.
+        roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 5}
+        ursa_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 20}
+
         def _tier_condition(star_count):
             """Force exactly `star_count` stars -> deal that one tier, run the feature."""
             return {
-                "reel_weights": {self.basegame_type: {"BR0": 1}, self.freegame_type: {"FR0": 1}},
+                "reel_weights": {
+                    self.basegame_type: {"BR0": 1},
+                    self.freegame_type: {"FR0": 1},
+                    "roam": dict(roam_weights),
+                },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
                 "force_wincap": False,
@@ -491,7 +721,11 @@ class GameConfig(Config):
         # 6 succeeds on ~92% of attempts there; on BR0 it would be ~20% and would
         # break silently the next time BR0's weights are touched.
         ascendant_condition = {
-            "reel_weights": {self.basegame_type: {"ASC": 1}, self.freegame_type: {"FR0": 1}},
+            "reel_weights": {
+                self.basegame_type: {"ASC": 1},
+                self.freegame_type: {"FR0": 1},
+                "roam": dict(roam_weights),
+            },
             "scatter_triggers": {6: 1},
             "mult_values": fg_mult,
             "force_wincap": False,
@@ -512,27 +746,90 @@ class GameConfig(Config):
         # beast is 2x2 now, and the 100k confirmation run measured ursa reaching the cap
         # NATURALLY (once in 99,960, before any forcing). The exclusion was a measurement
         # gap, not a structural fact.
-        # CORVUS STAYS OUT, and that is a choice rather than a limit: the sweep showed it
-        # can reach the cap with ladder top 800 (~1 in 2,500, easily forceable), but only
-        # by trading away the best body in the game (>cost 25.1% -> 14.5%, under the ~22%
-        # market norm) and flattening its ladder for five of nine rungs against a pitch
-        # that says the multiplier climbs every spin. It publishes an honest 10,000x.
+        # CORVUS JOINED THEM Aug 6 2026, AT ITS OWN 9,000x CEILING -- the "stays out"
+        # note that lived here is superseded and its two premises are both gone:
+        #  1. It was written when corvus advertised 25,000x and targeted an act-ONE
+        #     ladder top of 800. Corvus now publishes 9,000x, a figure it reaches
+        #     organically, so the slice manufactures a plausible round rather than an
+        #     out-of-reach one.
+        #  2. The ">cost 25.1% -> 14.5%" body cost was a SINGLE-DRAW measurement. An
+        #     n=8 variance run (Aug 6) put corvus's body spread at 26 POINTS run to run,
+        #     so that number never distinguished a real cost from noise. The slice's
+        #     actual RTP price is arithmetic and tiny: rate * cap / cost
+        #     = (1/2,000,000) * 9,000 / 120 = 0.00375% of the mode's RTP.
+        # WHAT IT BUYS: corvus's cap rate stops being an optimizer draw. Measured over 8
+        # identical runs it ranged 1 in 2.9M to 1 in 11.2M, and ONE OF THE EIGHT missed
+        # the ~1-in-10M obtainability guideline outright. A slice makes the rate a number
+        # we set. It also removes the tail as a free variable, which is why the body
+        # wandered 26 points while RTP converged to 0.9665 every single time.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
-        def _wincap_condition(star_count):
+        def _wincap_condition(star_count, roam_mix=None, force_ascension=False):
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
                     self.freegame_type: {"FR0": 1, "WCAP": 5},
+                    # The act two half of the same trick -- without it the roam
+                    # phase draws ordinary reels and the forced cap never lands.
+                    "roam": dict(roam_mix or roam_wincap_weights),
                 },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
                 "force_wincap": True,
                 "force_freegame": True,
+                # OFF unless a caller asks. Only corvus has an ascension block, so
+                # the flag is a no-op elsewhere -- but a slice that silently forced
+                # a mechanic the tier does not advertise is exactly the kind of
+                # thing that becomes load-bearing before anyone notices.
+                "force_ascension": bool(force_ascension),
             }
 
-        ursa_wincap_condition = _wincap_condition(4)
+        # CORVUS'S MIX IS THE HEAVIEST OF THE THREE, and for a different reason than
+        # ursa's. Ursa needs ROAMCAP 20 because 25,000x is far above its comfortable
+        # range. Corvus's target is only 9,000x -- but that sits at the very TOP of what
+        # corvus can organically produce (natural max measured 9,158x on a 1e6 pool, so
+        # >=9,000x is ~1 in 2.5M unforced). A forced slice therefore has to manufacture a
+        # near-best-case round every time, which is exactly the condition the LOOPS
+        # FOREVER warning above is about. 40 is a FIRST GUESS -- measure redraws per
+        # wincap book on a small run before trusting it at 1e6. Draco's is ~117.
+        corvus_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 40}
+
+        # ⚠ force_ascension=True is what makes corvus's cap MANUFACTURABLE. 25,000x
+        # is only reachable in an ascended round, and ascension is rare by design,
+        # so an unforced slice would redraw through ~one_in ordinary rounds per
+        # candidate. Forcing it here leaves the NATURAL rate untouched, which keeps
+        # the advertised max-win frequency a number the slice's rtp share sets
+        # rather than a side effect of how often corvus happens to ascend.
+        corvus_wincap_condition = _wincap_condition(
+            3, corvus_roam_wincap_weights, force_ascension=True)
+        ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
+
+        # ASCENDANT'S OWN WINCAP, added Aug 6 2026 so buy_mystery's forced cap books are
+        # ASCENDANT rolls rather than draco ones. NOT _wincap_condition(6): that helper
+        # draws BR0 for the basegame, where six scatters succeed ~20% of the time against
+        # ~92% on ASC (see ascendant_condition above). Everything else mirrors the helper.
+        #
+        # WHY: measured on the shipped pool, max-win rate per roll INSIDE buy_mystery was
+        # draco 1 in 317 vs ascendant 1 in 939 -- backwards. Every forced cap book in the
+        # mode was a draco roll, so draco got all the help and ascendant only kept its
+        # organic leftovers. Ascendant is the tier that cannot be bought and carries 46%
+        # of the mode's payback on 10% of its rolls; it should own the max win.
+        # ⚠ THIS IS A RELABELLING, NOT A REBALANCE. The slice quota, the total cap weight
+        # and mystery_cap_rtp are all unchanged, and every cap book pays exactly 25,000x
+        # whichever tier produced it -- so the mode's payout distribution, p5k, p10k, CVaR
+        # and ETL are untouched. Only the constellation on screen when it lands changes.
+        ascendant_wincap_condition = {
+            "reel_weights": {
+                self.basegame_type: {"ASC": 1},
+                self.freegame_type: {"FR0": 1, "WCAP": 5},
+                "roam": dict(roam_wincap_weights),
+            },
+            "scatter_triggers": {6: 1},
+            "mult_values": fg_mult,
+            "force_wincap": True,
+            "force_freegame": True,
+        }
 
         # Non-triggering base spins (draw_board redraws these to <3 stars). "0" is the
         # forced-loss slice; "basegame" is the paying base slice (funds the hit floor).
@@ -589,7 +886,49 @@ class GameConfig(Config):
         # repeats on a win_criteria mismatch, so its clamped books are KEPT, not redrawn.
         # Corvus is rounded DOWN from its natural max so only the sliver above clamps and
         # RTP survives to 5dp.
-        corvus_cap = 10000.0
+        # 10,000x UNTIL Aug 5 2026, when it became a lie. Act two removed the
+        # fully-wild-board route to the ceiling, and across a full 1e6 pool corvus
+        # topped out at 9,158x -- so the published figure failed the guidelines'
+        # "the maximum win amount matches the description in the game rules for each
+        # mode". Corvus has NO wincap slice to force it, so this is the only lever.
+        # 9,000x rather than 9,158x deliberately: 9,158 is ONE SEED'S observed
+        # maximum, and publishing at the observed max leaves 1.7% of margin against
+        # a number that moves whenever anything is retuned. At 9,000x the rate is
+        # 1 in 2.48M against a ~1-in-10M guideline, with room to spare.
+        # ⚠⚠ 9,000x UNTIL Aug 7 2026, WHEN IT WAS CUT TO 2,500x TO MAKE IT REACHABLE.
+        # 9,000x was honest (the engine could produce it) and useless: delivered at
+        # 1 in 2,000,003 against a MARKET NORM OF 1 in 400-4,000, contributing 0.1% of
+        # corvus's variance. The cause is a supply cliff -- corvus made 8,295 books in
+        # 2,500-5,000, 142 in 5,000-8,100 and ONE in 8,100-9,000 per 1e6.
+        # Building the missing tail was tried and REVERTED (see CLAUDE.md, Aug 7): a
+        # 50x star rung produced the tail exactly as swept, but the optimizer paid for
+        # it out of the middle and corvus became the harshest, most volatile buy in the
+        # menu at the cheapest price. Corvus cannot be the safe entry tier AND carry a
+        # real 9,000x.
+        # 2,500x is where corvus's distribution actually lives: P(>=2,500x) measures
+        # 1 in 2,417 unforced, so the ceiling becomes the MOST REACHABLE in the menu,
+        # which is right for the cheapest tier. Cost is ceiling-per-cost 75.0x -> 20.8x
+        # -- weak on a spec sheet, real in play.
+        # ⚠ BetMode.max_win is BOTH the published figure AND the engine clamp, so this
+        # needs a RE-SIM, not an optimizer-only run: books above 2,500x now clamp to it.
+        # ⚠⚠ 25,000x SINCE Aug 8 2026 -- corvus joins every other mode at the game's
+        # headline ceiling, which ASCENSION is what makes possible (see the
+        # constellation_ascension note). Meta Gaming ships this as an invariant: 18
+        # modes across Rage Bait, Coins and Cauldrons and Mushroom Madness, and every
+        # single one reaches its game's cap. Corvus at 2,500x was our only violation,
+        # and it made the cheapest buy strictly dominated by ursa -- 4x the ceiling
+        # for 2.2x the price, so no one had a reason to press it.
+        # Ceiling-per-stake goes 20.8x -> 208x, the highest in the menu, which is the
+        # market pattern rather than a defect: their cheapest buy also carries the
+        # highest, and the expensive tiers earn their price on cap FREQUENCY instead
+        # (this file already commits to that at the ceilings note above).
+        # ⚠ REACHABILITY IS NOT FREE HERE. This number is the engine clamp as well as
+        # the advertised figure, and a forced slice hunting an unreachable ceiling
+        # redraws forever. Measured with ascension forced and the ROAMCAP roam mix,
+        # P(>=25,000x) is 1 in 2,874, so the slice fills its quota in ~2 minutes. It
+        # is 1 in 25 MILLION without ascension. Do not raise this again without
+        # re-measuring reach FIRST.
+        corvus_cap = 25000.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that
@@ -635,17 +974,42 @@ class GameConfig(Config):
             # cap is unreachable (it can be bought with a taller ladder) but because
             # buying it costs corvus the best body in the game. The deliberate grind
             # tier: highest >cost, lowest ceiling.
+            #
+            # ⚠ 240x UNTIL Aug 5 2026, WHEN IT MADE CORVUS UNBUYABLE. Measured on the
+            # converged act two pool, corvus was LAST on ceiling-per-cost (38.2x
+            # against ursa's 93.3x and draco's 48.1x) and second-worst on median,
+            # with a beat rate inside the other three's noise -- ursa cost 12% more
+            # and offered 2.7x the ceiling, because ursa reaches the global 25,000x
+            # cap while corvus's is organic. No ceiling number fixes that: even at
+            # 10,000x corvus was 41.7x cost, still last. A longer feature does not
+            # either (reels/sweep_feature_spins.py: it works, and compresses the
+            # 84/63/32 completion ladder to 93/85/55 doing it).
+            # Re-optimizing the same 1e6 pool at 120x gives ceiling-per-cost 76.3x,
+            # clearing draco and approaching ursa, and the max win STAYS OBTAINABLE
+            # at 1 in 4.7M -- it survives because the ceiling is ~0.001% of RTP, so
+            # a lower target is met by reweighting the body, not the tail.
+            # The menu becomes 120 / 268 / 520 / 563: a ladder, where 240 and 268
+            # were two names for the same rung.
             BetMode(
-                name="buy_corvus", cost=240.0, rtp=self.rtp, max_win=corvus_cap,
+                name="buy_corvus", cost=200.0, rtp=self.rtp, max_win=corvus_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
-                    Distribution(criteria="corvus", quota=1.0, conditions=corvus_condition),
+                    # ⚠ win_criteria is corvus_cap (9,000), NOT the global cap. This mode
+                    # clamps at 9,000 via BetMode.max_win, so a slice searching for
+                    # 25,000 would hunt a book that cannot exist and hang forever.
+                    # Quota is deliberately smaller than ursa's 0.005: the optimizer
+                    # weights these down to 1 in 2M regardless, so the quota only has to
+                    # supply ENOUGH DISTINCT BOOKS that every max win is not the same
+                    # replay -- and each one costs a redraw loop to manufacture.
+                    Distribution(criteria="wincap", quota=0.002, win_criteria=corvus_cap,
+                                 conditions=corvus_wincap_condition),
+                    Distribution(criteria="corvus", quota=0.998, conditions=corvus_condition),
                 ],
             ),
             # buy_ursa: pin the coin-flip tier -- now ALSO a 25,000x product, at a
             # deliberately rarer cap than draco (see the ceilings note above).
             BetMode(
-                name="buy_ursa", cost=268.0, rtp=self.rtp, max_win=cap,
+                name="buy_ursa", cost=300.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ursa_wincap_condition),
@@ -655,7 +1019,7 @@ class GameConfig(Config):
             # buy_draco: pin the greedy tier -- the 25,000x product players pay for,
             # earning its price with ~4.5x ursa's cap rate rather than a taller ceiling.
             BetMode(
-                name="buy_draco", cost=520.0, rtp=self.rtp, max_win=cap,
+                name="buy_draco", cost=500.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
@@ -703,10 +1067,16 @@ class GameConfig(Config):
             # rolling the cheap tier) but it inverts "draco is the cap play", so
             # re-measure cap-value-per-stake across the menu before shipping.
             BetMode(
-                name="buy_mystery", cost=563.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=600.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
-                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=draco_wincap_condition),
+                    # Forced caps are ASCENDANT rolls (was draco until Aug 6 2026 -- see
+                    # ascendant_wincap_condition for the measurement that prompted it).
+                    # The single "wincap" opt fence searches payout == 25,000 and so still
+                    # matches these; no opt_params change is needed, and fence order still
+                    # puts wincap ahead of the kind=6 ascendant body fence, which is what
+                    # keeps the forced books out of the body slice.
+                    Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ascendant_wincap_condition),
                     Distribution(criteria="ascendant", quota=0.100, conditions=ascendant_condition),
                     Distribution(criteria="draco", quota=0.250, conditions=draco_condition),
                     Distribution(criteria="ursa", quota=0.295, conditions=ursa_condition),

@@ -29,16 +29,18 @@ func main() {
 		cfgPath  = flag.String("config", "", "config json (default go/config/starwake.json)")
 		repoRoot = flag.String("repo", "", "repo root (default: inferred)")
 		quiet    = flag.Bool("quiet", false, "suppress the progress summary")
+		noWincap = flag.Bool("no-wincap", false,
+			"drop forced-wincap slices (measure loop only -- see run())")
 	)
 	flag.Parse()
 
-	if err := run(*modeName, *numSims, *workers, *outDir, *cfgPath, *repoRoot, *quiet); err != nil {
+	if err := run(*modeName, *numSims, *workers, *outDir, *cfgPath, *repoRoot, *quiet, *noWincap); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(modeName string, numSims, workers int, outDir, cfgPath, repoRoot string, quiet bool) error {
+func run(modeName string, numSims, workers int, outDir, cfgPath, repoRoot string, quiet, noWincap bool) error {
 	root, err := resolveRoot(repoRoot)
 	if err != nil {
 		return err
@@ -61,6 +63,28 @@ func run(modeName string, numSims, workers int, outDir, cfgPath, repoRoot string
 	mode, err := cfg.Mode(modeName)
 	if err != nil {
 		return err
+	}
+	// ⚠ MEASURE LOOP ONLY -- a pool built with this flag must never be published.
+	//
+	// A forced-wincap slice draws until it finds a book paying the mode's ceiling,
+	// with no retry cap, so if the ceiling drifts out of structural reach the sim
+	// HANGS rather than failing. That is not hypothetical: it is what act two did
+	// on its first run, because collected multipliers could not reach 25,000x on
+	// first-pass values. Stripping the slice lets a tuning sweep read what the
+	// feature pays NATURALLY, which is the number you actually need before deciding
+	// whether the ceiling is reachable at all. It also removes the sampling quota
+	// that otherwise inflates a mode's raw mean.
+	if noWincap {
+		kept := mode.Distributions[:0]
+		for _, d := range mode.Distributions {
+			if d.Criteria != "wincap" {
+				kept = append(kept, d)
+			}
+		}
+		if len(kept) == 0 {
+			return fmt.Errorf("%s: every distribution is a wincap slice", modeName)
+		}
+		mode.Distributions = kept
 	}
 	if workers < 1 {
 		workers = 1

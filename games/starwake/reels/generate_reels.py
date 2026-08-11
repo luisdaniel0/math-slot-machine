@@ -66,10 +66,44 @@ FILLER = "L5"
 STRIP_WEIGHTS = {
     # Base: lows-heavy (frequent crumbs = hit-rate floor), wilds rare, stars only
     # to seed forced triggers + anticipation. Higher-paying symbol = lower count.
+    # ⚠ PREMIUMS ARE STACKED, AND THAT IS WHAT GIVES BASE A CEILING. Until Aug 5
+    # 2026 this was a flat shuffle and an ordinary base spin topped out at 22x while
+    # carrying 62.8% of base RTP -- the mode players spend 95% of their time in,
+    # structurally unable to produce a big win. That was never a paytable limit
+    # (twenty lines of H1 is 240x); a shuffled strip just never puts a premium on
+    # more than one payline at a time. Laying H1/H2/H3 down in runs of 4 means a stop
+    # on the run shows a SOLID COLUMN, so every row pays at once.
+    #
+    # Counts are raised alongside (H1 8->16, H2 10->16, H3 12->16, lows down to pay
+    # for it) because run length alone is not enough: H1 at count 8 gives only two
+    # 4-runs per reel, so P(one reel solid) is ~1.2% and a three-reel alignment is
+    # ~1 in 500k. More stacks per reel is what makes the big board reachable.
+    #
+    # MEASURED, delivered after the optimizer at 1e6:
+    #   variant       std    bust%    hit%   plain max   >100x share
+    #   flat        24.51   70.75%  29.25%        22x        0.229
+    #   x4 free     24.94   70.75%  29.25%        90x        0.250
+    #   x4 richer   24.99   70.75%  29.25%       180x        0.321   <- THIS
+    #   x4 richest  25.18   70.75%  29.25%       240x        0.372
+    # 0.372 is the ceiling the old structure could ever reach, since that bound was
+    # feature share plus cap share and ordinary spins contributed nothing to it.
+    # "richest" reaches it but turns base premium-heavy enough to read as a different
+    # game; "richer" takes most of the gain and keeps base recognisable.
+    #
+    # ⚠ HIT RATE, BUST RATE AND THE BASEGAME RTP SHARE CANNOT MOVE HERE -- opt_params
+    # pins all three. So stacking does not buy the ceiling with them; it redistributes
+    # the same RTP inside the same hit rate, which means the TYPICAL paying spin pays
+    # less. That is the trade.
+    # ⚠ AND IT DOES NOT FIX BASE STD (24.51 -> 24.99). Base variance is dominated by
+    # the wincap slice's 25,000x at 1 in 1.25M; a 180x ordinary ceiling barely
+    # registers. Std was never a compliance problem (gate is >=0.6, ceiling 50/60).
     "BR0.csv": {
-        "H1": 8, "H2": 10, "H3": 12, "H4": 14,
-        "L1": 18, "L2": 20, "L3": 22, "L4": 24, "L5": 26,
-        "W": 2, "S": 5,
+        "base": {
+            "H1": 16, "H2": 16, "H3": 16, "H4": 14,
+            "L1": 14, "L2": 16, "L3": 18, "L4": 20, "L5": 22,
+            "W": 2, "S": 5,
+        },
+        "stacks": {"H1": 4, "H2": 4, "H3": 4},
     },
     # Freegame: THE completion-ladder strip. Reels 0-2 wet enough that the snowball
     # ignites (Corvus stays a reliable beast hunt, no cold-start bust); reels 3-4
@@ -102,6 +136,78 @@ STRIP_WEIGHTS = {
         "H1": 12, "H2": 8, "H3": 6, "H4": 6,
         "L1": 6, "L2": 6, "L3": 6, "L4": 6, "L5": 6,
         "W": 16, "S": 0,
+    },
+    # ACT TWO roam strip -- the ONLY strip carrying the multiplier star "M".
+    #
+    # Drawn while the beast is awake and nowhere else. Act one keeps FR0, so a star
+    # can never land in the charge phase where there is no beast to collect it and
+    # a visibly inert symbol would be worse than either design.
+    #
+    # ⚠ M IS NON-PAYING, SO IT BREAKS A PAYLINE THE WAY A SCATTER DOES, AND THE COST
+    # DEPENDS ENTIRELY ON THE REEL. On a left-to-right lines game a blocker on reel 0
+    # kills every win through that row outright; one on reel 4 only shortens a 5-kind
+    # to a 4-kind. So density is weighted to the RIGHT: reel 0 stays clean, and the
+    # count climbs across the board. That also matches where act two's wins come from
+    # -- with the wild carpet gone, 5-kinds are rare and the left reels are carrying
+    # the 3-kinds that pay the body.
+    #
+    # ⚠ DENSITY AND VALUE TRADE AGAINST EACH OTHER AND THERE IS AN INTERIOR OPTIMUM.
+    # More stars = more multiplier but fewer paying cells to multiply, so pushing
+    # density past some point makes act two pay LESS. Density lives here; the value
+    # table lives in game_config.constellation_star_values. Sweep them together.
+    # FIRST-PASS NUMBERS, UNMEASURED -- this is the thing the next sweep is for.
+    #
+    # No wilds: the block is the only wild in act two, by design. No stars ("S"):
+    # the feature cannot retrigger.
+    # ⚠ PREMIUM-HEAVY, AND THAT INVERSION IS THE WHOLE FIX. This strip first
+    # shipped as a copy of FR0's lows-heavy curve, and act two came in thin AND
+    # FLAT: implied price 297x against a 520x target, mean/median 1.17 against the
+    # ladder's 1.72, max win 6,705x against a published 25,000x. With the wild
+    # carpet gone, act two's raw wins are 3-of-a-kind lows paying 0.2-0.5x, and a
+    # x50 multiplier on a 0.3x win is 15x -- there was nothing worth multiplying.
+    #
+    # Measured (reels/sweep_roam_strip.py, n=20k, wincap stripped, draco):
+    #   mix       dens    price   m/med      max
+    #   lows        1x     297x    1.17    6,705x   <- as shipped
+    #   premium     1x     505x    1.86   17,240x
+    #   premium     3x     766x    2.72   25,000x
+    # The mix ALONE restores both price and volatility at unchanged density.
+    #
+    # ⚠ DENSITY DELIBERATELY LEFT AT 1x. Raising it overshoots every tier and
+    # makes corvus beat its ticket 61.6% of the time, which is not a
+    # high-volatility buy. Stars are non-paying and break paylines, so past some
+    # density the board runs out of cells to pay and act two pays LESS -- an
+    # interior optimum, not a monotonic knob. The premium mix did the work.
+    "FRROAM.csv": {
+        "base": {
+            "H1": 20, "H2": 16, "H3": 13, "H4": 11,
+            "L1": 9, "L2": 8, "L3": 7, "L4": 6, "L5": 6,
+            "W": 0, "S": 0, "M": 0,
+        },
+        "per_reel": {1: {"M": 3}, 2: {"M": 6}, 3: {"M": 9}, 4: {"M": 12}},
+    },
+    # ACT TWO wincap helper -- the roam-phase twin of FRWCAP, mixed in at 5:1 on
+    # forced-wincap slices only.
+    #
+    # WHY IT EXISTS. A forced wincap slice redraws until it finds a book paying the
+    # mode's ceiling, with no retry cap, so a ceiling out of structural reach HANGS
+    # rather than failing. Act two's payout is (symbol win) x (collected multiplier)
+    # and BOTH halves are thin on the ordinary roam strip: measured max win was
+    # 6,705x against a published 25,000x. So this strip fattens both halves at once
+    # -- star density roughly 4x ROAM's so the multiplier actually accumulates, and
+    # premium-heavy paying symbols so there is something worth multiplying.
+    #
+    # ⚠ IT IS NOT SIMPLY "MORE STARS". Past some density the board runs out of
+    # paying cells and act two pays LESS -- stars are non-paying and break paylines.
+    # That is why the premiums are boosted alongside: the two must move together.
+    # Reel 0 stays star-free so the leftmost reel can always start a win.
+    "FRROAMCAP.csv": {
+        "base": {
+            "H1": 20, "H2": 14, "H3": 10, "H4": 8,
+            "L1": 6, "L2": 6, "L3": 6, "L4": 6, "L5": 6,
+            "W": 0, "S": 0, "M": 0,
+        },
+        "per_reel": {1: {"M": 12}, 2: {"M": 24}, 3: {"M": 36}, 4: {"M": 48}},
     },
     # DRACO ASCENDANT trigger strip -- the ONLY strip that can show 6 stars.
     #
@@ -154,6 +260,45 @@ def reel_tables(spec):
     return [dict(spec) for _ in range(NUM_REELS)]  # flat: same table every reel
 
 
+def _place_stacks(target_len, stack_spec, tables, rng):
+    """Lay symbols down in CONTIGUOUS RUNS instead of scattering them.
+
+    Returns {position: symbol}; every position it claims is removed from the
+    shuffled body so counts stay exact.
+
+    WHY STACKS. An ordinary base spin tops out at 22x, and that is not a paytable
+    ceiling -- 20 lines of H1 would be 240x. It is that a randomly-shuffled strip
+    almost never puts a premium on more than one payline at a time. Stacking H1 in
+    runs of 3-4 means a stop that hits the run shows a SOLID COLUMN of Leo, so
+    every row pays at once: four simultaneous 3-kinds instead of one. That is how
+    a lines game gets a big base win WITHOUT a multiplier.
+
+    ⚠ The strip is read circularly by the board draw ((stop + row) % len), so runs
+    wrap and the overlap check has to wrap with them.
+    """
+    placed = {}
+    occupied = set()
+    for sym, length in stack_spec.items():
+        count = tables.get(sym, 0)
+        n_runs = count // length
+        if n_runs == 0:
+            continue
+        for _ in range(n_runs):
+            for _attempt in range(500):
+                start = rng.randrange(target_len)
+                span = [(start + k) % target_len for k in range(length)]
+                if any(p in occupied for p in span):
+                    continue
+                for p in span:
+                    occupied.add(p)
+                    placed[p] = sym
+                break
+            else:
+                raise ValueError(
+                    f"could not place a {length}-run of {sym} on a strip of {target_len}")
+    return placed
+
+
 def _positions_min_gap(n, k, gap, rng):
     """k positions on a circle of length n, every circular gap >= `gap`.
 
@@ -180,15 +325,35 @@ def _positions_run(n, k, step, rng):
     return [(start + i * step) % n for i in range(k)]
 
 
-def build_reel(weights, target_len, rng, scatter_layout=None, reel=None):
+def build_reel(weights, target_len, rng, scatter_layout=None, reel=None, stacks=None):
     """One shuffled reel from a weight table, padded to target_len with FILLER.
 
-    With no `scatter_layout` the scatters are shuffled in with everything else
-    (the original behaviour -- BR0/FR0/FRWCAP must stay bit-identical, so this
-    path makes exactly the same rng calls it always did). A layout instead places
-    scatters at controlled positions and shuffles only the remaining symbols
-    around them; see STRIP_WEIGHTS["ASC.csv"] for why that control is needed.
+    With no `scatter_layout` and no `stacks` the scatters are shuffled in with
+    everything else (the original behaviour -- BR0/FR0/FRWCAP must stay
+    bit-identical, so this path makes exactly the same rng calls it always did). A
+    layout instead places scatters at controlled positions and shuffles only the
+    remaining symbols around them; see STRIP_WEIGHTS["ASC.csv"] for why that
+    control is needed. `stacks` lays chosen symbols down in contiguous runs; see
+    _place_stacks for why.
     """
+    if stacks and scatter_layout:
+        # The two paths both own symbol placement, and this one runs first -- so a
+        # spec asking for both would SILENTLY SKIP the scatter layout. On ASC that
+        # means losing the reel-2 step-3 run that guarantees a 6-scatter board, and
+        # forcing 6 would then hang forever rather than fail. Loud here instead.
+        raise ValueError("a strip cannot use both `stacks` and `scatter_layout`; "
+                         "the scatter layout would be silently dropped")
+    if stacks:
+        placed = _place_stacks(target_len, stacks, weights, rng)
+        body = []
+        for sym, count in weights.items():
+            remaining = count - sum(1 for s in placed.values() if s == sym)
+            body.extend([sym] * remaining)
+        body.extend([FILLER] * (target_len - len(body) - len(placed)))
+        rng.shuffle(body)
+        filler = iter(body)
+        return [placed[i] if i in placed else next(filler) for i in range(target_len)]
+
     if scatter_layout is None:
         strip = []
         for sym, count in weights.items():
@@ -227,8 +392,10 @@ def write_strip(filename, spec):
     rng = random.Random(SEED + zlib.crc32(filename.encode()) % 10_000)
     tables = reel_tables(spec)
     layout = spec.get("scatter_layout")
+    stacks = spec.get("stacks")
     target_len = max(sum(t.values()) for t in tables)
-    reels = [build_reel(tables[r], target_len, rng, layout, r) for r in range(NUM_REELS)]
+    reels = [build_reel(tables[r], target_len, rng, layout, r, stacks)
+             for r in range(NUM_REELS)]
     path = os.path.join(STARWAKE_REELS, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)

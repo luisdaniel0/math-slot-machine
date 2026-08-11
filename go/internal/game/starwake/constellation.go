@@ -61,6 +61,7 @@ type Constellation struct {
 	phase      Phase
 	multiplier int
 	rung       int
+	roamSpins  int
 	ladder     []int
 
 	beastW, beastH int
@@ -68,11 +69,31 @@ type Constellation struct {
 	beastOrigin    config.Cell
 	beastPlaced    bool
 
+	// ACT TWO. nil drops means this tier runs the original climbing ladder.
+	drops     *StarDrops
+	collected int
+	fallen    []Star
+	fallenBuf [engine.MaxReels * engine.MaxRows]Star
+
+	// ASCENSION. Rolled once at wake and sticky for the rest of the roam.
+	// AscendedThisSpin is the emitter's one-shot flag, mirroring WokeThisSpin.
+	// ForceAscend is set from the distribution's conditions so a wincap slice can
+	// pin the switch on; see config.Conditions.ForceAscension for why.
+	ascended         bool
+	AscendedThisSpin bool
+	ForceAscend      bool
+
 	// Per-spin scratch, consumed by the event emitters. Backed by a reusable
 	// array so a spin never allocates to report newly lit cells.
 	newlyLit     []config.Cell
 	newlyLitBuf  [engine.MaxReels * engine.MaxRows]config.Cell
 	WokeThisSpin bool
+}
+
+// Star is one multiplier star sitting on the board for a single roam spin.
+type Star struct {
+	Cell  config.Cell
+	Value int
 }
 
 // NewConstellation deals a tier.
@@ -87,6 +108,7 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 		targetList: tier.Cells,
 		numTargets: len(tier.Cells),
 		ladder:     tier.MultLadder,
+		drops:      tier.StarDrops,
 		beastW:     tier.BeastShape[0],
 		beastH:     tier.BeastShape[1],
 		origins:    tier.RoamOrigins(c),
@@ -95,6 +117,7 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 		rung:       -1,
 	}
 	con.newlyLit = con.newlyLitBuf[:0]
+	con.fallen = con.fallenBuf[:0]
 
 	for _, cell := range tier.Cells {
 		con.targets |= Bit(cell.Reel, cell.Row)
@@ -166,7 +189,18 @@ func (con *Constellation) LightFromWins(crossed CellMask) []config.Cell {
 	return con.newlyLit
 }
 
+// ActTwo reports whether this tier runs the star-collect mechanic rather than
+// the original climbing ladder.
+func (con *Constellation) ActTwo() bool { return con.drops != nil }
+
 // Wake enters the roam phase, places the block and sets the first multiplier.
+//
+// ⚠ ACT TWO CONSUMES THE STICKY WILDS HERE. `lit` is deliberately NOT cleared --
+// it stays as the record of which stars were traced, which the star chart and the
+// deal/starLit events still read. What changes is that WildCells stops counting
+// it, so the board goes back to normal symbols and the block is the only wild
+// left. Keeping the record and dropping the wildness is what lets act one's
+// completion ladder (84/63/32%) stay measurable after the change.
 func (con *Constellation) Wake(g *engine.RNG) error {
 	if !con.IsComplete() {
 		return fmt.Errorf("%s: beast cannot wake before the set is complete", con.Tier)
@@ -175,32 +209,160 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 		return fmt.Errorf("%s: beast already awake", con.Tier)
 	}
 	con.phase = PhaseRoam
-	con.rung = 0
-	con.multiplier = con.ladder[0]
+	if con.ActTwo() {
+		// Starts bare. Every point of multiplier from here is collected, so there
+		// is no dead x1 rung to sit through -- the first star IS the climb.
+		con.rung = -1
+		con.multiplier = 1
+		// ⚠ ROLLED ONLY WHEN THE TIER HAS AN ASCENSION BLOCK. That guard is what
+		// keeps a tier without one making the SAME rng calls it always did, so
+		// buy_ursa and buy_draco stay byte-identical to a pre-ascension pool and
+		// need no re-sim. Move this call outside the nil check and every mode's
+		// books shift, silently and with plausible numbers.
+		if con.drops.Ascension != nil {
+			// The roll is made UNCONDITIONALLY when the block exists, then ORed
+			// with the force. Rolling inside the `if !ForceAscend` would make a
+			// forced slice consume a different amount of rng than an ordinary
+			// book, so the two would drift apart for no reason -- and rng drift
+			// between slices of the same mode is the kind of thing that only
+			// shows up as an unreproducible pool months later.
+			ascend := g.IntN(con.drops.Ascension.OneIn) == 0
+			if con.ForceAscend {
+				ascend = true
+			}
+			if ascend {
+				con.ascended = true
+				con.AscendedThisSpin = true
+			}
+		}
+	} else {
+		con.rung = 0
+		con.multiplier = con.ladder[0]
+	}
 	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
 	con.beastPlaced = true
 	con.WokeThisSpin = true
+	// The beast is ON THE BOARD from the next spin, and that spin pays -- so the
+	// roam window starts at 1 here. Counted explicitly rather than derived from the
+	// rung: act two has no rungs, and deriving it read a flat zero for every act
+	// two feature while looking like a real measurement.
+	con.roamSpins = 1
 	return nil
 }
 
-// Roam moves the block to a new valid origin and climbs one ladder rung.
+// Roam moves the block to a new valid origin.
 //
-// The rung CLAMPS at the top. Clamping means a feature-length change can never
-// index off the end -- but it also means a ladder that is too short silently caps
-// that tier's ceiling with no error, which is exactly the failure the rung-count
-// invariant in config.go guards against.
+// Under the ladder it also climbs one rung. The rung CLAMPS at the top: clamping
+// means a feature-length change can never index off the end, but it also means a
+// ladder that is too short silently caps that tier's ceiling with no error, which
+// is what the rung-count invariant in config.go guards against.
+//
+// Under act two it climbs nothing -- the multiplier moves only in Collect.
 func (con *Constellation) Roam(g *engine.RNG) error {
 	if con.phase != PhaseRoam {
 		return fmt.Errorf("%s: roam before the beast woke", con.Tier)
 	}
 	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
-	if con.rung+1 < len(con.ladder) {
-		con.rung++
+	con.roamSpins++
+	if !con.ActTwo() {
+		if con.rung+1 < len(con.ladder) {
+			con.rung++
+		}
+		con.multiplier = con.ladder[con.rung]
 	}
-	con.multiplier = con.ladder[con.rung]
 	con.WokeThisSpin = false
 	return nil
 }
+
+// RoamSpins is how many spins the beast has been on the board, including the one
+// it appeared on.
+func (con *Constellation) RoamSpins() int { return con.roamSpins }
+
+// RollStarValues finds the multiplier stars the reels just dealt and gives each
+// one a value.
+//
+// ⚠ STARS ARE REAL REEL SYMBOLS, NOT AN OVERLAY. Their POSITION comes from the
+// strip -- act two draws a roam-only strip carrying the star symbol -- and only
+// their VALUE is rolled here. Splitting it that way keeps the two knobs
+// independent: density is tuned on the strip (per reel, the same machinery the FR0
+// drying used) and the value table is tuned in config, which matters because the
+// two trade against each other.
+//
+// A star is a non-paying symbol, so it BREAKS a payline the way a scatter does.
+// That cost is real and is why density belongs on the right-hand reels: on a
+// left-to-right lines game a blocker on reel 0 kills a win outright, while one on
+// reel 4 only shortens a 5-kind to a 4-kind.
+//
+// The value is stashed in the cell's own Mult field rather than a parallel map.
+// Safe because applyMult only reads cells INSIDE a winning run and a star never
+// matches, so it is never in one.
+func (con *Constellation) RollStarValues(b *engine.Board, star engine.SymID, g *engine.RNG) []Star {
+	con.fallen = con.fallenBuf[:0]
+	if !con.ActTwo() || con.phase != PhaseRoam {
+		return con.fallen
+	}
+	for reel := 0; reel < b.NumReels; reel++ {
+		for row := 0; row < b.NumRows[reel]; row++ {
+			if b.At(reel, row).Sym != star {
+				continue
+			}
+			value := pickWeighted(con.starTable(), g.IntN)
+			b.Set(reel, row, engine.Cell{Sym: star, Mult: uint16(value)})
+			con.fallen = append(con.fallen, Star{
+				Cell:  config.Cell{Reel: reel, Row: row},
+				Value: value,
+			})
+		}
+	}
+	return con.fallen
+}
+
+// Ascended reports whether this round switched to the richer star table.
+func (con *Constellation) Ascended() bool { return con.ascended }
+
+// starTable is the value table this spin's stars are drawn from -- the ascended
+// one once the round has ascended, the tier's ordinary one otherwise. Every star
+// value in the game goes through here, so it is the single seam the ascension
+// needs and the reason the feature is a table swap rather than a second code path.
+func (con *Constellation) starTable() []WeightedInt {
+	if con.ascended {
+		return con.drops.Ascension.Values
+	}
+	return con.drops.Values
+}
+
+// Collect takes every star the board dealt and adds it to the beast's multiplier.
+//
+// ⚠ COLLECTION IS GLOBAL, APPLICATION IS POSITIONAL -- copied from Rage Bait's own
+// rules ("whenever a Wild is on the board it collects every Fish... any winning
+// line passing through the Wild is multiplied that much more"). The block does not
+// have to land on a star to take it, so there is no positional lottery; but the
+// multiplier still only reaches lines that cross the block, so WHERE it roamed
+// decides which wins get paid at the new value.
+//
+// Returns the amount added this spin and the new total.
+func (con *Constellation) Collect() (gained, total int) {
+	for _, s := range con.fallen {
+		gained += s.Value
+	}
+	con.collected += gained
+	con.multiplier = 1 + con.collected
+	return gained, con.multiplier
+}
+
+// Fallen lists the stars currently on the board (this spin's drops).
+func (con *Constellation) Fallen() []Star { return con.fallen }
+
+// StarSymbol is the symbol name the beast collects.
+func (con *Constellation) StarSymbol() string {
+	if con.drops == nil {
+		return ""
+	}
+	return con.drops.StarSymbol
+}
+
+// Collected is the running sum of every star value taken so far.
+func (con *Constellation) Collected() int { return con.collected }
 
 // BeastOrigin returns the block's top-left cell and whether it is on the board.
 func (con *Constellation) BeastOrigin() (config.Cell, bool) {
@@ -221,9 +383,21 @@ func (con *Constellation) BeastCells() CellMask {
 	return m
 }
 
-// WildCells is every cell that should read as wild this spin: the sticky lit
-// stars plus the beast block.
-func (con *Constellation) WildCells() CellMask { return con.lit | con.BeastCells() }
+// WildCells is every cell that should read as wild this spin.
+//
+// ⚠ THIS IS WHERE ACT TWO ACTUALLY HAPPENS. Under the ladder it is the sticky lit
+// stars plus the block, for the whole feature -- which is how draco ended up with
+// 11.2 of 20 cells wild, a board that looks like a jackpot and pays a third of the
+// ticket. Under act two the lit stars stop being wild the moment the beast wakes,
+// so the roam runs on a normal board with the block as the only wild. The payout
+// moves off the wild carpet and onto the collected multiplier, and there is room
+// for paying symbols again.
+func (con *Constellation) WildCells() CellMask {
+	if con.ActTwo() && con.phase == PhaseRoam {
+		return con.BeastCells()
+	}
+	return con.lit | con.BeastCells()
+}
 
 // ApplyWilds stamps wilds onto a freshly drawn board.
 //

@@ -129,6 +129,17 @@ type Conditions struct {
 	MultValues      map[string][]MultValueWeight `json:"multValues"`
 	ForceWincap     bool                         `json:"forceWincap"`
 	ForceFreegame   bool                         `json:"forceFreegame"`
+	// ForceAscension pins a tier's rare star-table switch ON for this slice.
+	//
+	// WHY A SLICE NEEDS IT. A wincap slice reaches its ceiling by redrawing until
+	// the payout matches winCriteria, with no retry cap. Corvus's 25,000x is only
+	// reachable in an ascended round, and ascension is deliberately rare (1 in
+	// ~20,000), so an unforced slice would redraw through ~20,000 ordinary rounds
+	// per candidate -- the hang this whole mechanic exists to avoid. Forcing it
+	// makes cap books cheap to manufacture WITHOUT touching the natural rate,
+	// which is what keeps the advertised max-win frequency a dial we set via the
+	// slice's rtp share rather than a side effect of the ascension rate.
+	ForceAscension bool `json:"forceAscension"`
 }
 
 // Distribution is one slice of a bet mode's simulated outcomes.

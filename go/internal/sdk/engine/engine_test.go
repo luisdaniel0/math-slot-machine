@@ -33,9 +33,21 @@ func load(t *testing.T) (*config.Config, *SymbolTable, *ReelSet) {
 func TestSymbolTable(t *testing.T) {
 	_, st, _ := load(t)
 
-	// 11 symbols: W, S, H1-H4, L1-L5.
-	if got := st.Count(); got != 11 {
-		t.Errorf("interned %d symbols, want 11", got)
+	// 12 symbols: W, S, H1-H4, L1-L5, and M -- act two's multiplier star, which
+	// is non-paying and so reaches the table only via the roam strip.
+	if got := st.Count(); got != 12 {
+		t.Errorf("interned %d symbols, want 12", got)
+	}
+	// M must be neither wild nor scatter: wild would let it join winning runs and
+	// contribute its collected value to a line, scatter would let it trigger.
+	m := st.MustID("M")
+	if st.IsWild(m) || st.IsScatter(m) {
+		t.Error("the multiplier star must be a plain non-paying symbol")
+	}
+	for kind := 1; kind <= st.MaxKind(); kind++ {
+		if pay := st.Pay(kind, m); pay != 0 {
+			t.Errorf("M pays %v at kind %d; it must never pay", pay, kind)
+		}
 	}
 	if st.Name(NoSym) != "" {
 		t.Errorf("slot 0 should be reserved/empty, got %q", st.Name(NoSym))
@@ -192,6 +204,79 @@ func TestForceScatters(t *testing.T) {
 		}
 		if got := b.ScatterCount(); got != 6 {
 			t.Fatalf("forced 6 scatters, board shows %d", got)
+		}
+	}
+}
+
+// A forced scatter must be able to land on EVERY row, including when that
+// requires a negative stop.
+//
+// REGRESSION. The stop is offset back from the symbol's own strip position so the
+// scatter can appear on any row, so it goes NEGATIVE whenever the chosen scatter
+// sits within num_rows of the strip's start -- BR0 reel 4 carries one at position
+// 0. "Is this reel forced" used to be encoded as "stop >= 0", so those placements
+// were silently discarded and the reel got a RANDOM stop instead. The retry loop
+// hid it completely: it redraws until the scatter COUNT is right, so every board
+// was well-formed and every count correct while the position distribution was
+// wrong. Measured against Python's pool, the three wrapped stops came out ~40x
+// too rare (33 vs ~1,350 each per 40k forced boards).
+//
+// Asserting on the count -- which TestForceScatters already does -- cannot see
+// this. Only the distribution of stops can.
+func TestForcedScatterReachesWrappedStops(t *testing.T) {
+	c, st, rs := load(t)
+	b, _ := NewBoard(c)
+	g := NewRNG(3)
+	trigger := c.AnticipationTriggers[c.Game.BasegameType]
+
+	strip, _ := rs.Strip("BR0")
+	const reel = 4
+	length := len(strip[reel])
+	rows := c.Rows(reel)
+
+	// Find a scatter close enough to the strip start that placing it on a lower
+	// row demands a negative (wrapping) stop. Without one the test proves nothing.
+	scatterPos := -1
+	for pos := 0; pos < rows-1; pos++ {
+		if st.IsScatter(strip[reel][pos]) {
+			scatterPos = pos
+			break
+		}
+	}
+	if scatterPos < 0 {
+		t.Skipf("BR0 reel %d has no scatter within %d of the strip start, so no "+
+			"forced stop there can wrap -- this regression is unreachable on these strips",
+			reel, rows-1)
+	}
+
+	// The stops that place that scatter somewhere on the board.
+	want := map[int]int{}
+	for offset := 0; offset < rows; offset++ {
+		want[((scatterPos-offset)%length+length)%length] = 0
+	}
+
+	for i := 0; i < 20000; i++ {
+		if err := b.ForceScatters(rs, "BR0", strip, st, 3, trigger, g); err != nil {
+			t.Fatalf("force 3 on BR0: %v", err)
+		}
+		if _, ok := want[b.ReelPositions[reel]]; ok {
+			want[b.ReelPositions[reel]]++
+		}
+	}
+
+	// Each of the offsets is drawn uniformly, so the wrapped stops must show up at
+	// broadly the same rate as the non-wrapped one. A loose floor keeps this a
+	// structural check rather than a sampling-noise tripwire.
+	best := 0
+	for _, n := range want {
+		if n > best {
+			best = n
+		}
+	}
+	for stop, n := range want {
+		if n*5 < best {
+			t.Errorf("reel %d stop %d seen %d times against a best of %d -- forced "+
+				"placements needing a wrapping stop are being dropped", reel, stop, n, best)
 		}
 	}
 }

@@ -15,6 +15,7 @@ type Game struct {
 	Con     *Constellation
 	Tier    string
 	wild    engine.SymID
+	star    engine.SymID
 	padded  bool
 }
 
@@ -84,18 +85,22 @@ func (g *Game) RunSpin(sim int, seed uint64) error {
 // Valid after RunSpin returns: the redraw loop clears g.Con at the top of each
 // attempt, so what survives is the constellation of the book that was KEPT.
 //
-// roamSpins is rung+1, not rung: the beast shows rung 0 on the spin it first
-// appears (a roam spin that pays but does not climb), and each later roam takes
-// the next rung. That is the same count Python's measure harness gets from
-// counting beastRoam events.
-func (g *Game) FeatureOutcome() (dealt, completed bool, roamSpins, topRung int) {
+// roamSpins counts the spins the beast spent on the board, including the one it
+// appeared on -- the same count Python's measure harness gets from counting
+// beastRoam events. It is tracked explicitly rather than derived from the ladder
+// rung, because act two has no rungs and the derived version reported a flat zero
+// for every act two feature while looking like a real measurement.
+//
+// topMult is the multiplier the feature ended on: the last ladder rung reached, or
+// the total collected under act two.
+func (g *Game) FeatureOutcome() (dealt, completed bool, roamSpins, topMult int) {
 	if g.Con == nil {
 		return false, false, 0, 0
 	}
 	if g.Con.Phase() != PhaseRoam {
 		return true, false, 0, 0
 	}
-	return true, true, g.Con.Rung() + 1, g.Con.Multiplier()
+	return true, true, g.Con.RoamSpins(), g.Con.Multiplier()
 }
 
 // checkRepeat is Starwake's redraw rule on top of the SDK's.
@@ -180,12 +185,37 @@ func (g *Game) RunFreespin() error {
 		return err
 	}
 	g.Con = con
+	// Carried from the SLICE, not the tier: ascension's natural rate is a tier
+	// property, but a wincap slice needs it pinned on so cap books are cheap to
+	// manufacture. Read here at deal time because Wake has no view of the
+	// distribution it was dealt under.
+	if g.Dist != nil {
+		con.ForceAscend = g.Dist.Conditions.ForceAscension
+	}
+	// Resolved per deal, not once in NewGame: the star symbol lives in the TIER's
+	// starDrops block, and a tier without one runs the ladder and never looks it up.
+	g.star = 0
+	if name := con.StarSymbol(); name != "" {
+		id, err := g.Syms.ID(name)
+		if err != nil {
+			return fmt.Errorf("%s: star symbol %q: %w", g.Tier, name, err)
+		}
+		g.star = id
+	}
 	g.emitConstellationDealt()
 
 	beastHasAppeared := false
 
 	for g.Fs < g.TotFs {
 		g.UpdateFreespin()
+		// ACT TWO SWAPS THE REELS. The roam strip is the only one carrying star
+		// symbols, which is what keeps them out of the charge phase where there is
+		// no beast to collect them. Set per spin rather than once at wake so the
+		// charge phase is provably untouched.
+		g.StripKey = ""
+		if con.ActTwo() && con.Phase() == PhaseRoam {
+			g.StripKey = RoamStripKey
+		}
 		if err := g.DrawBoard(false); err != nil {
 			return err
 		}
@@ -198,11 +228,23 @@ func (g *Game) RunFreespin() error {
 					return err
 				}
 				g.emitBeastRoam()
-				g.emitMultiplierClimb()
+				if !con.ActTwo() {
+					g.emitMultiplierClimb()
+				}
 			} else {
 				beastHasAppeared = true
 				g.emitBeastRoam()
 			}
+		}
+
+		// ⚠ COLLECT BEFORE STAMPING. The block is about to overwrite whatever it
+		// covers, so a star it roamed on top of would be destroyed unread if this
+		// ran after ApplyWilds -- silently, and only on the spins where the block
+		// happened to land on the good star.
+		if stars := con.RollStarValues(g.Board, g.star, g.RNG); len(stars) > 0 {
+			g.emitStarsLanded(stars)
+			gained, total := con.Collect()
+			g.emitStarsCollected(stars, gained, total)
 		}
 
 		con.ApplyWilds(g.Board, g.wild)
@@ -224,6 +266,10 @@ func (g *Game) RunFreespin() error {
 				return err
 			}
 			g.emitBeastWake()
+			if con.AscendedThisSpin {
+				g.emitConstellationAscend()
+				con.AscendedThisSpin = false
+			}
 			// Guarantee the roam window. An early completion already has the
 			// spins (tot_fs untouched -- "finish early = longer roam", the fat
 			// tail); only a LATE completion extends the feature, so "even a
@@ -239,6 +285,8 @@ func (g *Game) RunFreespin() error {
 		}
 	}
 
+	// The basegame draws from the distribution again after the feature returns.
+	g.StripKey = ""
 	g.EndFreespin()
 	return nil
 }
@@ -311,6 +359,20 @@ func (g *Game) emitBeastWake() {
 	})
 }
 
+// emitConstellationAscend reports the rare switch to the richer star table.
+//
+// Emitted immediately AFTER beastWake and before the first starsLanded, because
+// the roll happens at wake and is sticky for the whole roam. A frontend that saw
+// it later would already have animated ordinary stars at ascended values. Replay
+// must work from any point, so it carries the tier rather than referring back.
+func (g *Game) emitConstellationAscend() {
+	g.AddEvent(engine.Event{
+		Type:  "constellationAscend",
+		Tier:  g.Con.Tier,
+		Beast: g.Con.BeastName,
+	})
+}
+
 func (g *Game) emitBeastRoam() {
 	con := g.Con
 	mult := con.Multiplier()
@@ -324,4 +386,38 @@ func (g *Game) emitBeastRoam() {
 func (g *Game) emitMultiplierClimb() {
 	mult := g.Con.Multiplier()
 	g.AddEvent(engine.Event{Type: "multiplierClimb", Multiplier: &mult})
+}
+
+func (g *Game) starsJSON(stars []Star) []engine.StarJSON {
+	out := make([]engine.StarJSON, len(stars))
+	for i, s := range stars {
+		out[i] = engine.StarJSON{
+			Reel:  s.Cell.Reel,
+			Row:   engine.PadRow(s.Cell.Row, g.padded),
+			Value: s.Value,
+		}
+	}
+	return out
+}
+
+// starsLanded reports the stars this roam spin dealt, BEFORE they are taken. Split
+// from the collect so the frontend has a beat to show them on the reels -- one
+// event carrying both would give it nothing to animate between.
+func (g *Game) emitStarsLanded(stars []Star) {
+	g.AddEvent(engine.Event{Type: "starsLanded", Stars: g.starsJSON(stars)})
+}
+
+// starsCollected reports the beast taking every star on the board.
+//
+// Repeats the star list rather than referring back to starsLanded: replay must be
+// able to start from any point, so no event may depend on having seen an earlier
+// one. `gained` is this spin's sum and `multiplier` is the running total, which is
+// what a line crossing the block will actually be paid at.
+func (g *Game) emitStarsCollected(stars []Star, gained, total int) {
+	g.AddEvent(engine.Event{
+		Type:       "starsCollected",
+		Stars:      g.starsJSON(stars),
+		Gained:     &gained,
+		Multiplier: &total,
+	})
 }
