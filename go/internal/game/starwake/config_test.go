@@ -102,6 +102,23 @@ func TestPrelitCells(t *testing.T) {
 	}
 }
 
+// Only ascendant wakes more than one block, and that is the entire on-screen
+// difference between it and an ordinary draco -- everything else about the two
+// tiers is derived from the same source and is identical by construction. If this
+// ever reads 1, the rarest outcome in the game is invisible again.
+func TestOnlyAscendantWakesTwins(t *testing.T) {
+	_, con := load(t)
+	for name, tier := range con.Tiers {
+		want := 1
+		if name == "ascendant" {
+			want = 2
+		}
+		if got := tier.Beasts(); got != want {
+			t.Errorf("%s: wakes %d beast(s), want %d", name, got, want)
+		}
+	}
+}
+
 func TestRoamOrigins(t *testing.T) {
 	c, con := load(t)
 	// A 2x2 block on a 5x4 grid has 4 x 3 = 12 legal origins. That count is the

@@ -120,6 +120,44 @@ class OptimizationSetup:
         zero_cond = ConstructConditions(rtp=0.0, av_win=0, search_conditions=0).return_dict()
 
         # damp the mid tail / lift the upper tail of a feature criteria (shape vol)
+        # ⚠⚠ MYSTERY BARBELLS WITHOUT THESE. MEASURED Aug 12 2026, TWO DRAWS.
+        # Concentrating 60% of payback into ascendant leaves the corvus and draco
+        # fences having to DISCARD 34% and 40% of their natural value, and the
+        # optimizer's cheapest way to discard value is to pile weight onto
+        # near-worthless books. Undressed, on identical books, it hollowed the middle
+        # out and moved the weight to BOTH ends (draw 1 / draw 2 under-0.25x 61.7% /
+        # 68.4%, against 44.4% before the roll-mix change):
+        #     band x ticket   before -> after      band x ticket  before -> after
+        #     0    - 0.25     40.2%  -> 61.7%      2  - 5          8.1%  ->  7.2%
+        #     0.25 - 0.5      24.3%  -> 15.8%      5  - 10         3.9%  ->  6.0%
+        #     0.5  - 1        14.6%  ->  4.8%      50 +            0.0%  ->  0.1%
+        # The 7-point gap between the two draws is this mode's own noise; both sit in
+        # the 60s, so it is the SHAPE that is wrong, not the draw. Same disease the
+        # corvus rebuild note documents, and the same treatment: suppress the dump zone
+        # FROM ZERO, boost the band the fence's own mean lands in, fund it off the top.
+        #
+        # ⚠ RANGES ARE DERIVED FROM THE TICKET, NOT TYPED IN. Every hardcoded band in
+        # this file has gone stale at least once when its mode was repriced (corvus's
+        # (30,60)/(60,120)/(120,240) were written for a 240x ticket and were boosting
+        # the dump zone by the time it cost 120x). Deriving them means a reprice moves
+        # them automatically and the annotation can never disagree with the numbers.
+        _MYSTERY_EDGES = (0.0, 0.25, 0.5, 1.0, 2.0, 5.0, 50.0)  # x ticket; 50x == the cap
+
+        def mystery_bands(criteria, factors):
+            """Gapless scaling bands for one tier fence inside buy_mystery.
+
+            GAPLESS IS THE POINT. Three bands with holes between them let the
+            optimizer put whatever it likes in the holes, which is how a 21-point
+            body swing showed up on corvus. Every range carries a factor here, so no
+            part of the distribution is left to its discretion.
+            """
+            ticket = costs["buy_mystery"]
+            return [
+                {"criteria": criteria, "scale_factor": f,
+                 "win_range": (int(lo * ticket), int(hi * ticket)), "probability": 1.0}
+                for (lo, hi), f in zip(zip(_MYSTERY_EDGES, _MYSTERY_EDGES[1:]), factors)
+            ]
+
         def tail_scaling(criteria):
             return [
                 {"criteria": criteria, "scale_factor": 0.8, "win_range": (1000, 2000), "probability": 1.0},
@@ -239,11 +277,60 @@ class OptimizationSetup:
         #    where the mode already has one Distribution per outcome (base/ante/mystery).
 
         mystery_cap_rtp = 0.040
-        mystery_roll_mix = {"corvus": 0.350, "ursa": 0.295, "draco": 0.250, "ascendant": 0.100}
-        mystery_payback = {"corvus": 0.149, "ursa": 0.141, "draco": 0.232, "ascendant": 0.478}
+        # ⚠ REWEIGHTED Aug 12 2026 to 35 / 35 / 20 / 10 (was 35 / 29.5 / 25 / 10). This
+        # MUST match the generation quotas in game_config's buy_mystery BetMode, and it
+        # is a RE-SIM: quotas decide which books exist, hr decides how often each is
+        # delivered, and only re-generating moves the published odds. Nothing else can
+        # -- a reprice or a ceiling change provably cannot, which this file has had to
+        # re-establish four separate times.
+        # Only the RATIOS matter here: _roll_total below normalises them.
+        mystery_roll_mix = {"corvus": 0.350, "ursa": 0.350, "draco": 0.200, "ascendant": 0.100}
+        # ⚠ RE-DERIVED Aug 12 2026 for the 500x reprice. THE RULE IS EXPLICIT NOW:
+        # every purchasable tier rolled inside mystery is worth the SAME FRACTION
+        # (~78%) of buying it outright, and ascendant absorbs the rest. At cost 500
+        # the standalone-fair values are corvus 193.4x, ursa 290.1x, draco 386.8x
+        # (rtp * that tier's own price), so:
+        #   corvus 0.35*152.3 = 53.3   ursa 0.35*227.7 = 79.7
+        #   draco  0.20*303.6 = 60.7   asc  0.10*2697  = 269.7   (+ 20.0 cap slice)
+        #   = 483.45x = rtp * 500.
+        # ASCENDANT NOW CARRIES 60% OF PAYBACK ON 10% OF ROLLS (was 49.86%), which
+        # is 5.79x the ticket per roll against 4.83x before -- the tier gets STRONGER
+        # in absolute terms while the ticket gets cheaper. Sits between Rage Bait's
+        # 52% and Captain Death's 80% (the ETL concentration cap).
+        # ⚠ RTP IS STRICTLY CONSERVED: every point here comes out of the other three.
+        # mystery_cap_rtp is NOT a second source -- since Aug 6 every mystery cap book
+        # is an ascendant roll, so that budget already belongs to ascendant and raising
+        # it only moves ascendant's own delivery from body wins to forced max wins.
+        # ⚠⚠ ASCENDANT PULLED BACK 60% -> 50% OF PAYBACK, Aug 12 2026, AND THE REASON
+        # IS THE BEAT RATE. At 60% the three purchasable tiers shared 40.1% of payback
+        # across 90% of rolls -- 0.474x the ticket each on average -- and a fence whose
+        # OWN mean is half a ticket cannot pay a full one often. Measured across three
+        # dress cuts the mode's beat rate sat at 15.05 / 15.12 / 12.61%, i.e. the dresses
+        # could move the body 10 points but not the beat rate at all. Ascendant alone
+        # supplied ~9 of those points.
+        # => BEAT RATE IS BOUGHT WITH CONCENTRATION, NOT WITH DRESSES. This is the
+        #    conservation law in its sharpest form: at fixed RTP the only way 90% of
+        #    rolls beat the ticket more often is for the other 10% to carry less.
+        #
+        # At 50% the three tiers deliver ~98% of their STANDALONE-FAIR value (what the
+        # same tier costs as its own buy), so rolling one inside mystery is worth almost
+        # exactly buying it, and the ticket premium is entirely the ascendant shot:
+        #   corvus 0.35*189.6 = 66.4   ursa 0.35*284.4 =  99.5
+        #   draco  0.20*379.2 = 75.8   asc  0.10*2415  = 241.5  (incl. 20.0 cap slice)
+        # ⚠ THE COST IS THE POINT OF THE EXERCISE. Ascendant per roll goes 5.79x the
+        # ticket back to 4.83x -- exactly where it was before this work -- so the tier's
+        # jackpot identity now rests on TWIN DRAGONS and the 500x price rather than on
+        # carrying a bigger share. Raising this number is the single lever if that turns
+        # out not to be enough.
+        mystery_payback = {"corvus": 0.143, "ursa": 0.215, "draco": 0.164, "ascendant": 0.478}
 
         _cap_weight = mystery_cap_rtp * costs["buy_mystery"] / wincaps["buy_mystery"]
-        _roll_total = sum(mystery_roll_mix.values())  # 0.995 by design, NOT 1.0
+        # Normalises the mix, so the shares above are read as RATIOS and their absolute
+        # sum is irrelevant. (It read 0.995 while the mix was written to leave room for
+        # the wincap quota; that coincidence is gone as of Aug 12 2026 and was never
+        # what made the invariant hold -- sum(1/hr) + cap_weight == 1 comes out of this
+        # normalisation for any mix.)
+        _roll_total = sum(mystery_roll_mix.values())
         mystery_hr = {
             tier: _roll_total / (share * (1.0 - _cap_weight))
             for tier, share in mystery_roll_mix.items()
@@ -522,8 +609,29 @@ class OptimizationSetup:
             "buy_draco": {
                 "conditions": {
                     "wincap": wincap_cond("buy_draco", 0.075),
-                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1.0015023),
+                    # ⚠⚠ hr RE-DERIVED Aug 12 2026 FOR THE 500 -> 400 REPRICE, and it
+                    # is the same trap buy_corvus documents above: hr = 1/(1-cap_rate)
+                    # and cap_rate = cap_rtp * cost / cap, so a COST change moves it
+                    # exactly as a CEILING change does. 0.075 * 400/25000 = 0.0012, so
+                    # hr = 1/(1 - 0.0012) = 1.0012014 (was 1.0015023 at cost 500).
+                    # Leaving the old value behind reserves weight for a cap slice that
+                    # no longer needs it; the shortfall renormalises every weight up and
+                    # lands the mode OVER Stake's 0.967 RTP cap -- a CRITICAL failure.
+                    # ⚠ The cap RATE moves with the price too: 1 in 667 -> 1 in 833.
+                    # Still the most frequent max win in the menu (mystery is 1 in
+                    # 1,250 at cost 500), so draco keeps the cap crown.
+                    "draco": feature_cond(round(rtp - 0.075, 5), hr=1.0012014),
                 },
+                # ⚠ TICKET-RELATIVE BAND AUDIT, Aug 12 2026 (the 500 -> 400 reprice).
+                # Ranges here are BASE-BET units, so a reprice silently changes what
+                # they mean -- the trap the corvus rebuild note above is written about.
+                # At 500x / at 400x:  tail_scaling (1000,2000) 2-4x -> 2.5-5x ticket,
+                # (3000,4000) 6-8x -> 7.5-10x; the fence bias (50,150) 0.1-0.3x ->
+                # 0.125-0.375x. All three shift by the same 25% and none crosses a
+                # band boundary that matters, so they are LEFT ALONE DELIBERATELY:
+                # re-cutting dresses in the same run as the reprice would confound the
+                # measurement, and draco's body is the thing being measured. Revisit
+                # only if the reprice measurement shows the body moved.
                 "scaling": ConstructScaling(tail_scaling("draco")).return_dict(),
                 "parameters": run_params(5, 20, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["draco"], [(50.0, 150.0)], [0.3]).return_dict(),
@@ -609,7 +717,36 @@ class OptimizationSetup:
                     "ursa": feature_cond(mystery_rtp["ursa"], hr=mystery_hr["ursa"], kind=4),
                     "corvus": feature_cond(mystery_rtp["corvus"], hr=mystery_hr["corvus"], kind=3),
                 },
-                "scaling": ConstructScaling(tail_scaling("ascendant") + tail_scaling("draco")).return_dict(),
+                # Boost peaks on the band each fence's OWN mean lands in -- corvus must
+                # average 152x (0.30x ticket), ursa 228x (0.46x), draco 304x (0.61x) --
+                # so each tier piles up around its own value instead of at zero. The
+                # top two bands fund it; they are where the undressed draws had grown.
+                # ASCENDANT IS DELIBERATELY UNDRESSED: it averages 2,699x (5.4x ticket)
+                # and completes 95.9%, so it is not what busts, and banding it would
+                # fight its own fence target.
+                # ⚠⚠ THE BEAT-RATE DIAL IS WHERE EACH FENCE'S PEAK SITS, NOT THE 2-5x
+                # FACTOR. Measured Aug 12 2026: raising 2-5x from 0.6 to 1.0 moved the
+                # mode's beat rate 15.05% -> 15.12% and the 2-5x band actually FELL
+                # (4.51% -> 3.67%). The optimizer was not short of permission there; it
+                # was following the peaks, which sat at 0.25-0.5x and 0.5-1x.
+                # A fence CANNOT beat the ticket often if its own mean is far below one:
+                # corvus must average 0.30x the ticket, ursa 0.46x, draco 0.61x
+                # (Markov puts hard ceilings of 30% / 46% / 61% on their beat rates, and
+                # the real numbers sit well under that once the tail is paid for). So the
+                # peaks are set PER TIER, at what each can actually afford:
+                # RE-CUT for the 50% split: every tier is richer now, so every peak
+                # moves up one band. Means are corvus 0.38x the ticket, ursa 0.57x,
+                # draco 0.76x -- draco can genuinely live at 1-2x, which it could not
+                # at 60% concentration.
+                #   corvus  peak 0.5-1x
+                #   ursa    peak 0.5-1x, strong 1-2x shoulder
+                #   draco   peak 1-2x
+                "scaling": ConstructScaling(
+                    mystery_bands("corvus", (0.15, 2.5, 3.0, 1.5, 1.0, 0.3))
+                    + mystery_bands("ursa", (0.15, 1.8, 3.0, 2.5, 1.0, 0.3))
+                    + mystery_bands("draco", (0.15, 1.2, 2.0, 3.5, 1.2, 0.3))
+                    + tail_scaling("ascendant")
+                ).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ascendant"], [(20.0, 60.0)], [0.3]).return_dict(),
             },

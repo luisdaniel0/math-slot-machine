@@ -427,6 +427,34 @@ class GameConfig(Config):
             "ascendant": [(4, 0), (4, 1)],
         }
 
+        # ---------------------------------------------------- TWIN DRAGONS
+        # How many beast blocks wake and roam. Absent = 1, keyed sparsely like
+        # constellation_ascension so every tier without an entry makes exactly the
+        # rng calls it always did -- verified byte-identical on a 1e6 buy_draco
+        # re-sim, which is what keeps five of six modes off the re-sim list.
+        #
+        # WHY ASCENDANT HAS TWO. It was the rarest outcome in the game and the only
+        # one a player could not buy, and NOTHING ON SCREEN SAID SO. Mechanically it
+        # was draco with two cells pre-lit: same 11 cells, same ladder, same star
+        # table, same 15 spins, and constellationDealt even emits beast "draco". The
+        # 1-in-10 moment was invisible. Two dragons is the cheapest legible answer --
+        # the same sprite drawn twice, so the art brief's "3 beasts, not 4" holds,
+        # and it is a different BOARD rather than bigger numbers on the same one.
+        #
+        # ⚠ IT DOES NOT COMPOUND THE MULTIPLIER, BY DESIGN. Line wins use
+        # max_symbol (game_executables.py) and both blocks carry the same collected
+        # value, so a line crossing both is multiplied ONCE. And collection is
+        # already global -- the beast never had to land on a star to take it -- so
+        # the second block changes neither how much is collected nor how big the
+        # multiplier gets. What it buys is REACH: 8 of 20 cells wild instead of 4,
+        # and roughly twice the paylines catching the multiplier.
+        #
+        # ⚠ A THIRD BLOCK IS CONFIG, NOT CODE -- the engine takes any count the grid
+        # can pack disjointly (four 2x2s on a 5x4). Sweep before believing it helps.
+        self.constellation_beast_count = {
+            "ascendant": 2,
+        }
+
         # Which CREATURE a tier renders as. Identity and artwork are the same thing
         # for the three normal tiers, but an Ascendant is a Draco -- the frontend
         # must draw the dragon, not invent a fourth beast. Emitted on the deal and
@@ -1019,15 +1047,16 @@ class GameConfig(Config):
             # buy_draco: pin the greedy tier -- the 25,000x product players pay for,
             # earning its price with ~4.5x ursa's cap rate rather than a taller ceiling.
             BetMode(
-                name="buy_draco", cost=500.0, rtp=self.rtp, max_win=cap,
+                name="buy_draco", cost=400.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     Distribution(criteria="wincap", quota=0.01, win_criteria=cap, conditions=draco_wincap_condition),
                     Distribution(criteria="draco", quota=0.99, conditions=draco_condition),
                 ],
             ),
-            # buy_mystery: "Let the Sky Decide" -- 35 / 29.5 / 25 / 10 corvus / ursa /
-            # draco / ASCENDANT, plus the wincap slice.
+            # buy_mystery: "Let the Sky Decide" -- 35 / 35 / 20 / 10 corvus / ursa /
+            # draco / ASCENDANT, plus the wincap slice. (Was 35 / 29.5 / 25 / 10 until
+            # Aug 12 2026; see the quota block below for why draco gave up 5 points.)
             #
             # ONE DISTRIBUTION PER TIER, not a single blended one. The old single
             # "mystery" fence let the optimizer reshape each tier freely to hit RTP,
@@ -1066,8 +1095,22 @@ class GameConfig(Config):
             # That is defensible (mystery is the dearest bet and carries a 35% chance of
             # rolling the cheap tier) but it inverts "draco is the cap play", so
             # re-measure cap-value-per-stake across the menu before shipping.
+            # ⚠⚠ RE-PRICED 600 -> 500 (Aug 12 2026), AND THE ARGUMENT ABOVE IS NOW
+            # PARTLY SUPERSEDED. "Cost is the measured output" was true while the
+            # payback split was held fixed; it is not a law. The optimizer reweights
+            # to hit mean = rtp * cost, so cost is a FREE parameter and the real
+            # binding constraint is RICHNESS, raw_mean/(rtp*cost) -- see the Aug 8
+            # entry in CLAUDE.md. 500x is the market norm for a mystery buy (Rage
+            # Bait, Captain Death and C&C all price theirs there), so we now pick the
+            # price and let the payback split absorb it rather than the other way
+            # round. buy_draco moved 500 -> 400 in the same change so the ladder
+            # stays strictly ascending: THE MENU IS 200 / 300 / 400 / 500.
+            # ⚠ The old note's worry -- "mystery must clear buy_draco's price" -- is
+            # met by moving draco, not mystery. Mystery being CHEAPER than a tier buy
+            # would have been the trap; it is not, and 65% of its rolls are the two
+            # tiers cheaper than draco anyway.
             BetMode(
-                name="buy_mystery", cost=600.0, rtp=self.rtp, max_win=cap,
+                name="buy_mystery", cost=500.0, rtp=self.rtp, max_win=cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     # Forced caps are ASCENDANT rolls (was draco until Aug 6 2026 -- see
@@ -1076,11 +1119,25 @@ class GameConfig(Config):
                     # matches these; no opt_params change is needed, and fence order still
                     # puts wincap ahead of the kind=6 ascendant body fence, which is what
                     # keeps the forced books out of the body slice.
+                    # ⚠ REWEIGHTED Aug 12 2026: 35 / 29.5 / 25 / 10 -> 35 / 35 / 20 / 10.
+                    # Five points move from DRACO to URSA. Quotas must sum to 1.000
+                    # INCLUDING the wincap slice, so the four tiers share 0.995 and the
+                    # ratios (not the absolute values) are what matter -- 0.348/0.348/
+                    # 0.199/0.100 is 35:35:20:10 scaled into the room available.
+                    # WHY: draco is the lottery and carries the highest body volatility
+                    # in the menu; ursa is the forgiving tier. Trading one for the other
+                    # makes mystery's PURCHASABLE side gentler. It also aims at the fence
+                    # that dumps hardest -- at the Aug 12 payback split draco has to
+                    # discard 40% of its natural value against ursa's 14%, and the
+                    # optimizer discards by refusing to deliver completed books (draco's
+                    # completion inside mystery fell 53.0% -> 28.3% on the reprice).
+                    # COST: draco is worth 505x natural against ursa's 260x, so the mode
+                    # gives up 2.0% of raw mean (544.1 -> 533.1x). Richness absorbs it.
                     Distribution(criteria="wincap", quota=0.005, win_criteria=cap, conditions=ascendant_wincap_condition),
                     Distribution(criteria="ascendant", quota=0.100, conditions=ascendant_condition),
-                    Distribution(criteria="draco", quota=0.250, conditions=draco_condition),
-                    Distribution(criteria="ursa", quota=0.295, conditions=ursa_condition),
-                    Distribution(criteria="corvus", quota=0.350, conditions=corvus_condition),
+                    Distribution(criteria="draco", quota=0.199, conditions=draco_condition),
+                    Distribution(criteria="ursa", quota=0.348, conditions=ursa_condition),
+                    Distribution(criteria="corvus", quota=0.348, conditions=corvus_condition),
                 ],
             ),
         ]

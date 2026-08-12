@@ -351,12 +351,37 @@ func (g *Game) emitStarLit(newly []config.Cell) {
 func (g *Game) emitBeastWake() {
 	con := g.Con
 	tier, _ := g.Feature.Tier(con.Tier)
-	g.AddEvent(engine.Event{
+	ev := engine.Event{
 		Type:       "beastWake",
 		Tier:       con.Tier,
 		Beast:      con.BeastName,
 		BeastShape: &engine.Shape{Reels: tier.BeastShape[0], Rows: tier.BeastShape[1]},
-	})
+	}
+	// beastShape describes ONE block, so a tier that wakes several needs to say how
+	// many and where. Only ascendant does today; see the beastCount note in
+	// game_config.py for why it is the tier that gets them.
+	g.addBeasts(&ev)
+	g.AddEvent(ev)
+}
+
+// addBeasts attaches the per-block origins, but only for a multi-block tier.
+//
+// ⚠ THE GUARD IS WHAT PROTECTS THE OTHER FIVE MODES. Adding a field to an event
+// changes every book that carries it, so emitting this unconditionally would
+// re-sim base, ante_starfall and all three tier buys for a field none of them
+// needs -- their single block is already fully described by `cells`.
+func (g *Game) addBeasts(ev *engine.Event) {
+	con := g.Con
+	if con.BeastCount() < 2 {
+		return
+	}
+	origins, placed := con.BeastOrigins()
+	if !placed {
+		return
+	}
+	count := con.BeastCount()
+	ev.Beasts = g.clientCells(origins)
+	ev.BeastCount = &count
 }
 
 // emitConstellationAscend reports the rare switch to the richer star table.
@@ -376,11 +401,15 @@ func (g *Game) emitConstellationAscend() {
 func (g *Game) emitBeastRoam() {
 	con := g.Con
 	mult := con.Multiplier()
-	g.AddEvent(engine.Event{
-		Type:       "beastRoam",
+	ev := engine.Event{
+		Type: "beastRoam",
+		// The union of every block. A one-block tier reads 4 cells exactly as it
+		// always did; a twin reads 8, and `beasts` below says which four are which.
 		Cells:      g.maskCells(con.BeastCells()),
 		Multiplier: &mult,
-	})
+	}
+	g.addBeasts(&ev)
+	g.AddEvent(ev)
 }
 
 func (g *Game) emitMultiplierClimb() {

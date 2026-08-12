@@ -176,6 +176,7 @@ def export_constellation(config) -> dict:
                 [int(r), int(row)]
                 for (r, row) in config.constellation_prelit_cells.get(tier, ())
             ],
+            "beastCount": int(getattr(config, "constellation_beast_count", {}).get(tier, 1)),
             "beastName": config.constellation_beast_names[tier],
             "featureSpins": config.num_feature_spins[tier],
         }
@@ -250,6 +251,21 @@ def validate(payload: dict, config) -> None:
         origins = (grid[0] - bw + 1) * (grid[1] - bh + 1)
         if origins < 2:
             raise ValueError(f"{tier}: beast {bw}x{bh} has {origins} roam positions")
+
+        # Every block needs a spot that is not on top of another one. This is a
+        # PACKING question, not an origin count: a 2x2 on a 5x4 has 12 origins but
+        # only 4 disjoint placements, so checking against 12 would wave through a
+        # beastCount that can only be met by stacking blocks -- which renders as one
+        # block and silently loses the mechanic. Mirrors Tier.maxDisjoint in Go so
+        # the two ends cannot disagree about what is loadable.
+        packed = (grid[0] // bw) * (grid[1] // bh)
+        if t["beastCount"] < 1:
+            raise ValueError(f"{tier}: beastCount {t['beastCount']} must be >= 1")
+        if t["beastCount"] > packed:
+            raise ValueError(
+                f"{tier}: beastCount {t['beastCount']} but only {packed} disjoint "
+                f"{bw}x{bh} blocks fit a {grid[0]}x{grid[1]} grid"
+            )
 
     exported = {m["name"] for m in payload["betModes"]}
     expected = {bm.get_name() for bm in config.bet_modes}

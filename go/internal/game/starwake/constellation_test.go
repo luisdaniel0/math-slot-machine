@@ -157,17 +157,25 @@ func TestBeastNeverExitsTheGrid(t *testing.T) {
 	}
 
 	for spin := 0; spin < 5000; spin++ {
-		origin, placed := cst.BeastOrigin()
+		origins, placed := cst.BeastOrigins()
 		if !placed {
 			t.Fatal("beast is awake but not placed")
 		}
-		if origin.Reel < 0 || origin.Reel+2 > c.Game.NumReels ||
-			origin.Row < 0 || origin.Row+2 > c.Rows(origin.Reel) {
-			t.Fatalf("spin %d: 2x2 beast at (%d,%d) is off a %dx%d grid",
-				spin, origin.Reel, origin.Row, c.Game.NumReels, c.Rows(0))
+		if len(origins) != cst.BeastCount() {
+			t.Fatalf("spin %d: %d blocks placed, want %d", spin, len(origins), cst.BeastCount())
 		}
-		if got := cst.BeastCells().Count(); got != 4 {
-			t.Fatalf("spin %d: 2x2 beast covers %d cells", spin, got)
+		for _, origin := range origins {
+			if origin.Reel < 0 || origin.Reel+2 > c.Game.NumReels ||
+				origin.Row < 0 || origin.Row+2 > c.Rows(origin.Reel) {
+				t.Fatalf("spin %d: 2x2 beast at (%d,%d) is off a %dx%d grid",
+					spin, origin.Reel, origin.Row, c.Game.NumReels, c.Rows(0))
+			}
+		}
+		// 4 cells per block with no overlap. Counting the UNION is what makes this
+		// a non-overlap assertion too: two stacked blocks would read 4, not 8.
+		if got, want := cst.BeastCells().Count(), 4*cst.BeastCount(); got != want {
+			t.Fatalf("spin %d: %d 2x2 beasts cover %d cells, want %d (blocks must not overlap)",
+				spin, cst.BeastCount(), got, want)
 		}
 		if err := cst.Roam(g); err != nil {
 			t.Fatal(err)

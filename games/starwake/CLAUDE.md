@@ -22,7 +22,117 @@ numbers, the fixed CrowdSim config that makes session stats comparable, and the 
 reading them. Use it when comparing Starwake to another game; use THIS file for why the
 math is the way it is.
 
+### ▶▶ TWIN DRAGONS, A 500x MYSTERY, AND A 35/35/20/10 MIX (Aug 12 2026)
+POOL RE-SIMMED, RE-OPTIMIZED, GATED AND PUBLISHED. All seven CRITICAL pass, 3-Star 0
+failed classes, 2-Star 1 (the known absolute CVaR), cross-mode RTP spread 0.000%.
+
+  THE MENU IS NOW 200 / 300 / 400 / 500.  buy_mystery took the 500x MARKET NORM
+  (Rage Bait, Captain Death and C&C all price a mystery there) and buy_draco dropped
+  to 400 so the ladder stays strictly ascending -- 500 would have collided.
+
+  buy_mystery      shipped(600x)   now(500x)
+  under 0.25x          40.19%       30.30%   <- the win
+  beat the ticket      20.86%       20.50%
+  weighted median      0.343x       0.370x
+  std/cost             2.0734       2.3139
+  max win          1 in 1,042   1 in 1,250
+  DELIVERED MIX 34.972 / 34.972 / 19.984 / 10.072 -- display 35 / 35 / 20 / 10.
+  PAYBACK 13.71 / 20.61 / 15.74 / 49.94. Completion 95.8 / 63.8 / 43.1 / 94.3.
+⚠ THE DISPLAYED ODDS HAVE CHANGED. Every 35/30/25/10 in this file and in any frontend
+copy is STALE. A roll-mix change is the ONLY thing that can move them (it is a
+generation quota), which is the flip side of the four-times-repeated warning below
+that a reprice or a ceiling change cannot.
+
+WHAT TWIN DRAGONS IS. The ascendant tier wakes TWO 2x2 blocks instead of one --
+`constellation_beast_count = {"ascendant": 2}`, a sparse per-tier dict like
+constellation_ascension. Same sprite drawn twice, so the art brief's "3 beasts, not
+4" holds.
+  - WHY: ascendant was the rarest outcome in the game, the only one that cannot be
+    bought, and NOTHING ON SCREEN SAID SO. It was draco with two cells pre-lit --
+    same 11 cells, ladder, star table and 15 spins, and constellationDealt emits
+    beast "draco". The 1-in-10 moment was invisible. This was a LEGIBILITY defect,
+    not an economy one: the tier already carried ~50% of payback and capped 1 in 108.
+  - IT DOES NOT COMPOUND THE MULTIPLIER. Lines use max_symbol and both blocks carry
+    the same collected value, so a line crossing both is multiplied ONCE; collection
+    was already global. A second block buys REACH -- 8 of 20 cells wild, ~2x the
+    paylines catching the multiplier -- not a bigger number.
+  - 3x3 WAS NOT REVISITED and should not be: 6 roam positions on a 5x4 and a second
+    sprite rig. Two 2x2s have 12 origins each and one rig.
+  - EVENTS: beastWake and beastRoam now carry `beasts` (one origin per block) and
+    `beastCount`, EMITTED ONLY WHEN count >= 2. `cells` still carries the union, so
+    a one-block tier's events are byte-identical. Replay needs `beasts` because
+    eight cells can be paired into blocks several ways.
+
+⚠⚠ IT IS 4.2x TOO STRONG ON ITS OWN AND THAT IS THE LIVE RISK.
+  ascendant raw mean   2,598x -> 10,994x        unforced at-cap  1 in 67 -> 1 in 5
+  mystery pool richness  2.15 -> 3.46           (healthy band is 1.9-2.6)
+Doubling the wild footprint on a 20-payline game MORE than doubles output because
+wilds compound across lines. The optimizer absorbed it -- RTP exact, body good, and
+the delivered cap rate is unaffected because the wincap fence is ordered FIRST and
+consumes every 25,000x book, so cap_rtp still pins it at 1 in 1,250. But richness
+3.46 is corvus-disease territory (that mode sat at 3.74 with +/-20 point body
+swings). MEASURED HERE: two draws on the same pool gave under-0.25x 27.15% and
+30.30%, so ~3 points, not 20 -- the gapless dresses are doing their job. STILL
+TAKE n>=3 AND KEEP THE BEST BEFORE ANY PUBLISH.
+=> IF IT NEEDS TAMING, the lever is ascendant's STAR TABLE (give it its own instead
+   of aliasing draco's at game_config.py:597 -- ascendant exists only in buy_mystery
+   so it re-sims ONE mode) or its FEATURE SPINS. NOT the pre-lit set: the sweep at
+   game_config.py:401-407 shows (3,2)(4,0) drops completion to 45.2%, and a jackpot
+   tier that fails half the time is worse than an over-strong one.
+
+⚠⚠ THE LESSON WORTH KEEPING: **BEAT RATE IS BOUGHT WITH CONCENTRATION, NOT WITH
+DRESSES.** Ascendant was pushed to 60% of payback to make it feel like a jackpot.
+That left corvus+ursa+draco sharing 40.1% across 90% of rolls -- 0.474x the ticket
+each -- and A FENCE WHOSE OWN MEAN IS HALF A TICKET CANNOT PAY A FULL ONE OFTEN
+(Markov caps it at the mean). Measured across three dress cuts at 60%:
+     dress cut            under 0.25x   beat
+     peaks at 0.25-1x        30.53%    15.05%
+     same, 2-5x band 0.6->1.0 30.13%   15.12%   <- the "obvious" dial did NOTHING
+     peaks moved up          20.16%    12.61%   <- best body, WORST beat
+The dresses moved the body 10 points and the beat rate not at all. Pulling ascendant
+back to 50% moved beat to 20.94% in one run. At 50% the three purchasable tiers
+deliver ~98% of their STANDALONE-FAIR value (what the same tier costs as its own
+buy), which is a clean thing to be able to say in copy.
+⚠ THE COST: ascendant is back to 4.83x the ticket per roll, exactly where it started,
+and 2,415x absolute against the old 2,893x. ITS JACKPOT IDENTITY NOW RESTS ENTIRELY
+ON TWIN DRAGONS AND THE 500x PRICE. mystery_payback is the lever if that is not enough.
+
+⚠⚠ MYSTERY BARBELLS WITHOUT DRESSES, AND IT HAD NONE. Its scaling block was only
+tail_scaling(ascendant)+tail_scaling(draco) -- no consolation bands at all. Undressed
+at the 60% split it hollowed the middle out and piled weight on BOTH ends (under-0.25x
+61.7% and 68.4% on two draws, against 44.4% before). Fixed with GAPLESS per-tier bands
+(`mystery_bands`), one set per tier fence, every range carrying a factor so no part of
+the distribution is left to the optimizer's discretion.
+⚠ THE BANDS ARE DERIVED FROM THE TICKET, NOT TYPED IN. Every hardcoded band in this
+game has gone stale at least once on a reprice (corvus's (30,60)/(60,120)/(120,240)
+were written for a 240x ticket and were BOOSTING the dump zone by the time it cost
+120x). mystery_bands takes ticket multiples and multiplies by cost.
+
+⚠ TWO TRAPS HIT ON THE WAY, BOTH ALREADY DOCUMENTED IN THIS FILE:
+  1. buy_draco's `hr` IS HARDCODED and a COST change moves it, exactly as a ceiling
+     change does: hr = 1/(1-cap_rate), cap_rate = cap_rtp*cost/cap. 0.075*400/25000
+     -> hr 1.0015023 -> 1.0012014. A stale hr lands the mode OVER 0.967, a CRITICAL
+     failure. Cap rate moved 1 in 667 -> 1 in 833; draco keeps the cap crown over
+     mystery's 1 in 1,250.
+  2. draco's richness left the band on the reprice: 2.37 -> 2.96. Accepted as the
+     price of the market-norm mystery, watched with best-of-n on that mode.
+
+⚠ VERIFIED, NOT ASSUMED: the multi-block refactor is RNG-NEUTRAL for one-block tiers.
+buy_draco re-simmed at 1e6 twice during this work and hashed BYTE-IDENTICAL to the
+pre-change pool both times (books and raw LUT). There is a unit test that proves the
+draw accounting directly (TestSingleBlockConsumesExactlyOneDrawPerPlacement). That is
+what kept five of six modes off the re-sim list.
+
+⚠⚠ PATH CORRECTION, AND IT COST A WRONG MEASUREMENT: **THE LIVE POOL IS
+`games/starwake_go/library/`**, the Go shadow tree that optimize_go.py writes and
+publish_go.py reads. `games/starwake/library/` is the STALE Jul 31 Python-era pool --
+measuring it reads buy_draco at RTP 1.0036 and looks plausible. check_risk_gates.py
+still DEFAULTS to the stale path; pass the shadow dir explicitly.
+
 ### ▶▶ WHERE WE ARE (Aug 5 2026)
+⚠⚠ SUPERSEDED IN PART BY "TWIN DRAGONS" (Aug 12 2026) ABOVE -- READ THAT FIRST. The
+menu is 200/300/400/500, the mystery odds are 35/35/20/10, and the ascendant tier
+wakes two dragons. Every price and every mystery-odds figure below this line is stale.
 MATH: DONE. Act Two built, converged and gated — see "THE MATH IS DONE" below for
 the numbers and the pool location. All seven critical tests pass and 3-Star carries
 zero failed classes.

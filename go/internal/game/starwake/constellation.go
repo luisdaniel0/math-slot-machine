@@ -25,8 +25,24 @@ const (
 // `lit == targets`.
 type CellMask uint64
 
+// MaxBeasts caps how many blocks one tier can wake. A 5x4 grid fits at most four
+// disjoint 2x2s, so this is generous; it exists to keep the per-constellation
+// scratch a fixed array rather than a slice that allocates on every deal.
+const MaxBeasts = 4
+
 // Bit returns the mask bit for one position.
 func Bit(reel, row int) CellMask { return 1 << uint(reel*engine.MaxRows+row) }
+
+// blockMask is the mask a wxh block covers with its top-left at origin.
+func blockMask(origin config.Cell, w, h int) CellMask {
+	var m CellMask
+	for dr := 0; dr < w; dr++ {
+		for drow := 0; drow < h; drow++ {
+			m |= Bit(origin.Reel+dr, origin.Row+drow)
+		}
+	}
+	return m
+}
 
 // Has reports whether a position is set.
 func (m CellMask) Has(reel, row int) bool { return m&Bit(reel, row) != 0 }
@@ -66,8 +82,16 @@ type Constellation struct {
 
 	beastW, beastH int
 	origins        []config.Cell
-	beastOrigin    config.Cell
-	beastPlaced    bool
+	// beastOrigins holds one top-left per block, always len == beastCount once
+	// placed. Backed by a fixed array so a roam never allocates -- the placement
+	// runs on every feature spin of every book.
+	beastCount   int
+	beastOrigins []config.Cell
+	beastOrigBuf [MaxBeasts]config.Cell
+	// candBuf is scratch for the non-overlapping candidate list built per extra
+	// block. Reused rather than reallocated for the same reason.
+	candBuf     [engine.MaxReels * engine.MaxRows]config.Cell
+	beastPlaced bool
 
 	// ACT TWO. nil drops means this tier runs the original climbing ladder.
 	drops     *StarDrops
@@ -111,6 +135,7 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 		drops:      tier.StarDrops,
 		beastW:     tier.BeastShape[0],
 		beastH:     tier.BeastShape[1],
+		beastCount: tier.Beasts(),
 		origins:    tier.RoamOrigins(c),
 		phase:      PhaseCharge,
 		multiplier: 1,
@@ -139,8 +164,51 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 	if len(con.origins) == 0 {
 		return nil, fmt.Errorf("%s: beast %dx%d does not fit the grid", tierName, con.beastW, con.beastH)
 	}
+	if con.beastCount > MaxBeasts {
+		return nil, fmt.Errorf("%s: beastCount %d exceeds the %d the engine carries scratch for",
+			tierName, con.beastCount, MaxBeasts)
+	}
+	con.beastOrigins = con.beastOrigBuf[:0]
 	con.lit = con.prelit
 	return con, nil
+}
+
+// placeBeasts puts every block somewhere legal and non-overlapping.
+//
+// ⚠ THE RNG SHAPE IS LOAD-BEARING. A single-block tier makes EXACTLY the one
+// g.IntN(len(origins)) call it has always made, in the same position -- that is
+// what keeps corvus, ursa and draco byte-identical to a pre-twin-dragon pool and
+// saves five of six modes from a re-sim. Same guard the ascension roll uses.
+//
+// Extra blocks draw ONE further IntN each, over a pre-filtered candidate list
+// rather than by rejection-sampling in a loop. A loop would burn a variable
+// number of draws per book, which is the kind of drift that only shows up months
+// later as a pool nobody can reproduce.
+func (con *Constellation) placeBeasts(g *engine.RNG) {
+	con.beastOrigins = con.beastOrigBuf[:0]
+	first := con.origins[g.IntN(len(con.origins))]
+	con.beastOrigins = append(con.beastOrigins, first)
+	if con.beastCount == 1 {
+		return
+	}
+	taken := blockMask(first, con.beastW, con.beastH)
+	for len(con.beastOrigins) < con.beastCount {
+		cand := con.candBuf[:0]
+		for _, o := range con.origins {
+			if taken&blockMask(o, con.beastW, con.beastH) == 0 {
+				cand = append(cand, o)
+			}
+		}
+		// Config validation proves a disjoint placement exists for every block, so
+		// this cannot run dry -- but a tier that somehow reached here with none left
+		// would rather stop short than index a zero-length slice.
+		if len(cand) == 0 {
+			return
+		}
+		next := cand[g.IntN(len(cand))]
+		con.beastOrigins = append(con.beastOrigins, next)
+		taken |= blockMask(next, con.beastW, con.beastH)
+	}
 }
 
 // Phase reports the current phase.
@@ -239,7 +307,7 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 		con.rung = 0
 		con.multiplier = con.ladder[0]
 	}
-	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
+	con.placeBeasts(g)
 	con.beastPlaced = true
 	con.WokeThisSpin = true
 	// The beast is ON THE BOARD from the next spin, and that spin pays -- so the
@@ -262,7 +330,7 @@ func (con *Constellation) Roam(g *engine.RNG) error {
 	if con.phase != PhaseRoam {
 		return fmt.Errorf("%s: roam before the beast woke", con.Tier)
 	}
-	con.beastOrigin = con.origins[g.IntN(len(con.origins))]
+	con.placeBeasts(g)
 	con.roamSpins++
 	if !con.ActTwo() {
 		if con.rung+1 < len(con.ladder) {
@@ -364,21 +432,28 @@ func (con *Constellation) StarSymbol() string {
 // Collected is the running sum of every star value taken so far.
 func (con *Constellation) Collected() int { return con.collected }
 
-// BeastOrigin returns the block's top-left cell and whether it is on the board.
-func (con *Constellation) BeastOrigin() (config.Cell, bool) {
-	return con.beastOrigin, con.beastPlaced
+// BeastOrigins returns each block's top-left cell and whether they are on the
+// board. The slice is the constellation's own scratch -- read it, do not keep it.
+func (con *Constellation) BeastOrigins() ([]config.Cell, bool) {
+	return con.beastOrigins, con.beastPlaced
 }
 
-// BeastCells is the mask of cells the block currently covers (0 while asleep).
+// BeastCount is how many blocks this tier wakes.
+func (con *Constellation) BeastCount() int { return con.beastCount }
+
+// BeastCells is the mask of cells the blocks currently cover (0 while asleep).
+//
+// ⚠ THIS IS THE SEAM THE WHOLE MULTI-BLOCK CHANGE HANGS ON. WildCells, ApplyWilds
+// and the beastRoam event all read the mask rather than an origin, so unioning
+// here is the entire behavioural difference -- nothing downstream knows or cares
+// how many blocks produced it.
 func (con *Constellation) BeastCells() CellMask {
 	if !con.beastPlaced {
 		return 0
 	}
 	var m CellMask
-	for dr := 0; dr < con.beastW; dr++ {
-		for drow := 0; drow < con.beastH; drow++ {
-			m |= Bit(con.beastOrigin.Reel+dr, con.beastOrigin.Row+drow)
-		}
+	for _, o := range con.beastOrigins {
+		m |= blockMask(o, con.beastW, con.beastH)
 	}
 	return m
 }

@@ -173,10 +173,17 @@ func TestBetModes(t *testing.T) {
 		// Each mode's cap_rtp is held at its cap-value-per-stake (the documented
 		// ladder: base .020, ante .025, ursa .026, mystery .040, draco .075) and hr
 		// re-derived from the resulting rate -- see game_optimization.
+		// ⚠ REPRICED Aug 12 2026 to 200/300/400/500. buy_mystery moved to the 500x
+		// MARKET NORM for a mystery buy (Rage Bait, Captain Death and C&C all price
+		// theirs there) and buy_draco dropped to 400 so the ladder stays strictly
+		// ascending -- 500 would have collided with mystery. Richness moved to
+		// 2.50/2.29/2.96/2.15; draco is out the top of the healthy 1.9-2.6 band,
+		// which is the accepted cost of the market-norm price and is watched by
+		// taking the best of n>=3 optimizer draws on that mode.
 		{"buy_corvus", 200, 25000, true},
 		{"buy_ursa", 300, 25000, true},
-		{"buy_draco", 500, 25000, true},
-		{"buy_mystery", 600, 25000, true},
+		{"buy_draco", 400, 25000, true},
+		{"buy_mystery", 500, 25000, true},
 	}
 	for _, tc := range cases {
 		m, err := c.Mode(tc.name)
