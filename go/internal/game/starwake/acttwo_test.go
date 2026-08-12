@@ -157,11 +157,11 @@ func TestNoDeadFirstRung(t *testing.T) {
 func TestCollectionIsGlobalIncludingUnderTheBlock(t *testing.T) {
 	cst, board, star, g := woken(t, "ursa", 23)
 
-	origin, ok := cst.BeastOrigin()
+	origins, ok := cst.BeastOrigins()
 	if !ok {
 		t.Fatal("beast not placed")
 	}
-	underBlock := config.Cell{Reel: origin.Reel, Row: origin.Row}
+	underBlock := config.Cell{Reel: origins[0].Reel, Row: origins[0].Row}
 	farAway := config.Cell{Reel: 0, Row: 0}
 	if cst.BeastCells().Has(farAway.Reel, farAway.Row) {
 		farAway = config.Cell{Reel: 4, Row: 3}

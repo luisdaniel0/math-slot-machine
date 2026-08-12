@@ -47,7 +47,15 @@ type Event struct {
 	NewlyLit   []Pos  `json:"newlyLit,omitempty"`
 	Complete   *bool  `json:"complete,omitempty"`
 	BeastShape *Shape `json:"beastShape,omitempty"`
-	Multiplier *int   `json:"multiplier,omitempty"`
+	// Beasts is one top-left origin per block, and is emitted ONLY when a tier
+	// wakes more than one. With a single block `cells` is unambiguous, but two
+	// 2x2s produce eight cells that can be paired up several ways, so a replay
+	// starting from this event could not reconstruct the board without it.
+	// ⚠ OMITTED FOR SINGLE-BLOCK TIERS ON PURPOSE: their books stay byte-identical,
+	// which is what keeps five of six modes off the re-sim list.
+	Beasts     []Pos `json:"beasts,omitempty"`
+	BeastCount *int  `json:"beastCount,omitempty"`
+	Multiplier *int  `json:"multiplier,omitempty"`
 
 	// --- act two: multiplier stars ---
 	Stars  []StarJSON `json:"stars,omitempty"`

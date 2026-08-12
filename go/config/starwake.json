@@ -487,6 +487,7 @@
         ],
         "ladderRungs": 9,
         "prelitCells": [],
+        "beastCount": 1,
         "beastName": "corvus",
         "featureSpins": 10,
         "starDrops": {
@@ -596,6 +597,7 @@
         ],
         "ladderRungs": 13,
         "prelitCells": [],
+        "beastCount": 1,
         "beastName": "ursa",
         "featureSpins": 15,
         "starDrops": {
@@ -695,6 +697,7 @@
         ],
         "ladderRungs": 12,
         "prelitCells": [],
+        "beastCount": 1,
         "beastName": "draco",
         "featureSpins": 15,
         "starDrops": {
@@ -807,6 +810,7 @@
             1
           ]
         ],
+        "beastCount": 2,
         "beastName": "draco",
         "featureSpins": 15,
         "starDrops": {
@@ -1500,7 +1504,7 @@
     },
     {
       "name": "buy_draco",
-      "cost": 500.0,
+      "cost": 400.0,
       "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
@@ -1597,7 +1601,7 @@
     },
     {
       "name": "buy_mystery",
-      "cost": 600.0,
+      "cost": 500.0,
       "rtp": 0.9669,
       "maxWin": 25000.0,
       "autoCloseDisabled": false,
@@ -1692,7 +1696,7 @@
         },
         {
           "criteria": "draco",
-          "quota": 0.25,
+          "quota": 0.199,
           "fixedAmt": null,
           "winCriteria": null,
           "conditions": {
@@ -1734,7 +1738,7 @@
         },
         {
           "criteria": "ursa",
-          "quota": 0.295,
+          "quota": 0.348,
           "fixedAmt": null,
           "winCriteria": null,
           "conditions": {
@@ -1776,7 +1780,7 @@
         },
         {
           "criteria": "corvus",
-          "quota": 0.35,
+          "quota": 0.348,
           "fixedAmt": null,
           "winCriteria": null,
           "conditions": {

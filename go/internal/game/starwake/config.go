@@ -97,14 +97,34 @@ const RoamStripKey = "roam"
 // construction time (same cells, beast, ladder and length; only the pre-lit set
 // differs), so it reaches Go as an ordinary tier rather than a special case.
 type Tier struct {
-	Cells        []config.Cell `json:"cells"`
-	BeastShape   []int         `json:"beastShape"`
-	MultLadder   []int         `json:"multLadder"`
-	LadderRungs  int           `json:"ladderRungs"`
-	PrelitCells  []config.Cell `json:"prelitCells"`
+	Cells       []config.Cell `json:"cells"`
+	BeastShape  []int         `json:"beastShape"`
+	MultLadder  []int         `json:"multLadder"`
+	LadderRungs int           `json:"ladderRungs"`
+	PrelitCells []config.Cell `json:"prelitCells"`
+	// BeastCount is how many blocks wake and roam. Zero means one -- the field is
+	// optional so every tier that does not set it keeps making exactly the rng
+	// calls it always did, the same guard Ascension uses, which is what lets a
+	// multi-beast tier ship without re-simming the five modes that do not have one.
+	//
+	// ⚠ MORE BLOCKS DO NOT COMPOUND THE MULTIPLIER. Every block carries the SAME
+	// collected value and line wins use max_symbol, so a line crossing two blocks
+	// is multiplied once. What a second block buys is REACH -- how many of the 20
+	// paylines catch the multiplier -- not a bigger number. Collection is global
+	// already (Collect sums every star on the board regardless of where the blocks
+	// are), so this does not change how much is collected either.
+	BeastCount   int           `json:"beastCount"`
 	BeastName    string        `json:"beastName"`
 	FeatureSpins int           `json:"featureSpins"`
 	StarDrops    *StarDrops    `json:"starDrops,omitempty"`
+}
+
+// Beasts is BeastCount with the zero value resolved to one block.
+func (t Tier) Beasts() int {
+	if t.BeastCount < 1 {
+		return 1
+	}
+	return t.BeastCount
 }
 
 // FeatureConfig is the feature-wide config plus every tier definition.
@@ -194,6 +214,16 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 		if n := len(t.RoamOrigins(c)); n < 2 {
 			return fmt.Errorf("tier %s: beast %dx%d has only %d roam position(s)",
 				name, t.BeastShape[0], t.BeastShape[1], n)
+		}
+		// Every block must have somewhere to go that is not on top of another one.
+		// Checked as a PACKING question rather than "origins >= count" because the
+		// origin list overlaps itself heavily: a 2x2 on a 5x4 has 12 origins but
+		// only 4 disjoint placements, so a naive count would wave through a
+		// beastCount that can only be satisfied by stacking blocks -- which renders
+		// as one block and silently loses the whole point of the mechanic.
+		if want := t.Beasts(); want > t.maxDisjoint(c) {
+			return fmt.Errorf("tier %s: beastCount %d but only %d disjoint %dx%d placements fit",
+				name, want, t.maxDisjoint(c), t.BeastShape[0], t.BeastShape[1])
 		}
 
 		if t.FeatureSpins < 1 {
@@ -318,6 +348,28 @@ func pickWeighted(rows []WeightedInt, roll func(int) int) int {
 		}
 	}
 	return rows[len(rows)-1].Value // unreachable while total > 0
+}
+
+// maxDisjoint is how many copies of the block fit on the grid without overlapping.
+//
+// Config-time only, so the greedy sweep is fine: it walks the origin list in
+// reading order and takes any placement that clears the ones already taken. For
+// the axis-aligned uniform blocks this game uses that is exactly the packing
+// number (a 2x2 on a 5x4 gives 4), and it can only ever UNDER-count, which fails
+// safe -- a rejected config is loud, an accepted impossible one is not.
+func (t Tier) maxDisjoint(c *config.Config) int {
+	w, h := t.BeastShape[0], t.BeastShape[1]
+	var taken CellMask
+	n := 0
+	for _, o := range t.RoamOrigins(c) {
+		m := blockMask(o, w, h)
+		if taken&m != 0 {
+			continue
+		}
+		taken |= m
+		n++
+	}
+	return n
 }
 
 // RoamOrigins lists every top-left position where the beast block fits fully on
