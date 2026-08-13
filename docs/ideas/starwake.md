@@ -343,12 +343,18 @@ the roam** working first.
   would NOT have been.)
 - **Beast multiplier values must be enumerable** — rules must "list all obtainable
   values" for special symbols, so the published set must be fixed, not open-ended.
-  ⚠️ **This gate is NOT yet satisfied, and the obvious source is wrong.** It used to be
-  met by the climbing ladder, which Act Two made inert (above). The obtainable set is
-  now the achievable **sums of collected star values** — finite (star values are
-  2/3/5/10/25/50/100 at per-tier weights, and the collected count is bounded by the
-  roam window) but **never enumerated**. Build that table off the pool before the
-  rules screen is written; do not publish the ladder.
+  ✅ **RESOLVED Aug 13 2026 — and the enumerable thing is the STAR, not the beast.**
+  The gate used to be met by the climbing ladder, which Act Two made inert (above). The
+  fix is not a bigger table: the *special symbol* is the multiplier star, and its
+  obtainable values are exactly the per-tier star tables — five to seven rows, exact,
+  weights summing to 100. The beast multiplier is a **derived running total**
+  (`1 + collected`), described by a rule the way any collect mechanic is, and its
+  obtainable set is a **range** — x1, then every whole number from x3 up (x2 is
+  provably unreachable: it needs 1 collected and the smallest star is 2).
+  ⚠️ Do **not** publish a per-tier multiplier maximum. The combinatorial bound is
+  unreachable and the pool-observed max is a sample that grows with sample size; the
+  only honest bound is the 25,000x win cap. Copy and tables:
+  `docs/ideas/starwake_rules_screen.md`; measurement: `enumerate_multipliers.py`.
 - **Replay mandatory** — publicly shareable, per-mode event IDs requested at review
   (normal win / big win / wincap / loss / bonus trigger). Fixed ~10-spin feature keeps
   every replay, including wincap, a tight watchable clip (the Keybearer 10-minute-replay

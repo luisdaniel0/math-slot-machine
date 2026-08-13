@@ -52,6 +52,44 @@ draco 600 as the obtainable multipliers would advertise numbers the engine canno
    and the collected count is bounded by the roam, so the set is finite and auditable --
    it is just a different set from the one the doc points at.
 
+✔ DONE Aug 13 2026 -- `enumerate_multipliers.py`, all six pools, 5,267,849 act two
+rounds. The answer is smaller than the question: the set is a RANGE, not a list, and
+the screen should not carry either ceiling the tool prints.
+  - `multiplier = 1 + collected` (constellation.go:412), so the set is DERIVED. Nothing
+    to author, which is why the ladder was always the wrong place to look.
+  - **x2 IS UNOBTAINABLE** -- it needs collected == 1 and the smallest star is 2. The
+    set is x1 (nothing collected), then resumes at x3. Zero occurrences in 5.27M rounds.
+  - **NO GAPS FROM x3 UP** -- every tier's table has both a 2 and a 3, and {2,3} sums to
+    every integer >= 2. Hence a range.
+  - ⚠ NEITHER CEILING IS PUBLISHABLE, and this is the part worth remembering. The
+    combinatorial bound (densest 4-row window x collecting spins x top star) gives draco
+    x19,601 -- printing that IS the config.go:168 sin again. The observed max is a
+    SAMPLE, not a limit, and it moved with sample size: draco read x1,126 at 5k
+    books/pool and x1,841 at 1e6. Anything that moves when you look harder is not a
+    ceiling.
+  - THE HONEST BOUND IS THE WIN CAP: 25,000x, engine-enforced, identical in every mode.
+    The multiplier gets a RULE; the win gets a CAP. Copy in
+    docs/ideas/starwake_rules_screen.md.
+
+### ▶ DELIVERED TIER MIX, MEASURED OFF THE LUT (Aug 13 2026)
+`tier_frequency.py` joins book->tier against the optimized LUT weights, because a quota
+is a CONSTRUCTION target and says nothing about what the player draws.
+
+  buy_mystery   corvus 34.97%  ursa 34.97%  draco 19.99%  ASCENDANT 10.07% (1 in 9.9)
+                RTP share      13.7%        20.6%         15.8%             49.9%
+
+THE 35/35/20/10 MIX SURVIVED OPTIMIZATION INTACT -- "1 in 10 wakes something you cannot
+buy" is true as DELIVERED, not just as designed. Ascendant is a tenth of the rolls and
+HALF the mode's payback (44.3% -> 47.8% at the Jul 30 reprice -> 49.9% now; the Aug 13
+star-table change moved it up, as intended, by cutting discard not delivery).
+
+⚠ CORVUS ASCENSION HAS NO SINGLE FREQUENCY, and the config number is the wrong one to
+quote. `oneIn: 20000` is the NATURAL roll; buy_corvus's wincap slice sets
+forceAscension=True, so delivered:
+  buy_corvus    1 in 634        (~100x the natural rate -- the forced slice dominates)
+  buy_mystery   1 in 62,999     (~1 in 22,000 corvus rounds, i.e. the natural rate)
+Any rules copy that prints one global ascension number is wrong on at least one screen.
+
 ⚠ AND IT WEAKENS AN ARGUMENT THIS FILE HAS LEANED ON. "Ascendant IS a draco and cannot
 drift" was justified partly by the SHARED LADDER (game_config.py:394-397, and the Jul 30
 reprice reasoning at L1706-1717). That half of the invariant is inert. What actually
