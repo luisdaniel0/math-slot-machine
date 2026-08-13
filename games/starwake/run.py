@@ -36,7 +36,7 @@ if __name__ == "__main__":
     num_sim_args = {
         "base": int(1e6),
         "ante_starfall": int(1e6),
-        "buy_corvus": int(1e6),
+        "buy_mystery_spin": int(1e6),
         "buy_ursa": int(1e6),
         "buy_draco": int(1e6),
         "buy_mystery": int(1e6),

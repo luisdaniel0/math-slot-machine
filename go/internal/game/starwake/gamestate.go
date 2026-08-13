@@ -155,6 +155,12 @@ func (g *Game) runFeature() error {
 	if !ok {
 		return fmt.Errorf("%d scatters deals no tier", count)
 	}
+	// A wake slice overrides the tier's length: the set arrives finished, so the
+	// charge spins it would otherwise be awarded have nothing to charge.
+	if g.Dist != nil && g.Dist.Conditions.Wake {
+		spins = g.Feature.WakeSpinLength
+	}
+
 	g.TotFs = spins
 	g.Tier = tier
 	g.EmitFsTrigger()
@@ -191,6 +197,18 @@ func (g *Game) RunFreespin() error {
 	// distribution it was dealt under.
 	if g.Dist != nil {
 		con.ForceAscend = g.Dist.Conditions.ForceAscension
+	}
+	// THE WAKE SPIN. Carried from the slice for the same reason as ForceAscend, and
+	// applied AFTER it because Wake reads the ascension flag on its way through.
+	// runFeature has already clamped TotFs to the one-spin length.
+	if g.Dist != nil && g.Dist.Conditions.Wake {
+		floor := 0
+		if g.Dist.Conditions.ForceSeed {
+			floor = g.Feature.WakeSeedWincapFloor
+		}
+		if err := con.DealWoken(g.Feature.WakeSeedValues, floor, g.RNG); err != nil {
+			return err
+		}
 	}
 	// Resolved per deal, not once in NewGame: the star symbol lives in the TIER's
 	// starDrops block, and a tier without one runs the ladder and never looks it up.

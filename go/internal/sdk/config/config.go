@@ -140,6 +140,30 @@ type Conditions struct {
 	// which is what keeps the advertised max-win frequency a dial we set via the
 	// slice's rtp share rather than a side effect of the ascension rate.
 	ForceAscension bool `json:"forceAscension"`
+	// Wake deals the constellation ALREADY COMPLETE and wakes the beast before
+	// spin 1, turning the feature into a single roam spin. It is what makes
+	// buy_mystery_spin a one-spin product (Miko Spin / Rage Spins shape) without
+	// a tier, a strip or a scatter count of its own.
+	//
+	// WHY A CONDITION AND NOT A TIER. Wake variants keyed at scatter counts 7-10
+	// are unreachable: a forced draw places at most one scatter per reel, so a 6th
+	// already needs a reel window revealing two and a 7th needs two such reels.
+	// In Python an unreachable forced count hangs forever rather than failing.
+	// Riding the slice keeps the trigger board ordinary -- 3, 4 or 5 stars.
+	Wake bool `json:"wake"`
+	// ForceSeed pins a wake slice's seed to at least the configured floor.
+	//
+	// A cap book on ONE spin needs three rare things at once: a big line win, a
+	// high seed, and a heavy star drop. Measured organic max is 23,072x at 3e6, so
+	// a 25,000x slice asks the generator for a better-than-record board every
+	// time -- 8.4 MILLION redraws per book. Guaranteeing the seed makes the hunt a
+	// much commoner event.
+	//
+	// GENERATION COST ONLY. The delivered max-win frequency is
+	// rate = slice_rtp*cost/cap, an optimizer weight we choose, so this leaves the
+	// natural seed distribution and the player-facing rate untouched -- exactly
+	// the argument ForceAscension above rests on.
+	ForceSeed bool `json:"forceSeed"`
 }
 
 // Distribution is one slice of a bet mode's simulated outcomes.

@@ -107,6 +107,12 @@ type Constellation struct {
 	AscendedThisSpin bool
 	ForceAscend      bool
 
+	// SEEDED MULTIPLIER. What the beast is already carrying when it wakes, so
+	// multiplier = seed + collected. ALWAYS 1 unless a wake slice rolls it, which
+	// makes `1 + collected` a special case of the same formula rather than a
+	// separate branch -- that is what keeps the other five modes byte-identical.
+	seed int
+
 	// Per-spin scratch, consumed by the event emitters. Backed by a reusable
 	// array so a spin never allocates to report newly lit cells.
 	newlyLit     []config.Cell
@@ -140,6 +146,7 @@ func NewConstellation(tier Tier, tierName string, c *config.Config) (*Constellat
 		phase:      PhaseCharge,
 		multiplier: 1,
 		rung:       -1,
+		seed:       1, // a wake slice overwrites this; everything else stays at 1
 	}
 	con.newlyLit = con.newlyLitBuf[:0]
 	con.fallen = con.fallenBuf[:0]
@@ -278,10 +285,11 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 	}
 	con.phase = PhaseRoam
 	if con.ActTwo() {
-		// Starts bare. Every point of multiplier from here is collected, so there
-		// is no dead x1 rung to sit through -- the first star IS the climb.
+		// Starts at the seed, which is 1 for every ordinary feature -- so this is
+		// still "starts bare, the first star IS the climb" everywhere except a wake
+		// slice, where the beast arrives already carrying a rolled multiplier.
 		con.rung = -1
-		con.multiplier = 1
+		con.multiplier = con.seed
 		// ⚠ ROLLED ONLY WHEN THE TIER HAS AN ASCENSION BLOCK. That guard is what
 		// keeps a tier without one making the SAME rng calls it always did, so
 		// buy_ursa and buy_draco stay byte-identical to a pre-ascension pool and
@@ -317,6 +325,57 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 	con.roamSpins = 1
 	return nil
 }
+
+// DealWoken deals the set already COMPLETE and wakes the beast before spin 1.
+//
+// This is buy_mystery_spin's entire feature: no charge phase, no tracing, one roam
+// spin with the block already on the board collecting whatever stars fall.
+//
+// ⚠ IT DELIBERATELY DOES NOT TOUCH `prelit`. NewConstellation refuses a tier whose
+// CONFIGURED pre-lit cells cover the whole shape, and that guard stays exactly as
+// it was -- it protects against a misconfigured tier, which is a different thing
+// from a slice that asked for a finished set on purpose. Setting `lit` directly
+// leaves the guard guarding what it was written to guard.
+//
+// The reason the old guard existed at all was the multiplier LADDER: completing
+// before spin 1 handed out a top rung for free. Under act two the multiplier is
+// collected star by star and starts bare at x1, so a woken deal grants nothing --
+// it only removes the part of the feature this product is not selling.
+// The seed is rolled HERE, before Wake, because Wake reads con.seed to set the
+// opening multiplier. Rolling it inside Wake would make every ordinary feature
+// consume rng it never consumed before and silently shift five modes' pools.
+// `floor` is 0 for an ordinary wake slice. A wincap slice passes the configured
+// floor so the seed is guaranteed high, which is what makes a 25,000x book cheap
+// to manufacture -- see config.Conditions.ForceSeed for why that does not change
+// the rate players actually see.
+func (con *Constellation) DealWoken(seeds []WeightedInt, floor int, g *engine.RNG) error {
+	if len(seeds) == 0 {
+		return fmt.Errorf("%s: a wake deal needs a seed table", con.Tier)
+	}
+	table := seeds
+	if floor > 0 {
+		// Keep the qualifying rows AND their relative weights, so a forced cap book
+		// still draws a varied seed rather than always the top one.
+		table = table[:0:0]
+		for _, w := range seeds {
+			if w.Value >= floor {
+				table = append(table, w)
+			}
+		}
+		if len(table) == 0 {
+			return fmt.Errorf("%s: seed floor %d excludes every seed in the table",
+				con.Tier, floor)
+		}
+	}
+	con.seed = pickWeighted(table, g.IntN)
+	con.lit = con.targets
+	return con.Wake(g)
+}
+
+// Seed is the multiplier the beast woke already carrying (1 for every ordinary
+// feature). Published separately from the collected total because the rules
+// screen has to state both halves of `multiplier = seed + collected`.
+func (con *Constellation) Seed() int { return con.seed }
 
 // Roam moves the block to a new valid origin.
 //
@@ -414,7 +473,7 @@ func (con *Constellation) Collect() (gained, total int) {
 		gained += s.Value
 	}
 	con.collected += gained
-	con.multiplier = 1 + con.collected
+	con.multiplier = con.seed + con.collected
 	return gained, con.multiplier
 }
 

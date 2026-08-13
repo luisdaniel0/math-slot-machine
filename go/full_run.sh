@@ -11,7 +11,7 @@ set -uo pipefail
 cd "$(dirname "$0")" || exit 1
 
 SIMS="${1:-1000000}"
-MODES=(base ante_starfall buy_corvus buy_ursa buy_draco buy_mystery)
+MODES=(base ante_starfall buy_ursa buy_draco buy_mystery buy_mystery_spin)
 LOG="out/full_run_$(date +%Y%m%d_%H%M%S).log"
 mkdir -p out
 

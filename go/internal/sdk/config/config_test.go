@@ -180,7 +180,15 @@ func TestBetModes(t *testing.T) {
 		// 2.50/2.29/2.96/2.15; draco is out the top of the healthy 1.9-2.6 band,
 		// which is the accepted cost of the market-norm price and is watched by
 		// taking the best of n>=3 optimizer draws on that mode.
-		{"buy_corvus", 200, 25000, true},
+		// ⚠ buy_corvus REPLACED BY buy_mystery_spin Aug 13 2026. The deciding
+		// measurement was that cost-adjusted volatility read corvus 1.85 against
+		// ursa 1.88 -- the two cheapest products were the same product at two
+		// prices. The corvus TIER is untouched and still rolls in base,
+		// ante_starfall, buy_mystery and buy_mystery_spin; only the buy is gone.
+		// maxWin is 15,000 until the SEEDED multiplier is measured. One spin cannot
+		// accumulate, so it topped out at 19,778x unseeded; the seed is what should
+		// lift it to the headline 25,000x. Raise this only once that is measured.
+		{"buy_mystery_spin", 200, 15000, true},
 		{"buy_ursa", 300, 25000, true},
 		{"buy_draco", 400, 25000, true},
 		{"buy_mystery", 500, 25000, true},
@@ -189,7 +197,7 @@ func TestBetModes(t *testing.T) {
 		m, err := c.Mode(tc.name)
 		if err != nil {
 			t.Errorf("%v", err)
-			continue
+			continue // ⚠ must not fall through: m is nil here and every check below derefs it
 		}
 		if m.Cost != tc.cost {
 			t.Errorf("%s cost = %v, want %v", tc.name, m.Cost, tc.cost)
@@ -204,8 +212,15 @@ func TestBetModes(t *testing.T) {
 
 	// The buy menu must stay strictly ordered, or the tier story breaks.
 	prev := 0.0
-	for _, name := range []string{"buy_corvus", "buy_ursa", "buy_draco", "buy_mystery"} {
-		m, _ := c.Mode(name)
+	for _, name := range []string{"buy_mystery_spin", "buy_ursa", "buy_draco", "buy_mystery"} {
+		// ⚠ MUST CHECK THE ERROR. Discarding it here meant that renaming a mode
+		// turned a readable "unknown bet mode" failure into a nil-pointer PANIC that
+		// took the whole package down and hid every other result in it.
+		m, err := c.Mode(name)
+		if err != nil {
+			t.Errorf("buy menu: %v", err)
+			continue
+		}
 		if m.Cost <= prev {
 			t.Errorf("buy menu out of order at %s (%v after %v)", name, m.Cost, prev)
 		}

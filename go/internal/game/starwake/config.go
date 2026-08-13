@@ -129,8 +129,20 @@ func (t Tier) Beasts() int {
 
 // FeatureConfig is the feature-wide config plus every tier definition.
 type FeatureConfig struct {
-	MinRoamSpins int             `json:"minRoamSpins"`
-	Tiers        map[string]Tier `json:"tiers"`
+	MinRoamSpins int `json:"minRoamSpins"`
+	// WakeSpinLength is how many spins a `wake` slice runs. The set is dealt
+	// complete and the beast is up before spin 1, so this is the whole feature.
+	WakeSpinLength int `json:"wakeSpinLength"`
+	// WakeSeedValues is the multiplier the beast ALREADY CARRIES when a wake slice
+	// deals it. Ordinary features never roll this and keep seed 1, which is the
+	// old `1 + collected` exactly -- that is what keeps every other mode's books
+	// byte-identical and off the re-sim list.
+	WakeSeedValues []WeightedInt `json:"wakeSeedValues"`
+	// WakeSeedWincapFloor is the minimum seed a forceSeed slice may roll. A FLOOR
+	// rather than a pin, so cap books keep varied seeds and every max-win replay is
+	// not the same one -- replays are public and shareable.
+	WakeSeedWincapFloor int             `json:"wakeSeedWincapFloor"`
+	Tiers               map[string]Tier `json:"tiers"`
 }
 
 // LoadFeatureConfig decodes the game-specific block out of a loaded SDK config
@@ -155,6 +167,21 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 	if con.MinRoamSpins < 1 {
 		return fmt.Errorf("minRoamSpins = %d; the beast must get at least one paying spin",
 			con.MinRoamSpins)
+	}
+	if con.WakeSpinLength < 1 {
+		return fmt.Errorf("wakeSpinLength = %d; a wake slice must run at least one spin",
+			con.WakeSpinLength)
+	}
+	// A wake slice with no seed table would silently fall back to seed 1 and quietly
+	// publish a ceiling the mode can no longer reach.
+	if len(con.WakeSeedValues) == 0 {
+		return fmt.Errorf("wakeSeedValues is empty; a wake slice needs a seed table")
+	}
+	for _, w := range con.WakeSeedValues {
+		if w.Value < 1 || w.Weight <= 0 {
+			return fmt.Errorf("wakeSeedValues: value %d weight %d; both must be positive",
+				w.Value, w.Weight)
+		}
 	}
 	if len(con.Tiers) == 0 {
 		return fmt.Errorf("no tiers")
