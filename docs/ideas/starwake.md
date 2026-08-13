@@ -297,6 +297,13 @@ the roam** working first.
   and CURVE > 1 holds the early rungs down so the two decouple. This is the only knob
   that lowers the mean and raises the ceiling at once — a paytable cut scales body and
   tail together. Chosen: Corvus 1:200:2.5, Ursa 1:500:2, Draco 2:600:1.5.
+  > ⚠️ **SUPERSEDED Aug 5 2026 by ACT TWO, and the config still lies about it.** The
+  > climbing ladder was replaced by star collection: the beast collects multiplier
+  > stars and its multiplier is the **sum of collected star values**, not a rung.
+  > `constellation_mult_ladders` is still present, still exported and still validated,
+  > but it is **unreachable in every tier** (`ActTwo()` is true wherever a tier has
+  > star values, which is all four). A ladder edit today is a silent no-op. See the
+  > Aug 13 2026 entry at the top of `games/starwake/CLAUDE.md`.
 - ~~**Draco 3×3 = 45% board coverage**~~ — RESOLVED: **all three beasts are 2×2.**
   The deciding argument was not RTP pressure but that *the roam barely works at 3×3*.
   Roam positions on a 5×4: 2×2 = 12, 2×3 = 8, 3×3 = 6. The dragon shuffling between
@@ -335,8 +342,13 @@ the roam** working first.
   stateful *feature* inside one book — compliant. The rejected tier-upgrade-gamble idea
   would NOT have been.)
 - **Beast multiplier values must be enumerable** — rules must "list all obtainable
-  values" for special symbols, so the climbing ladder is a fixed published set, not
-  open-ended.
+  values" for special symbols, so the published set must be fixed, not open-ended.
+  ⚠️ **This gate is NOT yet satisfied, and the obvious source is wrong.** It used to be
+  met by the climbing ladder, which Act Two made inert (above). The obtainable set is
+  now the achievable **sums of collected star values** — finite (star values are
+  2/3/5/10/25/50/100 at per-tier weights, and the collected count is bounded by the
+  roam window) but **never enumerated**. Build that table off the pool before the
+  rules screen is written; do not publish the ladder.
 - **Replay mandatory** — publicly shareable, per-mode event IDs requested at review
   (normal win / big win / wincap / loss / bonus trigger). Fixed ~10-spin feature keeps
   every replay, including wincap, a tight watchable clip (the Keybearer 10-minute-replay

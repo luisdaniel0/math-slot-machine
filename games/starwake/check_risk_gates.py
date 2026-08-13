@@ -30,7 +30,15 @@ import csv
 import os
 import sys
 
-GAME_DIR = sys.argv[1] if len(sys.argv) > 1 else "games/starwake/library/publish_files"
+# ⚠ THE DEFAULT USED TO BE games/starwake/library/publish_files, AND THAT IS THE
+# STALE Jul 31 PYTHON-ERA POOL. The live pool has been the Go shadow tree since
+# optimize_go.py/publish_go.py took over -- so running this file with no argument
+# gated a pool nobody ships, and it did so PLAUSIBLY (the stale tree reads
+# buy_draco at RTP 1.0036, which looks like a real answer rather than an error).
+# Same failure family as the hardcoded costs below: a gate checker that silently
+# measures the wrong thing is worse than no gate checker.
+DEFAULT_POOL = "games/starwake_go/library/publish_files"
+GAME_DIR = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_POOL
 
 
 def _costs():
