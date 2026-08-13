@@ -543,6 +543,29 @@ class GameConfig(Config):
         # 1,800. Rules screen must carry it.
         self.wake_seed_values = {2: 30, 5: 25, 10: 20, 25: 15, 50: 7, 100: 3}
 
+        # The MINIMUM seed a forced wincap book may roll. Applies to the cap slice
+        # only (conditions carry force_seed), never to ordinary play.
+        #
+        # WHY IT EXISTS -- IT IS forceAscension'S ARGUMENT EXACTLY. A cap book needs
+        # three rare things at once on ONE spin: a big line win, a high seed, and a
+        # heavy star drop. Measured organic max is 23,072x at 3e6 (unforced), so a
+        # 25,000x slice is asking the generator for a better-than-record board every
+        # single time -- 8.4 MILLION redraws per book. Pinning the seed high
+        # guarantees one of the three, so the hunt is for a much commoner event.
+        #
+        # ⚠ IT DOES NOT CHANGE WHAT PLAYERS SEE. The delivered max-win frequency is
+        # rate = slice_rtp * cost / cap, an optimizer weight we set. Forcing only
+        # makes the books cheap to MANUFACTURE; it leaves the natural seed
+        # distribution above untouched, exactly as forcing ascension left corvus's
+        # natural ascension rate untouched.
+        #
+        # A FLOOR, NOT A PIN, AND THAT IS DELIBERATE. Forcing seed == 100 would make
+        # every 25,000x replay identical, and replays are public and shareable. A
+        # floor of 25 leaves three values (25/50/100) with their relative weights
+        # intact, so cap books stay varied -- the same reason the slice quota exists
+        # at all ("enough DISTINCT books that every max win is not the same replay").
+        self.wake_seed_wincap_floor = 25
+
         # ---------------------------------------------------------- ACT TWO
         # The beast stops climbing a fixed ladder and starts COLLECTING. At wake the
         # sticky wilds are consumed (the board returns to normal symbols, the 2x2 is
@@ -913,7 +936,8 @@ class GameConfig(Config):
         # wandered 26 points while RTP converged to 0.9665 every single time.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
-        def _wincap_condition(star_count, roam_mix=None, force_ascension=False, wake=False):
+        def _wincap_condition(star_count, roam_mix=None, force_ascension=False,
+                              wake=False, force_seed=False):
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
@@ -932,6 +956,7 @@ class GameConfig(Config):
                 # thing that becomes load-bearing before anyone notices.
                 "force_ascension": bool(force_ascension),
                 "wake": bool(wake),
+                "force_seed": bool(force_seed),
             }
 
         # buy_mystery_spin's cap slice. DRACO, because the wake spin's whole economy
@@ -943,8 +968,13 @@ class GameConfig(Config):
         # ⚠ MEASURE REDRAWS PER WINCAP BOOK ON A SMALL RUN before trusting it at 1e6.
         # That number is the early warning for the loop-forever failure; corvus's
         # note records the same check and the same reason.
+        # ⚠ force_seed=True IS WHAT MAKES 25,000x MANUFACTURABLE. Measured organic
+        # max is 23,072x at 3e6 unforced, so an unseeded-force slice at 25,000x costs
+        # ~8.4 MILLION redraws per book -- the loop-forever condition in all but name.
+        # Guaranteeing seed >= wake_seed_wincap_floor removes one of the three rare
+        # coincidences a cap book needs. The NATURAL seed distribution is untouched.
         draco_wake_wincap_condition = _wincap_condition(
-            5, {"ROAM": 1, "ROAMCAP": 40}, wake=True)
+            5, {"ROAM": 1, "ROAMCAP": 40}, wake=True, force_seed=True)
 
         # CORVUS HAS NO WINCAP CONDITION ANY MORE. It existed only for buy_corvus,
         # removed Aug 13 2026 with that mode. The corvus TIER is untouched and still
@@ -1276,7 +1306,7 @@ class GameConfig(Config):
             # ENRICHMENT LEVER if the mean is short: ROAMCAP into the wake conditions'
             # roam mix, before ever touching the star tables (which are SHARED).
             BetMode(
-                name="buy_mystery_spin", cost=150.0, rtp=self.rtp, max_win=spin_cap,
+                name="buy_mystery_spin", cost=200.0, rtp=self.rtp, max_win=spin_cap,
                 auto_close_disabled=False, is_feature=False, is_buybonus=True,
                 distributions=[
                     # ⚠ win_criteria is spin_cap (15,000), NOT the global 25,000 --

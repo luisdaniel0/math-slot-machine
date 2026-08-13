@@ -54,6 +54,7 @@ KNOWN_CONDITION_KEYS = {
     "force_freegame",
     "force_ascension",
     "wake",
+    "force_seed",
 }
 
 
@@ -104,6 +105,7 @@ def export_conditions(conditions: dict, criteria: str, mode_name: str) -> dict:
         "forceFreegame": bool(conditions.get("force_freegame", False)),
         "forceAscension": bool(conditions.get("force_ascension", False)),
         "wake": bool(conditions.get("wake", False)),
+        "forceSeed": bool(conditions.get("force_seed", False)),
     }
 
     # reel_weights is required on every distribution (Distribution enforces it).
@@ -219,6 +221,7 @@ def export_constellation(config) -> dict:
         # Same weighted-pair encoding as the star tables: JSON object keys are
         # strings, so an int-keyed weight dict would come back stringly-typed.
         "wakeSeedValues": weighted_pairs(config.wake_seed_values, "value"),
+        "wakeSeedWincapFloor": config.wake_seed_wincap_floor,
         "tiers": tiers,
     }
 

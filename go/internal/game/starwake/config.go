@@ -137,8 +137,12 @@ type FeatureConfig struct {
 	// deals it. Ordinary features never roll this and keep seed 1, which is the
 	// old `1 + collected` exactly -- that is what keeps every other mode's books
 	// byte-identical and off the re-sim list.
-	WakeSeedValues []WeightedInt   `json:"wakeSeedValues"`
-	Tiers          map[string]Tier `json:"tiers"`
+	WakeSeedValues []WeightedInt `json:"wakeSeedValues"`
+	// WakeSeedWincapFloor is the minimum seed a forceSeed slice may roll. A FLOOR
+	// rather than a pin, so cap books keep varied seeds and every max-win replay is
+	// not the same one -- replays are public and shareable.
+	WakeSeedWincapFloor int             `json:"wakeSeedWincapFloor"`
+	Tiers               map[string]Tier `json:"tiers"`
 }
 
 // LoadFeatureConfig decodes the game-specific block out of a loaded SDK config

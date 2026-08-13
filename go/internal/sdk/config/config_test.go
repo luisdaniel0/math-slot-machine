@@ -188,7 +188,7 @@ func TestBetModes(t *testing.T) {
 		// maxWin is 15,000 until the SEEDED multiplier is measured. One spin cannot
 		// accumulate, so it topped out at 19,778x unseeded; the seed is what should
 		// lift it to the headline 25,000x. Raise this only once that is measured.
-		{"buy_mystery_spin", 150, 15000, true},
+		{"buy_mystery_spin", 200, 15000, true},
 		{"buy_ursa", 300, 25000, true},
 		{"buy_draco", 400, 25000, true},
 		{"buy_mystery", 500, 25000, true},

@@ -344,11 +344,30 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 // The seed is rolled HERE, before Wake, because Wake reads con.seed to set the
 // opening multiplier. Rolling it inside Wake would make every ordinary feature
 // consume rng it never consumed before and silently shift five modes' pools.
-func (con *Constellation) DealWoken(seeds []WeightedInt, g *engine.RNG) error {
+// `floor` is 0 for an ordinary wake slice. A wincap slice passes the configured
+// floor so the seed is guaranteed high, which is what makes a 25,000x book cheap
+// to manufacture -- see config.Conditions.ForceSeed for why that does not change
+// the rate players actually see.
+func (con *Constellation) DealWoken(seeds []WeightedInt, floor int, g *engine.RNG) error {
 	if len(seeds) == 0 {
 		return fmt.Errorf("%s: a wake deal needs a seed table", con.Tier)
 	}
-	con.seed = pickWeighted(seeds, g.IntN)
+	table := seeds
+	if floor > 0 {
+		// Keep the qualifying rows AND their relative weights, so a forced cap book
+		// still draws a varied seed rather than always the top one.
+		table = table[:0:0]
+		for _, w := range seeds {
+			if w.Value >= floor {
+				table = append(table, w)
+			}
+		}
+		if len(table) == 0 {
+			return fmt.Errorf("%s: seed floor %d excludes every seed in the table",
+				con.Tier, floor)
+		}
+	}
+	con.seed = pickWeighted(table, g.IntN)
 	con.lit = con.targets
 	return con.Wake(g)
 }

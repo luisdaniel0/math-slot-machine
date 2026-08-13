@@ -24,7 +24,7 @@ func TestDealWokenCompletesTheSetAndWakesTheBeast(t *testing.T) {
 				t.Fatalf("a fresh deal should be charging, got phase %v", cst.Phase())
 			}
 
-			if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
+			if err := cst.DealWoken(seedTable(), 0, engine.NewRNG(11)); err != nil {
 				t.Fatalf("deal woken: %v", err)
 			}
 
@@ -56,7 +56,7 @@ func TestWokenDealOpensAtItsSeed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), 0, engine.NewRNG(11)); err != nil {
 		t.Fatalf("deal woken: %v", err)
 	}
 
@@ -111,7 +111,7 @@ func TestWokenDealLeavesOnlyTheBlockWild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), 0, engine.NewRNG(11)); err != nil {
 		t.Fatalf("deal woken: %v", err)
 	}
 
@@ -131,10 +131,10 @@ func TestDealWokenIsNotRepeatable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), 0, engine.NewRNG(11)); err != nil {
 		t.Fatalf("first woken deal: %v", err)
 	}
-	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err == nil {
+	if err := cst.DealWoken(seedTable(), 0, engine.NewRNG(11)); err == nil {
 		t.Error("a second woken deal succeeded; want a refusal")
 	}
 }
