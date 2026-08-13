@@ -202,7 +202,7 @@ func (g *Game) RunFreespin() error {
 	// applied AFTER it because Wake reads the ascension flag on its way through.
 	// runFeature has already clamped TotFs to the one-spin length.
 	if g.Dist != nil && g.Dist.Conditions.Wake {
-		if err := con.DealWoken(g.RNG); err != nil {
+		if err := con.DealWoken(g.Feature.WakeSeedValues, g.RNG); err != nil {
 			return err
 		}
 	}

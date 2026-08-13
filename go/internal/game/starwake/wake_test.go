@@ -24,7 +24,7 @@ func TestDealWokenCompletesTheSetAndWakesTheBeast(t *testing.T) {
 				t.Fatalf("a fresh deal should be charging, got phase %v", cst.Phase())
 			}
 
-			if err := cst.DealWoken(engine.NewRNG(11)); err != nil {
+			if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
 				t.Fatalf("deal woken: %v", err)
 			}
 
@@ -44,30 +44,60 @@ func TestDealWokenCompletesTheSetAndWakesTheBeast(t *testing.T) {
 	}
 }
 
-// ⚠ THE POINT OF THE WHOLE DESIGN. Skipping act one must not be a gift. Under the
-// dead multiplier ladder a set completed before spin 1 would have handed out a top
-// rung free, which is exactly what NewConstellation's "pre-lit on every cell" guard
-// was written to prevent. Under act two the multiplier is COLLECTED, so a woken
-// deal starts at x1 and every point still has to be earned from the stars that fall
-// on the one spin the player paid for.
-func TestWokenDealGrantsNoMultiplier(t *testing.T) {
+// A woken deal opens at its SEED and nothing more -- collected is still zero, so
+// the multiplier is exactly what was rolled and every further point has to be
+// earned from the stars that fall on the one spin the player paid for.
+//
+// The seed is why this mode can publish 25,000x at all: one spin cannot
+// ACCUMULATE, and accumulation is how the 15-spin modes get there.
+func TestWokenDealOpensAtItsSeed(t *testing.T) {
 	c, tier := actTwoTier(t, "draco")
 	cst, err := NewConstellation(tier, "draco", c)
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
 		t.Fatalf("deal woken: %v", err)
 	}
 
-	if got := cst.Multiplier(); got != 1 {
-		t.Errorf("multiplier = x%d on a woken deal, want a bare x1", got)
+	seed := cst.Seed()
+	if seed < 2 {
+		t.Fatalf("seed = %d, want a value from the table (all >= 2)", seed)
+	}
+	if got := cst.Multiplier(); got != seed {
+		t.Errorf("multiplier = x%d on a woken deal, want the seed x%d", got, seed)
 	}
 	if got := cst.Collected(); got != 0 {
 		t.Errorf("collected = %d before any star fell, want 0", got)
 	}
 	if got := cst.RoamSpins(); got != 1 {
 		t.Errorf("roamSpins = %d, want 1 -- the beast is on the board for the paid spin", got)
+	}
+}
+
+// ⚠ THE GUARD THAT KEEPS FIVE MODES OFF THE RE-SIM LIST. An ordinary feature must
+// never touch the seed: it stays 1, so `multiplier = seed + collected` reduces to
+// the old `1 + collected` exactly, and no extra rng is drawn. If this fails, every
+// other mode's pool has silently shifted.
+func TestOrdinaryFeatureKeepsSeedOne(t *testing.T) {
+	for _, name := range []string{"corvus", "ursa", "draco"} {
+		t.Run(name, func(t *testing.T) {
+			c, tier := actTwoTier(t, name)
+			cst, err := NewConstellation(tier, name, c)
+			if err != nil {
+				t.Fatalf("deal %s: %v", name, err)
+			}
+			cst.LightFromWins(cst.Targets())
+			if err := cst.Wake(engine.NewRNG(11)); err != nil {
+				t.Fatalf("wake: %v", err)
+			}
+			if got := cst.Seed(); got != 1 {
+				t.Errorf("%s: seed = %d on an ordinary wake, want 1", name, got)
+			}
+			if got := cst.Multiplier(); got != 1 {
+				t.Errorf("%s: multiplier = x%d at wake, want a bare x1", name, got)
+			}
+		})
 	}
 }
 
@@ -81,7 +111,7 @@ func TestWokenDealLeavesOnlyTheBlockWild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
 		t.Fatalf("deal woken: %v", err)
 	}
 
@@ -101,10 +131,16 @@ func TestDealWokenIsNotRepeatable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deal: %v", err)
 	}
-	if err := cst.DealWoken(engine.NewRNG(11)); err != nil {
+	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err != nil {
 		t.Fatalf("first woken deal: %v", err)
 	}
-	if err := cst.DealWoken(engine.NewRNG(11)); err == nil {
+	if err := cst.DealWoken(seedTable(), engine.NewRNG(11)); err == nil {
 		t.Error("a second woken deal succeeded; want a refusal")
 	}
+}
+
+// A representative seed table for the wake tests. Deliberately NOT the shipped
+// one -- these tests pin behaviour, not tuning.
+func seedTable() []WeightedInt {
+	return []WeightedInt{{Value: 2, Weight: 30}, {Value: 25, Weight: 15}, {Value: 100, Weight: 3}}
 }

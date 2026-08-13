@@ -451,6 +451,32 @@
   "gameSpecific": {
     "minRoamSpins": 2,
     "wakeSpinLength": 1,
+    "wakeSeedValues": [
+      {
+        "value": 2,
+        "weight": 30
+      },
+      {
+        "value": 5,
+        "weight": 25
+      },
+      {
+        "value": 10,
+        "weight": 20
+      },
+      {
+        "value": 25,
+        "weight": 15
+      },
+      {
+        "value": 50,
+        "weight": 7
+      },
+      {
+        "value": 100,
+        "weight": 3
+      }
+    ],
     "tiers": {
       "corvus": {
         "cells": [

@@ -514,6 +514,35 @@ class GameConfig(Config):
         # different reason. Measure before turning it.
         self.wake_spin_length = 1
 
+        # ------------------------------------------- THE SEEDED MULTIPLIER
+        # The beast arrives ALREADY CARRYING a multiplier, rolled from this table,
+        # and the stars it collects add to it: multiplier = seed + collected
+        # (Collect(), constellation.go). Ordinary features are unchanged -- they
+        # keep seed 1, which is exactly the old `1 + collected`.
+        #
+        # WHY IT EXISTS. One spin cannot ACCUMULATE, and accumulation is how the
+        # multi-spin modes reach 25,000x: buy_draco builds across 15 spins. Measured
+        # unforced at 3e6, one spin with one 2x2 tops out at 19,778x -- 79% of the
+        # cap -- and that number does not move with roam density (ROAMCAP 10 -> 2000
+        # is flat). The seed is the only lever that raises the ceiling WITHOUT adding
+        # blocks, so it is what lets this mode publish the headline 25,000x while
+        # staying "one beast, which beast". It is also Miko Spin's own described
+        # mechanic: "a guaranteed 2x2 wild AND A BOOSTED MULTIPLIER".
+        #
+        # ADDITIVE, NOT MULTIPLICATIVE. seed * collected would compound two random
+        # sources and blow the tail-probability gate (p5k/p10k is the risk class
+        # closest to flipping, and it is NOT scaled by cost multiplier, so a cheap
+        # ticket with a fat tail is exactly where it bites).
+        #
+        # Shape mirrors draco's own star table -- weighted hard to the low values --
+        # so the seed reads as part of the game rather than a bolt-on. Weights sum to
+        # 100, so these ARE the percentages the rules screen publishes.
+        # ⚠ THE OBTAINABLE-VALUES TABLE NOW HAS TWO SOURCES. The multiplier is still
+        # a RANGE rather than a list (every star table contains a 2 and a 3, and
+        # {2,3} generates every integer >= 2), so this adds one row to publish, not
+        # 1,800. Rules screen must carry it.
+        self.wake_seed_values = {2: 30, 5: 25, 10: 20, 25: 15, 50: 7, 100: 3}
+
         # ---------------------------------------------------------- ACT TWO
         # The beast stops climbing a fixed ladder and starts COLLECTING. At wake the
         # sticky wilds are consumed (the board returns to normal symbols, the 2x2 is

@@ -216,6 +216,9 @@ def export_constellation(config) -> dict:
     return {
         "minRoamSpins": config.min_roam_spins,
         "wakeSpinLength": config.wake_spin_length,
+        # Same weighted-pair encoding as the star tables: JSON object keys are
+        # strings, so an int-keyed weight dict would come back stringly-typed.
+        "wakeSeedValues": weighted_pairs(config.wake_seed_values, "value"),
         "tiers": tiers,
     }
 
