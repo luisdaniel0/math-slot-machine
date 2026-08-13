@@ -53,6 +53,7 @@ KNOWN_CONDITION_KEYS = {
     "force_wincap",
     "force_freegame",
     "force_ascension",
+    "wake",
 }
 
 
@@ -102,6 +103,7 @@ def export_conditions(conditions: dict, criteria: str, mode_name: str) -> dict:
         "forceWincap": bool(conditions.get("force_wincap", False)),
         "forceFreegame": bool(conditions.get("force_freegame", False)),
         "forceAscension": bool(conditions.get("force_ascension", False)),
+        "wake": bool(conditions.get("wake", False)),
     }
 
     # reel_weights is required on every distribution (Distribution enforces it).
@@ -211,7 +213,11 @@ def export_constellation(config) -> dict:
                     ],
                 }
 
-    return {"minRoamSpins": config.min_roam_spins, "tiers": tiers}
+    return {
+        "minRoamSpins": config.min_roam_spins,
+        "wakeSpinLength": config.wake_spin_length,
+        "tiers": tiers,
+    }
 
 
 def validate(payload: dict, config) -> None:

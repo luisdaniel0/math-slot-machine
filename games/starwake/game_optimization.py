@@ -14,11 +14,16 @@ its none_count guard), so every slice carries a hint even though rtp is authorit
 
 Criteria per mode MUST match game_config's distribution criteria:
   base / ante_starfall : wincap, draco, ursa, corvus, basegame, 0
-  buy_corvus           : corvus          buy_ursa   : wincap, ursa
-  buy_draco            : wincap, draco    buy_mystery: wincap, mystery
-Every mode except buy_corvus carries a wincap slice. Corvus publishes an honest
-10,000x instead -- it CAN be made to reach the cap, but only by trading away the
-best body in the game (see game_config's ceilings note).
+  buy_ursa             : wincap, ursa          buy_draco  : wincap, draco
+  buy_mystery          : wincap, ascendant, draco, ursa, corvus
+  buy_mystery_spin     : wincap, draco, ursa, corvus
+Every mode carries a wincap slice. buy_corvus was removed Aug 13 2026 and replaced
+by buy_mystery_spin; see DECISIONS.md for the measurement that decided it.
+
+⚠ buy_mystery_spin's cap is 15,000x, NOT 25,000x, and it is the only mode that does
+not publish the headline number. One spin with one 2x2 block tops out at a measured
+19,778x regardless of roam density, so a slice aimed at the global cap would loop
+forever. wincaps[] carries the per-mode value, so every derivation picks it up.
 
 A WINCAP SLICE'S rtp SHARE IS ITS FREQUENCY, which is the only dial that sets how
 often a mode pays its max win:
@@ -40,12 +45,17 @@ Coins & Cauldrons, MIKO, Waylanders Forge, Red Strike and Dojo Duel). slice_rtp 
 cap-value-per-stake, so this list is literally "who is the best max-win bet per
 dollar", and it must read down the menu in the order the UI sells it:
 
-    buy_corvus  ~0      (10,000x ceiling, no cap slice -- a deliberate non-lottery)
-    base         0.020
-    ante         0.025
-    buy_ursa     0.030  (was 0.0215 -- BELOW ante, i.e. inverted)
-    buy_mystery  0.040  (was 0.0199 -- below ante AND below ursa)
-    buy_draco    0.075  (was 0.050 -- raised to keep the crown as the others rise)
+    base              0.020
+    ante              0.025
+    buy_ursa          0.030  (was 0.0215 -- BELOW ante, i.e. inverted)
+    buy_mystery       0.040  (was 0.0199 -- below ante AND below ursa)
+    buy_mystery_spin  0.050  (1 in 2,000 at a 15,000x cap -- see below)
+    buy_draco         0.075  (was 0.050 -- raised to keep the crown as the others rise)
+
+⚠ buy_mystery_spin BREAKS THE "cap-value-per-stake" READING OF THIS LADDER, because
+slice_rtp is only comparable across modes sharing a cap. Its 0.05 buys 1 in 2,000 at
+15,000x; the same share at 25,000x would buy 1 in 3,333. Compare ceiling-per-cost
+instead: 100x here against ursa 83x, draco 62x, mystery 50x.
 
 The old ladder had ante beating two of the four buys, which is backwards from every
 audited game: they all put the most cap value in the buys (Rage Bait: base 0.045,
@@ -208,55 +218,6 @@ class OptimizationSetup:
                 }
             ]
 
-        # -- buy_mystery: DERIVE both invariants instead of hand-typing them --
-        # Two different numbers, and mixing them up has already cost one 1e6 run:
-        #   ROLL mix  -> hr (how often each tier is dealt)
-        #   PAYBACK   -> rtp split (how much of the mode's mean each tier carries)
-        # Invariant A: sum(1/hr) + wincap_weight == 1   (shares must be exhaustive)
-        # Invariant B: sum(rtp splits) + wincap_rtp == mode rtp, exact to 5dp
-        #              (verify_optimization_input asserts round(...,5) equality)
-        # Deriving them means a change to the cap share can no longer silently break
-        # either one -- the failure mode both times was arithmetic, not design.
-        # buy_corvus's cap share. RE-DERIVED Aug 7 2026 when the ceiling was cut
-        # 9,000x -> 2,500x to make it reachable (see game_config's corvus_cap note).
-        # rate = slice_rtp * cost / cap, so 0.008333 * 120 / 2500 = 1 in 2,500 --
-        # essentially the rate corvus already produces unforced (P(>=2,500x) measured
-        # 1 in 2,417), so the slice PINS what the engine naturally does rather than
-        # manufacturing something it does not. That is the point: without a slice the
-        # delivered rate is an optimizer draw, and corvus's was measured across eight
-        # identical runs at 1 in 2.9M to 11.2M with one of the eight missing its gate.
-        # ⚠ IT IS NO LONGER FREE. At 9,000x/1-in-2M the slice cost 0.00375% of the
-        # mode's RTP; at 2,500x/1-in-2,500 it costs 0.83%. Still the smallest cap share
-        # in the game (draco 7.5%, mystery 4.0%, ursa 2.6%, base 2.0%) and appropriate
-        # for the cheapest tier with the smallest ceiling.
-        # ⚠ RE-DERIVED Aug 8 2026 for the 25,000x ceiling. A slice's rtp share IS its
-        # frequency: rate = slice_rtp * cost / cap, so at cap 25,000 and cost 120,
-        # slice_rtp = rate * 208.333.
-        #     1 in 10,000  ->  0.020833      1 in 50,000  ->  0.0041667
-        #     1 in 20,000  ->  0.010417      1 in 100,000 ->  0.0020833
-        # 1 in 50,000 chosen: it must be the RAREST max win in the menu (draco 1 in
-        # 641, ursa 1 in 3,588) because corvus is the cheapest ticket AND has to be
-        # the least volatile mode. The cap's variance contribution is
-        # slice_rtp * cap/cost = rate * (cap/cost)^2, so a rarer cap costs
-        # QUADRATICALLY less variance -- 0.87 here against 2.17 at 1 in 20,000 and
-        # 4.34 at 1 in 10,000. That is the whole reason corvus can carry a 208x
-        # ceiling-per-stake and still sit below ursa's 1.96 std.
-        # ⚠ 1 in 20,000 SINCE Aug 8 2026 (was 1 in 50,000, slice_rtp 0.0025).
-        # slice_rtp = rate * cap / cost = (1/20000) * 25000/200 = 0.00625.
-        # WHY IT MOVED: at 1 in 50,000 corvus's max win was 12.5x outside the market
-        # band (400-4,000), i.e. a ceiling that reads as unreachable to anyone
-        # comparing games. At 1 in 20,000 it is still the RAREST in this menu by 6.2x
-        # (ursa 1 in 3,205, draco 1 in 667) but stops looking like an outlier.
-        # WHAT IT DOES NOT BUY: session feel. The cap sits at 125x the ticket while a
-        # "big win" is 10x, so P(>=10x) barely moves (48.7% -> 49.0% of sessions).
-        # What it buys is max-win SIGHTINGS, 0.60% -> 1.49% of 300-spin sessions.
-        # ⚠ THE CEILING ON THIS IS CORVUS'S OWN TIER ORDERING, not compliance. Corvus
-        # must stay under ursa's 1.88 std, which binds at ~1 in 15,260; the cap-value
-        # ladder does not bind until 1 in 4,808 and the risk gates not at all (corvus
-        # p5k 2.5e-05 against a 0.05 limit). 20,000 leaves margin because the limit
-        # was computed with the body held constant, and moving rtp into the cap
-        # hardens the body.
-        corvus_cap_rtp = 0.00625
 
         # ⚠⚠ PAYOUT-RANGE FENCES WERE TESTED HERE Aug 7 2026 AND ARE NOT AVAILABLE
         # WITHOUT A RE-SIM. Recording it so nobody re-derives it:
@@ -342,6 +303,66 @@ class OptimizationSetup:
             _body - sum(v for k, v in mystery_rtp.items() if k != "ascendant"), 6
         )
 
+        # ------------------------------------------------- buy_mystery_spin
+        # The one-spin mode. Derived exactly like mystery's above so the two
+        # invariants cannot drift: sum(1/hr) + cap_weight == 1 (A) and the rtp
+        # splits summing to the mode rtp (B).
+        #
+        # ⚠ THIS MODE'S CAP IS 15,000x, NOT 25,000x, and wincaps[] carries that -- so
+        # every derivation below picks it up automatically. cap_rtp 0.05 puts the
+        # max-win rate at rate = slice_rtp*cost/cap = 0.05*150/15000 = 1 in 2,000,
+        # inside the 1-in-400-to-4,000 market band and close to rage_spins' 1 in
+        # 1,377. It is the second-largest cap budget in the game after draco's 0.075,
+        # which is what a mode selling a tail should look like.
+        #
+        # ⚠ BOTH DICTS BELOW ARE FIRST GUESSES AND ONLY ONE OF THEM IS CHEAP TO
+        # CHANGE. spin_roll_mix must match the generation quotas in game_config and
+        # moving it is a RE-SIM (quotas decide which books exist). spin_payback is
+        # pure reweighting and costs nothing.
+        spin_roll_mix = {"corvus": 0.15, "ursa": 0.25, "draco": 0.60}
+        # Weighted by roll share x star-table mean (3.35 / 4.70 / 20.19), which on a
+        # single spin is very nearly the whole economy: same 2x2 block, same one
+        # spin, so the star table is the only thing separating the tiers.
+        #   corvus 0.15*3.35 = 0.50   ursa 0.25*4.70 = 1.18   draco 0.60*20.19 = 12.11
+        # => 3.6% / 8.5% / 87.9%. Draco carrying ~88% of payback on 60% of rolls is
+        # the intended shape, not a defect -- it is what stops the mode being a coin
+        # flip between two duds. RE-DERIVE FROM THE MEASURED FENCE MEANS after run 1.
+        spin_payback = {"corvus": 0.036, "ursa": 0.085, "draco": 0.879}
+
+        spin_cap_rtp = 0.05
+
+        # Same normalisation as mystery's: the mix is read as RATIOS, and invariant A
+        # (sum(1/hr) + cap_weight == 1) falls out of it for any mix.
+        _spin_cap_weight = spin_cap_rtp * costs["buy_mystery_spin"] / wincaps["buy_mystery_spin"]
+        _spin_roll_total = sum(spin_roll_mix.values())
+        spin_hr = {
+            tier: _spin_roll_total / (share * (1.0 - _spin_cap_weight))
+            for tier, share in spin_roll_mix.items()
+        }
+        _spin_body = rtp - spin_cap_rtp
+        spin_rtp = {tier: round(share * _spin_body, 6) for tier, share in spin_payback.items()}
+        # absorb float drift in the largest split so invariant B holds exactly
+        spin_rtp["draco"] = round(
+            _spin_body - sum(v for k, v in spin_rtp.items() if k != "draco"), 6
+        )
+
+        # Same gapless construction as mystery_bands, on THIS mode's ticket. The top
+        # edge is the cap expressed in tickets and is DERIVED -- every hardcoded band
+        # in this game has gone stale on a reprice at least once, and this mode is
+        # explicitly expected to be repriced once its mean is known.
+        _SPIN_EDGES = (
+            0.0, 0.25, 0.5, 1.0, 2.0, 5.0,
+            wincaps["buy_mystery_spin"] / costs["buy_mystery_spin"],
+        )
+
+        def spin_bands(criteria, factors):
+            ticket = costs["buy_mystery_spin"]
+            return [
+                {"criteria": criteria, "scale_factor": f,
+                 "win_range": (int(lo * ticket), int(hi * ticket)), "probability": 1.0}
+                for (lo, hi), f in zip(zip(_SPIN_EDGES, _SPIN_EDGES[1:]), factors)
+            ]
+
         self.game_config.opt_params = {
             # base (1x): RTP mostly in the base game (the hit floor) + a natural tier
             # tail; wincap is the rare draco-to-cap slice. Sum = 0.9665.
@@ -384,144 +405,6 @@ class OptimizationSetup:
                 "parameters": run_params(2, 6, [50, 100, 200], [0.3, 0.4, 0.3]),
                 "distribution_bias": ConstructFenceBias(["basegame"], [(2.0, 3.0)], [0.5]).return_dict(),
             },
-            # buy_corvus: the safe tier -- all RTP in the corvus feature. Low vol.
-            # No wincap fence (game_config gives this mode no wincap Distribution), so
-            # its 10,000x ceiling is organic. maxwin_boost lifts it over the
-            # "realistically obtainable" gate; see that helper for why and for the
-            # fallback. MEASURE P(10,000x) on the new LUT -- target >= 1e-07.
-            # ⚠ THE CONSOLATION BANDS BELOW ARE LOAD-BEARING AND THE TAIL BOOST IS
-            # THEIR PRICE. Repricing corvus 240 -> 120 left it returning under a
-            # quarter of the ticket on 59.1% of buys with a 0.17x median -- harsh for
-            # the entry tier a first-time buyer reaches for. Boosting 0.25-0.5x,
-            # 0.5-1x and 1-2x cost (30-60 / 60-120 / 120-240 in base-bet terms) moves
-            # that to 42.3% and 0.29x, a 17-point shift and larger than the ~8 points
-            # of optimizer run-to-run noise on this mode.
-            # ⚠ AN EARLIER TWO-BAND VERSION PUSHED THE MAX WIN TO 1 IN 14.5M, OUTSIDE
-            # the "realistically obtainable" gate. Corvus has no wincap slice, so
-            # weight moved into the body comes straight out of an unprotected tail --
-            # measured 1 in 6.76M with these three bands, but it MUST be re-measured
-            # on whatever pool ships rather than assumed. See maxwin_boost above.
-            # ⚠ WINCAP FENCE ADDED Aug 6 2026. It must come FIRST -- fences are assigned
-            # in order and consume what they match, so the body fence would otherwise
-            # swallow the cap books. slice_rtp sets the rate exactly: the relation
-            # rate = slice_rtp * cost / cap is not an approximation, it reproduces every
-            # other mode's measured cap frequency to within one part in a million
-            # (base 0.02 -> 1 in 1,250,000 measured 1,250,001; ursa 0.026 -> 3,588 vs
-            # 3,589; draco 0.075 -> 641 vs 642). 3.75e-05 * 120 / 9,000 = 1 in 2,000,000,
-            # a 5x margin under the ~1-in-10M obtainability guideline -- chosen for margin
-            # because corvus's UNSLICED rate drew anywhere from 1 in 2.9M to 1 in 11.2M
-            # across 8 identical runs.
-            # ⚠ EXPERIMENT Aug 7 2026 -- PAYOUT-RANGE FENCE. ConstructConditions turns a
-            # TUPLE search_conditions into identity_condition.win_range_start/end, and
-            # write_configs writes fence_info["name"] as a plain label -- matching is by
-            # identity_condition, NOT by name. So a single-criteria mode can carry
-            # several fences split by PAYOUT BAND, each with its own rtp target.
-            # WHY IT MATTERS: corvus's missing middle is a WEIGHTING artifact, not a
-            # supply one -- 21.7% of its books pay 60-240x (0.5-2x ticket) and only 6.5%
-            # of delivered weight lands there, because the optimizer must strip ~73% of a
-            # 3.7x-surplus pool and dumps it into the cheapest band with supply (30-60x
-            # goes 5.2% raw -> 31.8% delivered). A dress only biases; a FENCE PINS the
-            # band's RTP outright.
-            # ⚠ FENCE ORDER IS LOAD-BEARING: fences consume the books they match, so the
-            # range fence MUST precede the {"symbol":"scatter"} catch-all, which matches
-            # every corvus book.
-            # ⚠ AND SHARES MUST STAY EXHAUSTIVE: sum(1/hr) + wincap weight == 1. The
-            # catch-all's hr is therefore 1/(1 - mid_share - wincap_weight), not 1.
-            "buy_corvus": {
-                "conditions": {
-                    "wincap": wincap_cond("buy_corvus", corvus_cap_rtp),
-                    # ⚠ hr IS DERIVED FROM THE CAP RATE, NOT TUNED. The invariant is
-                    # sum(1/hr) + wincap_weight == 1, so hr = 1 / (1 - cap_rate)
-                    # where cap_rate = cap_rtp * cost / cap. Leaving the old
-                    # 1.0004001 behind when the ceiling moved 2,500x -> 25,000x
-                    # reserved 0.0004 of weight for a cap that now needs 0.00002;
-                    # the shortfall renormalised every weight up by 1.00038 and put
-                    # the mode at RTP 0.9673 -- OVER Stake's 0.967 cap, which is a
-                    # CRITICAL test and blocks submission outright. Measured exactly
-                    # that on all four sweep variants before the cause was found.
-                    # Here: cap_rate = 0.00625 * 200/25000 = 5.0e-05, so
-                    # hr = 1/(1 - 5.0e-05) = 1.0000500.
-                    "corvus": feature_cond(round(rtp - corvus_cap_rtp, 7), hr=1.0000500),
-                },
-                # ⚠ tail_scaling AND maxwin_boost BOTH REMOVED Aug 7 2026 with the
-                # 2,500x ceiling, because both had become wrong or redundant:
-                #  - tail_scaling damps (1000,2000) at 0.8 and lifts (3000,4000) at 1.2.
-                #    Above a 2,500x cap the second band CANNOT EXIST, and the first is
-                #    no longer "mid tail" -- it is the shoulder right below the ceiling,
-                #    which is the last thing corvus should be suppressing.
-                #  - maxwin_boost exists (see its docstring) ONLY for modes with no
-                #    forced wincap slice, to nudge an organic ceiling over the
-                #    obtainability gate. corvus GAINED a slice on Aug 6, so the boost
-                #    has been redundant since then and would now fight it: the slice
-                #    sets the rate exactly, a search hint only biases toward one.
-                # What remains is the three consolation bands, which are what actually
-                # protect corvus's body -- and protecting the body is the whole reason
-                # the 9,000x tail-build was reverted.
-                # ⚠ REBUILT Aug 7 2026 -- THE OLD DRESSES WERE BOOSTING THE DUMP ZONE.
-                # They ran 1.25 on (30,60), 1.6 on (60,120), 1.3 on (120,240), written
-                # when corvus cost 240x so those bands meant 0.125-1x of the ticket. At
-                # 120x they mean 0.25-2x, and (30,60) had become the band the optimizer
-                # already dumps into: raw supply there is 5.2% of books and it delivered
-                # 31.8% of weight -- a 6.1x up-weight, WITH a 1.25 dress on top of it.
-                # Meanwhile 60-240x holds 21.7% of raw books and delivered only 6.5%.
-                # So corvus had almost no "nearly got it back" or "small win" band and
-                # was the LEAST forgiving buy in the menu (19.3% return >=0.5x ticket
-                # against ursa's 39.0%) -- inverting the intended tier identity, since
-                # corvus is meant to be the safe entry tier.
-                # This is the treatment that moved ursa 60.2% -> 43.1% under a quarter
-                # ticket: suppress the dump zone FROM 0, boost the target band, and fund
-                # it out of the top rather than letting the optimizer pick.
-                # ⚠ MADE GAPLESS Aug 8 2026 TO STOP THE BODY BEING A LOTTERY. The
-                # three bands above left two ranges unconstrained -- (240,600) and,
-                # after the ceiling moved to 25,000x, the whole (2500,25000) tail.
-                # MEASURED over 3 optimize draws on IDENTICAL books (the sim is
-                # deterministic, so all three weighted the same pool): under-0.25x
-                # came out 29.6% / 51.2% / 30.3%, a 21.6-POINT SWING in what players
-                # actually experience, while RTP converged to 0.96690 every time.
-                # Corvus's raw pool is 3.74x richer than its price needs -- the
-                # widest mismatch in the game (ursa 2.57, draco 2.28, mystery 1.94)
-                # -- so the optimizer has enormous freedom in what to weight, and
-                # THAT FREEDOM IS THE VARIANCE. Ursa, whose body std is a tight 1.19
-                # against corvus's 1.67-2.30, is far more constrained.
-                # Every band carries a factor now, so no range is left to the
-                # optimizer's discretion. Ranges are in base-bet units; corvus costs
-                # 120x, so the ticket multiples are noted per line.
-                "scaling": ConstructScaling(
-                    [{"criteria": "corvus", "scale_factor": 0.25,
-                        "win_range": (0, 56), "probability": 1.0},        # <0.25x: the dump zone
-                       {"criteria": "corvus", "scale_factor": 0.6,
-                        "win_range": (50, 100), "probability": 1.0},       # 0.25-0.5x
-                       {"criteria": "corvus", "scale_factor": 3.0,
-                        "win_range": (100, 200), "probability": 1.0},      # 0.5-1x: nearly got it back
-                       {"criteria": "corvus", "scale_factor": 3.0,
-                        "win_range": (200, 400), "probability": 1.0},     # 1-2x: small win
-                       {"criteria": "corvus", "scale_factor": 1.2,
-                        "win_range": (400, 1000), "probability": 1.0},     # 2-5x   (was a gap)
-                       {"criteria": "corvus", "scale_factor": 0.7,
-                        "win_range": (1000, 2000), "probability": 1.0},    # 5-10x
-                       {"criteria": "corvus", "scale_factor": 0.5,
-                        "win_range": (2000, 4000), "probability": 1.0},   # 10-20.8x
-                       {"criteria": "corvus", "scale_factor": 0.5,
-                        "win_range": (4000, 25000), "probability": 1.0}]  # 20.8-208x (was a gap)
-                ).return_dict(),
-                "parameters": run_params(1.5, 5, [10, 20, 50], [0.6, 0.2, 0.2]),
-                "distribution_bias": ConstructFenceBias(["corvus"], [(2.0, 5.0)], [0.4]).return_dict(),
-            },
-            # buy_ursa: the coin-flip tier, now also a 25,000x product. Mid-high vol.
-            # RAISED 0.0215 -> 0.030 -> SETTLED AT 0.026. At 0.0215 this buy was a worse
-            # max-win bet per dollar than grinding ante_starfall (0.025), inverting the
-            # market pattern (every audited game puts more cap value in its buys). But
-            # 0.030 OVERSHOT: the optimizer funded the bigger cap slice by packing ursa's
-            # consolation band down, and buys returning <=0.25x cost went 53.4% -> 67.7%
-            # with the median halving 0.226 -> 0.118x. That made URSA THE HARSHEST BUY IN
-            # THE GAME -- harsher than draco (38.6%) -- which inverts the tier identity,
-            # since ursa is meant to be the COIN FLIP and draco the lottery.
-            # 0.026 keeps ursa above ante (the ordering fix that motivated this) at a
-            # buys/base ratio of 1.3x, which is exactly the market's (Rage Bait base
-            # 0.045 vs buys 0.056-0.064). Cap rate 0.026*268/25000 = 1 in 3,588.
-            # The extra scaling entry protects the 0.5-2x cost consolation band
-            # (134-536x base-bet) that the 0.030 run hollowed out -- a coin-flip tier
-            # needs a real middle, not just a tail.
             "buy_ursa": {
                 "conditions": {
                     "wincap": wincap_cond("buy_ursa", 0.026),
@@ -749,6 +632,54 @@ class OptimizationSetup:
                 ).return_dict(),
                 "parameters": run_params(3, 12, [10, 20, 50], [0.6, 0.2, 0.2]),
                 "distribution_bias": ConstructFenceBias(["ascendant"], [(20.0, 60.0)], [0.3]).return_dict(),
+            },
+            # THE MOST VOLATILE PRODUCT IN THE MENU, BY DESIGN. Target shape is
+            # rage_spins: median ~0.10-0.15x the ticket and sigma/cost 3.5-4.0,
+            # against draco's 2.57. Bands are cut to STARVE THE MIDDLE and feed both
+            # ends -- weight piles up under 0.25x and in the tail, and the 0.5-5x
+            # body is suppressed, which is what a low median with a live ceiling
+            # looks like.
+            #
+            # ⚠ IT DOES NOT BUST, AND THAT WAS MEASURED, NOT ASSUMED. Zero-pay came
+            # back 0.00% at every roam density: a 2x2 wild on a 20-line 5x4 nearly
+            # always completes some line, so the "act two consumes the sticky wilds,
+            # therefore a woken deal can pay nothing" reasoning is wrong in practice.
+            # This is the MIKO shape (0.00% bust) rather than rage_spins' 5.95%, and
+            # it keeps the market norm and our own structural property intact.
+            #
+            # ⚠ SUPPRESSION BANDS START AT 0 (they are gapless from the origin). A
+            # range suppression that starts higher funnels the displaced weight into
+            # the gap underneath it instead of removing it.
+            "buy_mystery_spin": {
+                "conditions": {
+                    "wincap": wincap_cond("buy_mystery_spin", spin_cap_rtp),
+                    # kind is the scatter count recorded at trigger. The wake slices
+                    # force 3/4/5 exactly like the ordinary tier slices do -- the flag
+                    # changes the FEATURE, not the trigger board -- so the fences
+                    # separate on the same key they always have. Fence ORDER matters
+                    # and is invisible to verify_optimization_input: wincap sits ahead
+                    # of the kind=5 draco body fence, which is what keeps the forced
+                    # books out of the body slice.
+                    "draco": feature_cond(spin_rtp["draco"], hr=spin_hr["draco"], kind=5),
+                    "ursa": feature_cond(spin_rtp["ursa"], hr=spin_hr["ursa"], kind=4),
+                    "corvus": feature_cond(spin_rtp["corvus"], hr=spin_hr["corvus"], kind=3),
+                },
+                # bands:      0-.25  .25-.5  .5-1x   1-2x   2-5x  5-100x
+                # corvus and ursa cannot build a tail on one spin (star means 3.35 and
+                # 4.70), so they are shaped to sit low and cheap and let draco carry
+                # the ceiling. Draco keeps a real 5x+ shoulder -- it is the only tier
+                # whose star table can reach the cap at all.
+                "scaling": ConstructScaling(
+                    spin_bands("corvus", (3.0, 1.2, 0.5, 0.4, 0.4, 1.0))
+                    + spin_bands("ursa", (3.0, 1.2, 0.5, 0.4, 0.5, 1.2))
+                    + spin_bands("draco", (2.5, 1.0, 0.5, 0.4, 0.8, 2.0))
+                ).return_dict(),
+                # WIDE m2m ON PURPOSE. This is the most volatile product in the menu by
+                # construction -- rage_spins runs a 0.054x median against a 0.967x mean,
+                # i.e. m2m near 18 -- so a band cut for the tier buys (3-12) would fight
+                # the mode's own identity and force the optimizer to flatten the tail it
+                # exists to sell. Permissive now, re-cut once the curve is measured.
+                "parameters": run_params(3, 25, [10, 20, 50], [0.6, 0.2, 0.2]),
             },
         }
 

@@ -487,6 +487,33 @@ class GameConfig(Config):
         # TOPS, never by putting the floor back.
         self.min_roam_spins = 2
 
+        # ------------------------------------------------------- THE WAKE SPIN
+        # buy_mystery_spin's whole feature: the set is dealt COMPLETE, the beast is
+        # woken before spin 1, and the feature is this many spins. Market shape --
+        # Miko Spin ("one special spin with a guaranteed 2x2 wild"), Rage Spins
+        # ("a single powerful spin", free spins disabled).
+        #
+        # WHY THIS IS A FLAG AND NOT FOUR NEW TIERS. The first design keyed wake
+        # variants at scatter counts 7-10, the way ascendant is keyed at 6. That
+        # cannot work: _force_special_board places AT MOST ONE SCATTER PER REEL, so
+        # on five reels a 6th already needs a reel whose window reveals two (which
+        # is the entire reason the ASC strip exists) and a 7th needs two such reels.
+        # An unreachable forced count does not error in Python -- force_special_board
+        # is a bare `while True`, so it HANGS FOREVER. Riding a distribution
+        # condition instead keeps the trigger board completely ordinary: the mode
+        # forces 3, 4 or 5 stars exactly like buy_mystery already does.
+        #
+        # min_roam_spins does NOT apply here and needs no override: waking at deal
+        # means the "just completed -> extend tot_fs" branch never fires, because the
+        # constellation is never in PhaseCharge during the spin loop.
+        #
+        # ENRICHMENT LEVER, if the measured mean comes in short: weight ROAMCAP into
+        # the wake conditions' "roam" mix (roam_weights below is a bare {"ROAM": 1}).
+        # That is the star-dense strip the wincap slices already use, so a richer
+        # single spin costs no new code -- it is the same knob, turned for a
+        # different reason. Measure before turning it.
+        self.wake_spin_length = 1
+
         # ---------------------------------------------------------- ACT TWO
         # The beast stops climbing a fixed ladder and starts COLLECTING. At wake the
         # sticky wilds are consumed (the board returns to normal symbols, the 2x2 is
@@ -760,26 +787,52 @@ class GameConfig(Config):
         # pay the ceiling either way, so this changes how FAST they are found, not
         # the distribution. It does mean ursa's max-win replays all share the juiced
         # strip's premium-heavy look, on top of FRWCAP already doing that to act one.
+        # THE WAKE SPIN'S ROAM MIX -- the mode's only real tuning dial.
+        # A wake slice buys ONE roam spin, so its whole economy is what that single
+        # spin's strip deals. ROAMCAP is the star-dense strip the wincap slices
+        # already use; weighting it in here is the same knob turned for a different
+        # reason, and it is the ONLY lever that raises the mean and the ceiling at
+        # once (the star tables are SHARED with three other modes and must not move).
+        # Measured at 1e6, unforced -- see DECISIONS.md.
+        wake_roam_weights = {"ROAM": 1, "ROAMCAP": 10}
+
         roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 5}
         ursa_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 20}
 
-        def _tier_condition(star_count):
-            """Force exactly `star_count` stars -> deal that one tier, run the feature."""
+        def _tier_condition(star_count, wake=False):
+            """Force exactly `star_count` stars -> deal that one tier, run the feature.
+
+            `wake=True` is the ONE-SPIN product (buy_mystery_spin): the set is dealt
+            already complete, the beast is awake before spin 1, and the feature is a
+            single roam spin. See self.wake_spin for the numbers and why this is a
+            distribution CONDITION rather than a tier of its own.
+            """
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
                     self.freegame_type: {"FR0": 1},
-                    "roam": dict(roam_weights),
+                    "roam": dict(wake_roam_weights if wake else roam_weights),
                 },
                 "scatter_triggers": {star_count: 1},
                 "mult_values": fg_mult,
                 "force_wincap": False,
                 "force_freegame": True,
+                # OFF everywhere but buy_mystery_spin. Keyed like force_ascension so a
+                # tier that never sees it makes exactly the rng calls it always did.
+                "wake": bool(wake),
             }
 
         corvus_condition = _tier_condition(3)
         ursa_condition = _tier_condition(4)
         draco_condition = _tier_condition(5)
+
+        # The one-spin rolls. Same three tiers, same 2x2 beast, same star tables --
+        # the only difference is that the constellation arrives finished. Ascendant is
+        # deliberately NOT among them: its identity is the twin dragons, and on a
+        # single spin with one block it would be draco wearing a different star table.
+        corvus_wake_condition = _tier_condition(3, wake=True)
+        ursa_wake_condition = _tier_condition(4, wake=True)
+        draco_wake_condition = _tier_condition(5, wake=True)
 
         # DRACO ASCENDANT: 6 stars, dealt only from the ASC strip. That strip is the
         # only one that can show six -- _force_special_board places at most ONE
@@ -831,7 +884,7 @@ class GameConfig(Config):
         # wandered 26 points while RTP converged to 0.9665 every single time.
         # ⚠ A forced slice LOOPS FOREVER if its cap drifts out of structural reach, so
         # ursa's is the one thing to watch on the first run after this change.
-        def _wincap_condition(star_count, roam_mix=None, force_ascension=False):
+        def _wincap_condition(star_count, roam_mix=None, force_ascension=False, wake=False):
             return {
                 "reel_weights": {
                     self.basegame_type: {"BR0": 1},
@@ -849,26 +902,27 @@ class GameConfig(Config):
                 # a mechanic the tier does not advertise is exactly the kind of
                 # thing that becomes load-bearing before anyone notices.
                 "force_ascension": bool(force_ascension),
+                "wake": bool(wake),
             }
 
-        # CORVUS'S MIX IS THE HEAVIEST OF THE THREE, and for a different reason than
-        # ursa's. Ursa needs ROAMCAP 20 because 25,000x is far above its comfortable
-        # range. Corvus's target is only 9,000x -- but that sits at the very TOP of what
-        # corvus can organically produce (natural max measured 9,158x on a 1e6 pool, so
-        # >=9,000x is ~1 in 2.5M unforced). A forced slice therefore has to manufacture a
-        # near-best-case round every time, which is exactly the condition the LOOPS
-        # FOREVER warning above is about. 40 is a FIRST GUESS -- measure redraws per
-        # wincap book on a small run before trusting it at 1e6. Draco's is ~117.
-        corvus_roam_wincap_weights = {"ROAM": 1, "ROAMCAP": 40}
+        # buy_mystery_spin's cap slice. DRACO, because the wake spin's whole economy
+        # is the star table and draco's mean of 20.19 is 4-6x the other two -- a
+        # corvus cap book would need a board this game cannot deal. The roam mix is
+        # corvus-grade heavy (40) for the same reason corvus's is: a forced slice has
+        # to manufacture a near-best-case round every time, and 15,000x against a
+        # 19,778x natural maximum is 76% of the best board ever observed.
+        # ⚠ MEASURE REDRAWS PER WINCAP BOOK ON A SMALL RUN before trusting it at 1e6.
+        # That number is the early warning for the loop-forever failure; corvus's
+        # note records the same check and the same reason.
+        draco_wake_wincap_condition = _wincap_condition(
+            5, {"ROAM": 1, "ROAMCAP": 40}, wake=True)
 
-        # ⚠ force_ascension=True is what makes corvus's cap MANUFACTURABLE. 25,000x
-        # is only reachable in an ascended round, and ascension is rare by design,
-        # so an unforced slice would redraw through ~one_in ordinary rounds per
-        # candidate. Forcing it here leaves the NATURAL rate untouched, which keeps
-        # the advertised max-win frequency a number the slice's rtp share sets
-        # rather than a side effect of how often corvus happens to ascend.
-        corvus_wincap_condition = _wincap_condition(
-            3, corvus_roam_wincap_weights, force_ascension=True)
+        # CORVUS HAS NO WINCAP CONDITION ANY MORE. It existed only for buy_corvus,
+        # removed Aug 13 2026 with that mode. The corvus TIER is untouched and still
+        # rolls in base, ante_starfall, buy_mystery and buy_mystery_spin.
+        # Its forced ascension went with it, so ascension now delivers at its
+        # NATURAL rate everywhere -- the ~1-in-634 figure in the rules screen
+        # described buy_corvus alone and is STALE.
         ursa_wincap_condition = _wincap_condition(4, ursa_roam_wincap_weights)
         draco_wincap_condition = _wincap_condition(5)
 
@@ -991,11 +1045,22 @@ class GameConfig(Config):
         # (this file already commits to that at the ceilings note above).
         # ⚠ REACHABILITY IS NOT FREE HERE. This number is the engine clamp as well as
         # the advertised figure, and a forced slice hunting an unreachable ceiling
-        # redraws forever. Measured with ascension forced and the ROAMCAP roam mix,
-        # P(>=25,000x) is 1 in 2,874, so the slice fills its quota in ~2 minutes. It
-        # is 1 in 25 MILLION without ascension. Do not raise this again without
-        # re-measuring reach FIRST.
-        corvus_cap = 25000.0
+        # ⚠ buy_mystery_spin IS THE ONE MODE THAT DOES NOT REACH 25,000x, AND IT IS
+        # STRUCTURAL, NOT A TUNING MISS. Measured unforced at 3e6 across FIVE roam-mix
+        # densities (ROAMCAP 10 / 40 / 100 / 400 / 2000): the natural maximum is
+        # 19,778x at EVERY ONE OF THEM. Enrichment moves the mean (+5%) and does not
+        # move the ceiling at all -- the same wall DECISIONS.md already recorded from
+        # the other side ("a denser roam strip cannot reach 25,000x; pushing density
+        # past the optimum makes it WORSE"). One spin with one 2x2 block simply cannot
+        # get there, and a forced slice aimed at 25,000x would LOOP FOREVER.
+        #
+        # 15,000x sits comfortably inside that reach, so its slice is manufacturable.
+        # MARKET CHECK: both single-spin competitors DO reach their game's cap -- but
+        # Rage Spins does it by dealing 3-6 roaming wilds, not one, and Miko Spin does
+        # it because Miko's whole game caps at 10,000x. At a 150x ticket our 15,000x is
+        # 100x COST, better than Miko Spin's 40x and Rage Spins' 71x, and 1.5x Miko
+        # Spin's absolute number. The headline is smaller; the value per stake is not.
+        spin_cap = 15000.0
 
         # BUY COSTS = measured avg win / rtp (doc L115: prices are outputs). Read off
         # reels/measure_tiers.py at n=100k with the forced-wincap slice REMOVED -- that
@@ -1035,42 +1100,6 @@ class GameConfig(Config):
                     Distribution(criteria="corvus", quota=0.10, conditions=corvus_condition),
                     Distribution(criteria="basegame", quota=0.5, conditions=basegame_condition),
                     Distribution(criteria="0", quota=0.3, win_criteria=0.0, conditions=zerowin_condition),
-                ],
-            ),
-            # buy_corvus: pin the safe tier. NO forced-wincap slice -- not because the
-            # cap is unreachable (it can be bought with a taller ladder) but because
-            # buying it costs corvus the best body in the game. The deliberate grind
-            # tier: highest >cost, lowest ceiling.
-            #
-            # ⚠ 240x UNTIL Aug 5 2026, WHEN IT MADE CORVUS UNBUYABLE. Measured on the
-            # converged act two pool, corvus was LAST on ceiling-per-cost (38.2x
-            # against ursa's 93.3x and draco's 48.1x) and second-worst on median,
-            # with a beat rate inside the other three's noise -- ursa cost 12% more
-            # and offered 2.7x the ceiling, because ursa reaches the global 25,000x
-            # cap while corvus's is organic. No ceiling number fixes that: even at
-            # 10,000x corvus was 41.7x cost, still last. A longer feature does not
-            # either (reels/sweep_feature_spins.py: it works, and compresses the
-            # 84/63/32 completion ladder to 93/85/55 doing it).
-            # Re-optimizing the same 1e6 pool at 120x gives ceiling-per-cost 76.3x,
-            # clearing draco and approaching ursa, and the max win STAYS OBTAINABLE
-            # at 1 in 4.7M -- it survives because the ceiling is ~0.001% of RTP, so
-            # a lower target is met by reweighting the body, not the tail.
-            # The menu becomes 120 / 268 / 520 / 563: a ladder, where 240 and 268
-            # were two names for the same rung.
-            BetMode(
-                name="buy_corvus", cost=200.0, rtp=self.rtp, max_win=corvus_cap,
-                auto_close_disabled=False, is_feature=False, is_buybonus=True,
-                distributions=[
-                    # ⚠ win_criteria is corvus_cap (9,000), NOT the global cap. This mode
-                    # clamps at 9,000 via BetMode.max_win, so a slice searching for
-                    # 25,000 would hunt a book that cannot exist and hang forever.
-                    # Quota is deliberately smaller than ursa's 0.005: the optimizer
-                    # weights these down to 1 in 2M regardless, so the quota only has to
-                    # supply ENOUGH DISTINCT BOOKS that every max win is not the same
-                    # replay -- and each one costs a redraw loop to manufacture.
-                    Distribution(criteria="wincap", quota=0.002, win_criteria=corvus_cap,
-                                 conditions=corvus_wincap_condition),
-                    Distribution(criteria="corvus", quota=0.998, conditions=corvus_condition),
                 ],
             ),
             # buy_ursa: pin the coin-flip tier -- now ALSO a 25,000x product, at a
@@ -1177,6 +1206,62 @@ class GameConfig(Config):
                     Distribution(criteria="draco", quota=0.199, conditions=draco_condition),
                     Distribution(criteria="ursa", quota=0.348, conditions=ursa_condition),
                     Distribution(criteria="corvus", quota=0.348, conditions=corvus_condition),
+                ],
+            ),
+            # ------------------------------------------------- buy_mystery_spin
+            # "One Wake" -- ONE spin, the beast already up, which beast is the roll.
+            # The market shape it is built to: Miko Spin (250x, one special spin with a
+            # guaranteed 2x2 wild) and Rage Spins (350x, "a single powerful spin", free
+            # spins disabled, 5.95% bust, sigma 3.96, median 0.054x). Those two are the
+            # only single-spin buys in the surveyed market and BOTH sell one guaranteed
+            # block plus guaranteed multipliers -- not a flood of wilds.
+            #
+            # WHAT MAKES IT A DIFFERENT PRODUCT FROM buy_mystery. Not the odds, the
+            # SHAPE. Rage Bait ships two mysteries at the same 500x price and separates
+            # them purely by bust-vs-tail (0.00% bust / sigma 2.68 against 46.52% bust /
+            # sigma 3.32), which is the precedent for carrying two here at all. Ours
+            # separates on length: buy_mystery is a full feature that must be traced,
+            # this is the last spin of one, sold on its own.
+            #
+            # ⚠ THIS MODE CAN BUST, AND THAT IS DELIBERATE. Every other buy in the game
+            # is structurally incapable of paying zero because act one's lit stars are
+            # wild all feature. Act two consumes them at wake, so a woken deal is a
+            # NORMAL board carrying one 2x2 -- see TestWokenDealLeavesOnlyTheBlockWild.
+            # "Buys bust 0.00%" is a market norm we hold elsewhere and are knowingly
+            # breaking here, with precedent (rage_spins busts 5.95%).
+            #
+            # PRICE AND CEILING ARE BOTH MEASURED OUTPUTS, settled at 1e6/3e6:
+            #   raw_mean 329.6x at ROAMCAP 10  ->  richness at 150x = 2.27 (healthy
+            #   band 1.9-2.6). 200x was tried first and is NOT buildable: richness
+            #   tops out at 1.76 there even at ROAMCAP 2000, and a pool that thin
+            #   leaves the optimizer nothing to discard, which is precisely how a
+            #   mode ends up flat. THE CHEAPER TICKET IS WHAT BUYS THE VOLATILITY.
+            #   natural max 19,778x, flat across five roam densities -> 15,000x cap.
+            #
+            # MIX 15 / 25 / 60 corvus / ursa / draco, a FIRST GUESS to be swept. On a
+            # single spin the tiers differ ONLY by star-table mean -- 3.35 / 4.7 / 20.19
+            # -- because all three carry the same 2x2 block and the same one spin. So the
+            # mix is very nearly the whole economy, and a corvus-heavy mystery would be a
+            # mode whose modal outcome is a dud. Ascendant is deliberately absent: its
+            # identity is the twin dragons, and at one block it is draco in a hat.
+            # ENRICHMENT LEVER if the mean is short: ROAMCAP into the wake conditions'
+            # roam mix, before ever touching the star tables (which are SHARED).
+            BetMode(
+                name="buy_mystery_spin", cost=150.0, rtp=self.rtp, max_win=spin_cap,
+                auto_close_disabled=False, is_feature=False, is_buybonus=True,
+                distributions=[
+                    # ⚠ win_criteria is spin_cap (15,000), NOT the global 25,000 --
+                    # the mode clamps there via BetMode.max_win, so a slice hunting
+                    # 25,000 would chase a book that cannot exist and hang forever.
+                    # Quota is small for the same reason corvus's is: the optimizer
+                    # weights these down regardless, so it only has to supply enough
+                    # DISTINCT books that every max win is not the same replay, and
+                    # each one costs a redraw loop to manufacture.
+                    Distribution(criteria="wincap", quota=0.004, win_criteria=spin_cap,
+                                 conditions=draco_wake_wincap_condition),
+                    Distribution(criteria="draco", quota=0.598, conditions=draco_wake_condition),
+                    Distribution(criteria="ursa", quota=0.249, conditions=ursa_wake_condition),
+                    Distribution(criteria="corvus", quota=0.149, conditions=corvus_wake_condition),
                 ],
             ),
         ]

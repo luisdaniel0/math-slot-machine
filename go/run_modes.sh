@@ -34,7 +34,7 @@ SIMS="${1:-1000000}"
 shift 2>/dev/null || true
 MODES=("$@")
 if [[ ${#MODES[@]} -eq 0 ]]; then
-    MODES=(base ante_starfall buy_corvus buy_ursa buy_draco buy_mystery)
+    MODES=(base ante_starfall buy_ursa buy_draco buy_mystery buy_mystery_spin)
 fi
 
 start=$(date +%s)

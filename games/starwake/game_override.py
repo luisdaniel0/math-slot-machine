@@ -23,6 +23,20 @@ class GameStateOverride(GameExecutables):
             self.count_special_symbols(scatter_key),
             max(self.config.freespin_triggers[self.gametype]),
         )
+        # ⚠ THE WAKE SLICE IS GO-ONLY, AND SILENCE HERE WOULD BE THE WORST OUTCOME.
+        # This Python engine predates act two: constellation.py has no star drops and
+        # no collection, so wake() hands out mult_ladder[0] -- the branch CLAUDE.md
+        # records as dead in every mode. Ignoring an unknown condition would run a
+        # full-length ladder feature and write books that look entirely plausible.
+        # The Go engine is the sim engine for this product; fail rather than lie.
+        if self.get_current_distribution_conditions().get("wake", False):
+            raise NotImplementedError(
+                f"{self.betmode}/{self.criteria}: the 'wake' condition is implemented "
+                "only in the Go engine (go/internal/game/starwake). This Python engine "
+                "has no act two, so it cannot produce a wake spin -- it would silently "
+                "write a full-length ladder feature instead. Run this mode via "
+                "go/run_modes.sh."
+            )
         self.tot_fs = self.config.freespin_triggers[self.gametype][count]
         self.constellation_tier = self.config.scatter_tiers[count]
         if self.gametype == self.config.basegame_type:

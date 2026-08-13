@@ -107,7 +107,7 @@ the thing DOA2's three bonus modes get right — here it falls out structurally.
 |---|---|---|
 | `base` | 1× | 3/4/5 star scatters trigger the tier. Landing the 5th star = pure hype. |
 | `ante_starfall` | ~1.5–3× | **"Starfall"** — denser star scatters on ante strips: more triggers AND a richer tier mix (4th/5th star proportionally likelier). One knob (scatter density) buys both. Honest label: *lower* volatility (more frequent bonuses = smoother). Partially answers the reopened base-boost question for players who opt in. |
-| `buy_corvus` | ~cheap | Pay to guarantee the safe tier. Lower-ceiling product (a 2×2 over ~10 spins may be structurally unable to reach 25,000× — that's fine and honest). |
+| `buy_mystery_spin` | **150×** | **"One Wake"** — ONE spin, the constellation dealt already complete and the beast already roaming; *which* beast is the mystery (corvus / ursa / draco, 15/25/60). Replaced `buy_corvus` Aug 13 2026, because cost-adjusted volatility read corvus **1.85** against ursa **1.88** — the two cheapest products were the same product at two prices. The corvus TIER is untouched; only the buy is gone. **The one mode that does not publish 25,000×:** one spin with one 2×2 tops out at a measured 19,778× at every roam density, so it publishes an honest **15,000×** — which at a 150× ticket is 100× cost, better than Miko Spin's 40× and Rage Spins' 71×. Market shape: Miko Spin (250×, one spin, guaranteed 2×2) and Rage Spins (350×, single powerful spin). |
 | `buy_ursa` | ~mid | Pay to guarantee the balanced tier — the coin-flip bonus. |
 | `buy_draco` | ~high | Pay to guarantee the greedy tier. **This is where the 25,000× lives.** |
 | `buy_mystery` | **~500× (target)** | **"Let the Sky Decide"** — weighted random constellation. TARGET COST 500× (market-standard mystery price — Rage Bait/C&C/Captain Death all 500×; fixes the ladder so mystery is the "premium random shot" between guaranteed-Ursa 283× and guaranteed-Draco 651×). Reach 500× by weighting the mix toward Draco (cost = avg_win/rtp, an output). Probabilities MUST be displayed as the ACTUAL post-opt mix per compliance. Math-cheap: weighted mix over the three tier books, no new feature code. |
@@ -313,9 +313,15 @@ the roam** working first.
   the sticky cells, not the beast footprint**: at wake the board is 8 / 11 / 15 of 20
   cells wild (4/7/11 lit + the 2×2). The constellation covers the sky; the beast
   prowls over it — arguably the better story.
-- **Buy-menu shape:** just the 3 tier buys, or also a Hex-Bloom-style single "enhanced
-  spin" / "guaranteed progress" product? (Their menu is *different products*, not a
-  price ladder — worth stealing the shape if 3 near-priced tier buys feel flat.)
+- ~~**Buy-menu shape:** just the 3 tier buys, or also a Hex-Bloom-style single "enhanced
+  spin" product?~~ **RESOLVED Aug 13 2026 — the single-spin product, and the tier buys
+  went from 3 to 2.** They did feel flat, and it was measurable rather than a matter of
+  taste: cost-adjusted volatility read corvus 1.85 / ursa 1.88, so the 200× and 300×
+  rungs were selling one product twice. `buy_corvus` out, `buy_mystery_spin` in at 150×.
+  The menu is now **different products** — 150× one spin (highest volatility, lowest
+  price), 300× coin flip, 400× lottery, 500× random tier — rather than a price ladder.
+  Two mystery buys is precedented: Rage Bait ships two at 500× separated only by
+  bust-vs-tail shape (0.00% / 46.52%). Ours separate on LENGTH.
 - **Vertical-drift rule** for the wrap (how far it shifts each lap).
 
 ## Design Lineage (what we borrowed, and from where)

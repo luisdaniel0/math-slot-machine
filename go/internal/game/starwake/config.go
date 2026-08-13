@@ -129,8 +129,11 @@ func (t Tier) Beasts() int {
 
 // FeatureConfig is the feature-wide config plus every tier definition.
 type FeatureConfig struct {
-	MinRoamSpins int             `json:"minRoamSpins"`
-	Tiers        map[string]Tier `json:"tiers"`
+	MinRoamSpins int `json:"minRoamSpins"`
+	// WakeSpinLength is how many spins a `wake` slice runs. The set is dealt
+	// complete and the beast is up before spin 1, so this is the whole feature.
+	WakeSpinLength int             `json:"wakeSpinLength"`
+	Tiers          map[string]Tier `json:"tiers"`
 }
 
 // LoadFeatureConfig decodes the game-specific block out of a loaded SDK config
@@ -155,6 +158,10 @@ func (con *FeatureConfig) validate(c *config.Config) error {
 	if con.MinRoamSpins < 1 {
 		return fmt.Errorf("minRoamSpins = %d; the beast must get at least one paying spin",
 			con.MinRoamSpins)
+	}
+	if con.WakeSpinLength < 1 {
+		return fmt.Errorf("wakeSpinLength = %d; a wake slice must run at least one spin",
+			con.WakeSpinLength)
 	}
 	if len(con.Tiers) == 0 {
 		return fmt.Errorf("no tiers")

@@ -318,6 +318,26 @@ func (con *Constellation) Wake(g *engine.RNG) error {
 	return nil
 }
 
+// DealWoken deals the set already COMPLETE and wakes the beast before spin 1.
+//
+// This is buy_mystery_spin's entire feature: no charge phase, no tracing, one roam
+// spin with the block already on the board collecting whatever stars fall.
+//
+// ⚠ IT DELIBERATELY DOES NOT TOUCH `prelit`. NewConstellation refuses a tier whose
+// CONFIGURED pre-lit cells cover the whole shape, and that guard stays exactly as
+// it was -- it protects against a misconfigured tier, which is a different thing
+// from a slice that asked for a finished set on purpose. Setting `lit` directly
+// leaves the guard guarding what it was written to guard.
+//
+// The reason the old guard existed at all was the multiplier LADDER: completing
+// before spin 1 handed out a top rung for free. Under act two the multiplier is
+// collected star by star and starts bare at x1, so a woken deal grants nothing --
+// it only removes the part of the feature this product is not selling.
+func (con *Constellation) DealWoken(g *engine.RNG) error {
+	con.lit = con.targets
+	return con.Wake(g)
+}
+
 // Roam moves the block to a new valid origin.
 //
 // Under the ladder it also climbs one rung. The rung CLAMPS at the top: clamping
