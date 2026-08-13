@@ -25,6 +25,64 @@ Design doc: `docs/ideas/starwake.md`. Competitor sheet: `BENCHMARKS.md`.
 
 ---
 
+### THE SEEDED MULTIPLIER — SHIPPED, AND FOR THE OPPOSITE REASON IT WAS PROPOSED (Aug 13 2026)
+
+`multiplier = seed + collected`. The beast arrives already carrying a rolled multiplier
+(x2/5/10/25/50/100 at weights 30/25/20/15/7/3). Seed is 1 everywhere except a wake slice,
+so the formula reduces to the old `1 + collected` and no extra rng is drawn — five modes
+stay off the re-sim list, guarded by `TestOrdinaryFeatureKeepsSeedOne`.
+
+PROPOSED to reach 25,000x. **IT DID NOT, AND THE REASON GENERALISES.** One spin cannot
+ACCUMULATE; accumulation is how the 15-spin modes reach the cap. Measured organic max,
+fully unforced: **19,778x unseeded → 23,072x seeded.** Better, still under the cap.
+
+⚠⚠ **CAP-SLICE COST IS EXPONENTIAL IN HOW FAR THE TARGET SITS ABOVE THE ORGANIC MAX.**
+Measured with the seed floor ON, 100 sims, one cap book each:
+
+    cap        redraws/book   books/s   est 1e6
+    25,000        29,102          9     ~31 hours
+    22,000        13,843         18     ~15 hours
+    20,000         6,575         38     ~7 hours
+    18,000         3,871         66     ~4 hours
+    15,000           237        808     ~21 min
+
+**A 16x cliff between 18,000 and 15,000.** The seed floor bought ~3x (8.4M → 2.9M redraws
+per cap book at 25,000x) against the ~1000x needed. **NO AMOUNT OF FORCING RESCUES AN
+ABOVE-RECORD TARGET.** This is the general form of the loop-forever warning: it does not
+hang, it becomes unaffordable, and it looks like a run that never finishes. Ceiling stays
+**15,000x**.
+
+⚠ **WHAT THE SEED ACTUALLY BOUGHT WAS RICHNESS.** Raw mean 330.24x → 423.92x, which is
+what lets the ticket move 150x → **200x** at richness 2.19 (mid-band). At 150x the seeded
+pool sits at 2.92 — above healthy, generating value only to discard two thirds of it.
+**A CHEAPER TICKET DOES NOT MAKE A MODE PUNCHIER.** The optimizer needs room to discard
+and that room IS the volatility; too much room is waste, not extra punch.
+
+THE SEED FLOOR IS STILL WORTH KEEPING: at 15,000x it cut generation 1,153 → 237
+redraws/book, **5x**. A FLOOR (>=25), not a pin at 100, so cap books keep varied seeds and
+every max-win replay is not the same one — replays are public and shareable. Generation
+cost only; the delivered rate is `slice_rtp*cost/cap` = 1 in 1,500, against rage_spins'
+1 in 1,377.
+
+SHIPPED AND VERIFIED (1e6/mode, pipeline 1,643s):
+
+    mode              cost   rtp      bust     >=1x cost   max win
+    base                1x   0.9669   70.75%      8.81%    25,000x
+    ante_starfall     1.5x   0.9669   65.67%      3.47%    25,000x
+    buy_mystery_spin  200x   0.9669    0.00%     11.13%    15,000x
+    buy_ursa          300x   0.9669    0.00%     26.86%    25,000x
+    buy_draco         400x   0.9669    0.00%     16.71%    25,000x
+    buy_mystery       500x   0.9669    0.00%     23.21%    25,000x
+
+CRITICAL gates all pass (RTP 96.69-96.69%, cross-mode spread 0.000%); 3-Star 0 failed
+classes; 2-Star 1 (absolute CVaR, structural to any 25,000x game, free) — **identical to
+the pre-change position**. At 11.13% the wake spin is the most volatile product in the
+menu, ahead of rage_spins' 14.72%, while never busting.
+
+⚠ `check_risk_gates.py` NOW DEFAULTS TO THE CORRECT POOL (`games/starwake_go/library/
+publish_files`). The long-standing warning that it defaults to the stale Jul 31 path is
+itself stale.
+
 ### buy_corvus OUT, buy_mystery_spin IN — THE ONE-SPIN MYSTERY (Aug 13 2026)
 
 WHY CORVUS WAS THE ONE TO CUT. Not "it is the weak tier" -- the deciding measurement is

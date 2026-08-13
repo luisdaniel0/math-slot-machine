@@ -80,18 +80,45 @@ below are exact, not rounded.
 |---|---|---|---|---|---|---|
 | **Corvus, ascended** | 25% | 20% | 20% | 18% | 12% | 5% |
 
-⚠️ **Do not print "1 in 20,000" for this.** That is the config's natural roll
-(`starDrops.ascension.oneIn`), and it is only true where nothing forces it.
-`buy_corvus`'s wincap slice sets `forceAscension=True`, so the *delivered* rate differs
-by mode by a factor of ~100. Measured off the optimized LUTs (`tier_frequency.py`):
+⚠️ **THE PER-MODE SPLIT DIED WITH `buy_corvus` (Aug 13 2026).** That mode's wincap slice
+was the only thing setting `forceAscension=True`, which is what made the delivered rate
+differ by ~100x between modes. **The "1 in 634" figure described `buy_corvus` alone and is
+now meaningless.** With no forced delivery anywhere, ascension runs at its natural
+`starDrops.ascension.oneIn` rate everywhere — 1 in 20,000 corvus rounds.
 
-| Mode | Delivered ascension rate |
-|---|---|
-| Buy Corvus | **1 in 634** |
-| Buy Mystery | 1 in 62,999 (≈1 in 22,000 Corvus rounds — the natural rate) |
+Player copy should call it rare and leave it unnumbered. Re-measure with
+`tier_frequency.py` before printing any figure.
 
-Player copy should call it rare and leave it unnumbered, or carry the per-mode figure on
-the mode it describes. A single global number is wrong on at least one screen.
+⚠️ **THIS MAKES ASCENSION A CANDIDATE FOR DELETION, NOT A FEATURE TO DOCUMENT.** It now
+fires effectively never, its `one_in` has no measured effect on anything, and
+`constellationAscend` still has no art. Deleting it touches the corvus star table, which
+is SHARED by base, ante_starfall, buy_mystery and buy_mystery_spin — so it re-sims four
+of six modes. Deferred, not forgotten.
+
+---
+
+## 2b. The seeded multiplier — One Wake only
+
+> ### The beast wakes ready
+>
+> In **One Wake**, the beast is already roaming when the spin begins, and it arrives
+> **already carrying a multiplier**. Every star it collects on that spin adds to it.
+
+| Seed | x2 | x5 | x10 | x25 | x50 | x100 |
+|---|---|---|---|---|---|---|
+| **One Wake** | 30% | 25% | 20% | 15% | 7% | 3% |
+
+Source: `game_config.wake_seed_values`. Weights sum to 100, so these are exact.
+
+⚠️ **THE SEED APPLIES ONLY TO One Wake.** Everywhere else the beast wakes bare at x1 and
+climbs purely by collecting — `multiplier = seed + collected` with seed 1 is exactly the
+old rule. Copy must not imply the beast is ever pre-loaded in the ordinary feature.
+
+⚠️ **DO NOT PUBLISH THE WINCAP SEED FLOOR.** `wake_seed_wincap_floor` guarantees seed ≥25
+inside the max-win slice; it is a GENERATION device that makes cap books affordable to
+manufacture, and it does not change the odds a player faces. The delivered max-win rate
+is set by the slice's RTP share (1 in 1,500), not by the floor. Printing it would
+advertise a mechanic nobody experiences.
 
 ---
 
@@ -140,10 +167,19 @@ Source: `go/config/starwake.json`. All modes share one RTP by design.
 |---|---|---|---|
 | Base | 1x | 96.69% | 25,000x |
 | Ante (Starfall) | 1.5x | 96.69% | 25,000x |
-| Buy Corvus | 200x | 96.69% | 25,000x |
+| **One Wake** (mystery spin) | **200x** | 96.69% | **15,000x** |
 | Buy Ursa | 300x | 96.69% | 25,000x |
 | Buy Draco | 400x | 96.69% | 25,000x |
 | Buy Mystery | 500x | 96.69% | 25,000x |
+
+⚠️ **BUY CORVUS NO LONGER EXISTS** (removed Aug 13 2026). Any screen still listing it is
+stale. The corvus *constellation* is unchanged and still appears in base, ante, Buy
+Mystery and One Wake — only the 200x buy is gone.
+
+⚠️ **ONE WAKE IS THE ONE MODE WITH A DIFFERENT MAX WIN, AND THE COPY MUST NOT ROUND IT
+UP TO 25,000x.** One spin cannot accumulate a multiplier the way a 15-spin feature does;
+the measured organic maximum is 23,072x, so 15,000x is the honest, reachable figure. It
+is delivered at 1 in 1,500, the most frequent max win in the game.
 
 Feature length: Corvus **10** spins, Ursa / Draco / Draco Ascendant **15**. A beast that
 completes late still gets a guaranteed minimum roam of **2** spins.

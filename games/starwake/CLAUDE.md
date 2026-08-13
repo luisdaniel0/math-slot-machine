@@ -22,7 +22,7 @@ to work, and reverted. The list under "Measured, does not work" below is the ind
 
 ## Where it stands
 
-Six modes, all at RTP 0.96690 to seven decimal places. **Menu 150 / 300 / 400 / 500.**
+Six modes, all at RTP 0.96690 to seven decimal places. **Menu 200 / 300 / 400 / 500.**
 Mystery mix 35 / 35 / 20 / 10 (corvus / ursa / draco / ascendant), delivered and
 verified off the LUT, not just designed. All seven CRITICAL tests pass; 3-Star carries
 zero failed classes, 2-Star one (absolute CVaR, structural to any 25,000x game, free).
@@ -36,10 +36,32 @@ with the set dealt complete and the beast already up, 150x, mix 15/25/60
 corvus/ursa/draco. Full measurement record in `DECISIONS.md`.
 
 ⚠ **`buy_mystery_spin` IS THE ONLY MODE THAT DOES NOT PUBLISH 25,000x.** Its ceiling is
-**15,000x**, and that is structural, not a tuning miss: the natural max is 19,778x and
-is IDENTICAL across roam densities ROAMCAP 10 → 2000. One spin with one 2x2 block
-cannot get there and a slice aimed at 25,000x would loop forever. At a 150x ticket
-15,000x is 100x cost — better than Miko Spin's 40x and Rage Spins' 71x.
+**15,000x** and that is structural. One spin cannot ACCUMULATE, and accumulation is how
+the 15-spin modes reach the cap. Measured organic max, unforced: **19,778x unseeded,
+23,072x seeded** — both under the cap, and flat across roam densities ROAMCAP 10 → 2000.
+At a 200x ticket 15,000x is 75x cost, still ahead of Rage Spins' 71.4x and nearly double
+Miko Spin's 40x.
+
+⚠⚠ **CAP-SLICE COST IS EXPONENTIAL IN HOW FAR THE TARGET SITS ABOVE THE ORGANIC MAX.**
+Measured on the wake spin with the seed floor ON (100 sims, one cap book each):
+
+    cap        redraws/book   books/s   est 1e6
+    25,000        29,102          9     ~31 hours
+    22,000        13,843         18     ~15 hours
+    20,000         6,575         38     ~7 hours
+    18,000         3,871         66     ~4 hours
+    15,000           237        808     ~21 min
+
+A **16x cliff** between 18,000 and 15,000. **No amount of forcing rescues an
+above-record target** — the seed floor bought 3x against the ~1000x that was needed.
+This is the general form of the loop-forever warning: it does not hang, it just becomes
+unaffordable, and the failure looks like a run that never finishes.
+
+⚠ **THE SEED BOUGHT RICHNESS, NOT CEILING** — the opposite of why it was added. Raw mean
+330.24x → 423.92x, which is what makes a 200x ticket land at richness 2.19. At 150x it
+would sit at 2.92, above the healthy band, generating value only to discard two thirds.
+**The cheaper ticket does not make a mode punchier; the optimizer needs room to discard,
+and that room IS the volatility.**
 
 ⚠ **The live pool is `games/starwake_go/library/`.** `games/starwake/library/` is the
 stale Jul 31 Python-era pool — measuring it reads buy_draco at RTP 1.0036 and looks
