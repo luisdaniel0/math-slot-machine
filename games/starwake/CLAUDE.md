@@ -57,6 +57,21 @@ above-record target** — the seed floor bought 3x against the ~1000x that was n
 This is the general form of the loop-forever warning: it does not hang, it just becomes
 unaffordable, and the failure looks like a run that never finishes.
 
+⚠⚠ **SCORE BEST-OF-N DRAWS ON THE LUT, NOT ON THE OPTIMIZER'S CONSOLE OUTPUT.** The
+summary prints `>= 1x` only, and that is the *stable* dimension. Measured over 8 draws of
+buy_mystery_spin: under-0.25x swings **8.9 points** (56.22–65.11%) against **2.57** on
+`>= 1x`. Picking on the printed number is picking nearly blind on the measure that moves
+most. `/tmp/bestofn` + a scoring pass over the LUTs is the real procedure.
+
+⚠ **AND THE TWO MEASURES PULL OPPOSITE WAYS.** Kindest body and most ticket-beating wins
+were *different draws* (2 and 7), weight moving between the soft middle and the two ends,
+with std/cost too flat (2.86–3.01) to break the tie. **"Best of n" is meaningless without
+a stated product goal** — there is no dominant draw.
+
+⚠ **A SINGLE DRAW IS NOT A PROPERTY.** buy_mystery_spin was first reported at 11.13%
+`>= 1x`; eight subsequent draws ran 12.80–15.37% (mean 13.84). The original was a lucky
+draw quoted as a fact. Same disease as corvus's gentleness, met on a different mode.
+
 ⚠ **THE SEED BOUGHT RICHNESS, NOT CEILING** — the opposite of why it was added. Raw mean
 330.24x → 423.92x, which is what makes a 200x ticket land at richness 2.19. At 150x it
 would sit at 2.92, above the healthy band, generating value only to discard two thirds.
