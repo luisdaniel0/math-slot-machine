@@ -22,6 +22,53 @@ numbers, the fixed CrowdSim config that makes session stats comparable, and the 
 reading them. Use it when comparing Starwake to another game; use THIS file for why the
 math is the way it is.
 
+### ⚠⚠ THE MULTIPLIER LADDER IS DEAD CODE, AND THE COMPLIANCE TABLE POINTS AT IT (Aug 13 2026)
+FOUND WHILE AUDITING buy_mystery. Not a math defect -- the pool is fine -- but the
+rules screen would publish fiction if anyone wrote it from the config today.
+
+**`constellation_mult_ladders` / `constellation_ladder_rungs` NEVER RUN.** Act Two
+replaced the climbing ladder with star collection on Aug 5, and the design entry below
+(L1507) says so in as many words -- "This replaces constellation_mult_ladders /
+constellation_ladder_rungs and the two guard tests" -- but NOTHING WAS ACTUALLY
+REMOVED. The values are still in game_config, still exported to
+go/config/starwake.json as `multLadder`/`ladderRungs`, and still validated by
+config.go:171-179. Verified in the engine:
+  - constellation.go:262  `ActTwo() = drops != nil`
+  - constellation.go:335  the ladder climbs ONLY under `if !con.ActTwo()`
+  - every one of the four tiers carries `starDrops` (corvus/ursa/draco/ascendant all
+    have constellation_star_values entries), so ActTwo() is TRUE EVERYWHERE and the
+    ladder branch is unreachable in every mode.
+  - constellation.go:315 already says it out loud: "act two has no rungs".
+
+⚠⚠ THE COMPLIANCE CONSEQUENCE, AND IT IS THE POINT OF THIS ENTRY. The design doc names
+that ladder as the auditable table: docs/ideas/starwake.md:293-294 ("pasted literally
+into `game_config.constellation_mult_ladders` so the compliance 'all obtainable values'
+table stays auditable") and L337 ("rules must list all obtainable values"). UNDER ACT
+TWO THOSE VALUES ARE NOT OBTAINABLE. The real multiplier is the SUM OF COLLECTED STAR
+VALUES, and that set has never been enumerated. Publishing corvus 200 / ursa 500 /
+draco 600 as the obtainable multipliers would advertise numbers the engine cannot pay.
+=> BEFORE THE RULES SCREEN IS WRITTEN, enumerate the achievable sums per tier off the
+   pool. The star tables are the input (values 2/3/5/10/25/50/100 at per-tier weights)
+   and the collected count is bounded by the roam, so the set is finite and auditable --
+   it is just a different set from the one the doc points at.
+
+⚠ AND IT WEAKENS AN ARGUMENT THIS FILE HAS LEANED ON. "Ascendant IS a draco and cannot
+drift" was justified partly by the SHARED LADDER (game_config.py:394-397, and the Jul 30
+reprice reasoning at L1706-1717). That half of the invariant is inert. What actually
+makes ascendant a draco is the shared cells, beast shape, feature spins and -- until
+Aug 13 -- the star table.
+
+DELETION IS DEFERRED ON PURPOSE, NOT FORGOTTEN. The surface is 2 engines, 3 tools
+(find_books.py, sweep_ladder.py, measure_tiers.py) and 8 tests, and config.go:242-244
+records a live reason the path is kept loadable: "the ladder path stays loadable with no
+roam weights at all -- which is what the A/B sweep needs". Act two has carried 75-93% of
+payback since Aug 5 so reverting is not a live option, but that is a capability to give
+up deliberately, in its own change with its own verification -- not bundled into a
+mystery re-sim that would put the other five modes in the blast radius.
+⚠ UNTIL IT IS DELETED, A LADDER EDIT IS A SILENT NO-OP. That is the same failure family
+as every other one in this file: the config validates, the sim runs, the numbers look
+plausible, and the thing you changed does nothing.
+
 ### ▶▶ TWIN DRAGONS, A 500x MYSTERY, AND A 35/35/20/10 MIX (Aug 12 2026)
 POOL RE-SIMMED, RE-OPTIMIZED, GATED AND PUBLISHED. All seven CRITICAL pass, 3-Star 0
 failed classes, 2-Star 1 (the known absolute CVaR), cross-mode RTP spread 0.000%.

@@ -622,7 +622,46 @@ class GameConfig(Config):
             "ursa": {2: 45, 3: 25, 5: 17, 10: 9, 25: 3, 50: 1},
             "draco": {2: 16, 3: 14, 5: 18, 10: 18, 25: 15, 50: 12, 100: 7},
         }
-        self.constellation_star_values["ascendant"] = self.constellation_star_values["draco"]
+        # ⚠ ASCENDANT NO LONGER ALIASES DRACO. It did until Aug 13 2026, and TWIN
+        # DRAGONS is why it stopped: two 2x2 blocks on a 20-payline game MORE than
+        # double output (wilds compound across lines), so ascendant's raw mean went
+        # 2,598x -> 10,328x and buy_mystery's pool RICHNESS -- raw_mean/(rtp*cost),
+        # the real binding constraint -- went to 3.21 against a healthy 1.9-2.6.
+        #
+        # THIS IS NOT A NERF, AND THAT IS THE WHOLE POINT. Ascendant's DELIVERED
+        # value is pinned by mystery_payback (0.478 of the mode's mean, ~2,397x per
+        # roll) and the optimizer hits its fence target at any richness. What
+        # richness decides is how much it must DISCARD to get there -- and its
+        # cheapest way to discard is to pile weight onto near-worthless books, which
+        # is the corvus disease (that mode sat at 3.74 with +/-20 point body swings).
+        # Discard falls 77% -> 53%. The player sees the same money, on a steadier
+        # distribution, and ascendant's mass moves DOWN into the 5-20x ticket band
+        # the mode is short of rather than sitting above it where it just gets thrown away.
+        #
+        # MEASURED (reels/sweep_ascendant_stars.py, n=20k, 100% ascendant, no wincap):
+        #   variant       star     mean   complete   at cap   richness
+        #   alias-draco  20.19  10,328x     89.4%    1 in  6     3.21
+        #   asc-11       11.22   6,803x     89.4%    1 in 19     2.48
+        #   asc-8         7.98   5,106x     89.4%    1 in 45     2.13   <- CHOSEN
+        #   asc-6         5.75   3,407x     89.4%    1 in 571    1.78
+        #
+        # ⚠ COMPLETION DOES NOT MOVE, AND THAT IS WHY THIS LEVER WON. The star table
+        # is act TWO's collection value; act ONE lights cells from winning paylines
+        # and never reads it. The competing lever -- num_feature_spins["ascendant"]
+        # -- reaches the SAME richness by shortening the feature and pays for it in
+        # completion: at a matched 2.11 richness, 12 spins completes 76.5% against
+        # this table's 89.4%. A tier whose whole identity is "1 in 10 wakes something
+        # you cannot buy" cannot afford to fail to wake a quarter of the time.
+        #
+        # ⚠ THE CAP MUST STAY REACHABLE or the forced wincap slice is a silent
+        # infinite hang. Verified, not assumed: every swept variant still reached
+        # 25,000x, and this one does it 1 in 45 unforced before the slice's WCAP/
+        # ROAMCAP strips help at all.
+        #
+        # ⚠ FREQUENCY BEATS MAGNITUDE (the lesson at the top of this block): the 100
+        # rung is thinned, not deleted. Deleting it would cost ascendant its draco
+        # character for no gain, and a rung nobody hits moves nothing in either direction.
+        self.constellation_star_values["ascendant"] = {2: 32, 3: 23, 5: 20, 10: 14, 25: 7, 50: 3, 100: 1}
 
         # ---------------------------------------------------- CORVUS ASCENSION
         # A rare round switches corvus to a richer star table. This is the ONLY
